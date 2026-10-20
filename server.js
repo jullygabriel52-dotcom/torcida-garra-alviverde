@@ -528,13 +528,15 @@ async function requestHandler(req, res) {
   }
 }
 
-// Inicializa o servidor HTTP (Vercel captura o server.listen automaticamente quando não há função exportada)
-if (!global.__tgaServerStarted) {
-  global.__tgaServerStarted = true;
+// Inicializa o servidor HTTP apenas localmente (na Vercel o index.js exporta o requestHandler para @vercel/node)
+if (!IS_VERCEL && require.main === module) {
   ensureLocalDb();
   const server = http.createServer(requestHandler);
   server.listen(Number(process.env.PORT || 3000), () => {
     console.log(`Portal Garra Alviverde (TGA) rodando na porta ${PORT}`);
   });
 }
+
+module.exports = requestHandler;
+
 

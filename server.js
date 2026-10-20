@@ -5,8 +5,14 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL);
 const DATA_DIR = IS_VERCEL ? '/tmp' : path.join(__dirname, 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
-const SEED_DB_FILE = path.join(__dirname, 'data', 'db.json');
+const DB_FILE = IS_VERCEL ? path.join('/tmp', 'db.json') : (
+  fs.existsSync(path.join(__dirname, 'data', 'db.json'))
+    ? path.join(__dirname, 'data', 'db.json')
+    : path.join(__dirname, 'db.json')
+);
+const SEED_DB_FILE = fs.existsSync(path.join(__dirname, 'data', 'db.json'))
+  ? path.join(__dirname, 'data', 'db.json')
+  : path.join(__dirname, 'db.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const KV_KEY = 'tga_portal_db_v1';
 
@@ -79,8 +85,28 @@ const DEFAULT_DB = {
 };
 
 function getKvConfig() {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  let url =
+    process.env.KV_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.STORAGE_KV_REST_API_URL ||
+    process.env.STORAGE_REST_API_URL;
+  let token =
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.STORAGE_KV_REST_API_TOKEN ||
+    process.env.STORAGE_REST_API_TOKEN;
+
+  if (!url || !token) {
+    for (const key of Object.keys(process.env)) {
+      if (!url && key.endsWith('REST_API_URL') && process.env[key]) {
+        url = process.env[key];
+      }
+      if (!token && key.endsWith('REST_API_TOKEN') && process.env[key]) {
+        token = process.env[key];
+      }
+    }
+  }
+
   if (url && token) return { url: url.replace(/\/$/, ''), token };
   return null;
 }
@@ -92,8 +118,9 @@ function getFirebaseUrl() {
 
 function ensureLocalDb() {
   try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dir = path.dirname(DB_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
     if (!fs.existsSync(DB_FILE)) {
       if (IS_VERCEL && fs.existsSync(SEED_DB_FILE)) {
@@ -109,7 +136,7 @@ function ensureLocalDb() {
 }
 
 async function readDb() {
-  // 1. Tenta Upstash Redis / Vercel KV (1 clique na aba Storage da Vercel)
+  // 1. Tenta Upstash Redis / Vercel KV
   const kv = getKvConfig();
   if (kv) {
     try {
@@ -134,7 +161,7 @@ async function readDb() {
     }
   }
 
-  // 2. Tenta Firebase Realtime Database (se configurado)
+  // 2. Tenta Firebase Realtime Database
   const fbUrl = getFirebaseUrl();
   if (fbUrl) {
     try {
@@ -157,7 +184,7 @@ async function readDb() {
     }
   }
 
-  // 3. Fallback local (db.json no PC ou /tmp/db.json na Vercel)
+  // 3. Fallback local
   ensureLocalDb();
   try {
     const raw = fs.readFileSync(DB_FILE, 'utf8');
@@ -168,7 +195,6 @@ async function readDb() {
 }
 
 async function writeDb(data) {
-  // 1. Salva no Upstash Redis / Vercel KV
   const kv = getKvConfig();
   if (kv) {
     try {
@@ -186,7 +212,6 @@ async function writeDb(data) {
     }
   }
 
-  // 2. Salva no Firebase Realtime Database
   const fbUrl = getFirebaseUrl();
   if (fbUrl) {
     try {
@@ -201,7 +226,6 @@ async function writeDb(data) {
     }
   }
 
-  // 3. Salva no arquivo local
   ensureLocalDb();
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
@@ -264,6 +288,31 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon'
 };
 
+function findStaticFile(requestPathname) {
+  const cleanRel = requestPathname === '/' ? 'index.html' : requestPathname.replace(/^\/+/, '');
+  const baseName = path.basename(cleanRel);
+
+  const candidates = [
+    path.join(PUBLIC_DIR, cleanRel),
+    path.join(__dirname, cleanRel),
+    path.join(PUBLIC_DIR, 'assets', baseName),
+    path.join(__dirname, baseName)
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = path.normalize(candidate);
+    if (!resolved.startsWith(__dirname)) continue;
+    // Impede servir arquivos de servidor
+    if (baseName === 'server.js' || baseName === 'index.js' || baseName === 'package.json' || baseName === 'vercel.json') {
+      continue;
+    }
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+      return resolved;
+    }
+  }
+  return null;
+}
+
 async function requestHandler(req, res) {
   const host = req.headers.host || 'localhost:3000';
   const parsedUrl = new URL(req.url, `http://${host}`);
@@ -280,6 +329,7 @@ async function requestHandler(req, res) {
       db.socios = Array.isArray(db.socios) ? db.socios : [];
       db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
       db.inscricoesCaravana = Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [];
+      db.storageMode = getKvConfig() ? 'upstash-redis' : (getFirebaseUrl() ? 'firebase' : 'local-file');
       return sendJson(res, 200, db);
     }
 
@@ -451,29 +501,16 @@ async function requestHandler(req, res) {
     return sendJson(res, 500, { error: apiErr.message || 'Erro interno do servidor' });
   }
 
-  // Static Files (para execução local ou fallback)
-  let filePath = pathname === '/' ? '/index.html' : pathname;
-  const resolvedPath = path.normalize(path.join(PUBLIC_DIR, filePath));
-
-  if (!resolvedPath.startsWith(PUBLIC_DIR)) {
-    res.writeHead(403);
-    return res.end('Acesso negado');
-  }
-
-  if (fs.existsSync(resolvedPath) && fs.statSync(resolvedPath).isFile()) {
-    const ext = path.extname(resolvedPath).toLowerCase();
+  // Static Files (funciona tanto na estrutura com pasta public/ quanto todos os arquivos na raiz)
+  const staticFile = findStaticFile(pathname) || findStaticFile('/index.html');
+  if (staticFile) {
+    const ext = path.extname(staticFile).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
     res.writeHead(200, { 'Content-Type': contentType });
-    fs.createReadStream(resolvedPath).pipe(res);
+    fs.createReadStream(staticFile).pipe(res);
   } else {
-    const indexHtml = path.join(PUBLIC_DIR, 'index.html');
-    if (fs.existsSync(indexHtml)) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      fs.createReadStream(indexHtml).pipe(res);
-    } else {
-      res.writeHead(404);
-      res.end('Arquivo não encontrado');
-    }
+    res.writeHead(404);
+    res.end('Arquivo não encontrado');
   }
 }
 

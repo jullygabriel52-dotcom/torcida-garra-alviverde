@@ -1,10 +1,3 @@
-let requestHandler;
-try {
-  requestHandler = require('./server');
-} catch (e) {
-  requestHandler = require('../server');
-}
+const requestHandler = require('./server');
 
-module.exports = async function handler(req, res) {
-  return requestHandler(req, res);
-};
+module.exports = requestHandler;

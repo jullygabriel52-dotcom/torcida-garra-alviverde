@@ -4,6 +4,23 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL);
+
+// Referências explícitas para o empacotador da Vercel (@vercel/nft) incluir todos os arquivos
+const NFT_FILES = [
+  path.join(__dirname, 'index.html'),
+  path.join(__dirname, 'styles.css'),
+  path.join(__dirname, 'app.js'),
+  path.join(__dirname, 'logo-tga.jpg'),
+  path.join(__dirname, 'escudo-ecrv.jpg'),
+  path.join(__dirname, 'db.json'),
+  path.join(__dirname, 'public', 'index.html'),
+  path.join(__dirname, 'public', 'styles.css'),
+  path.join(__dirname, 'public', 'app.js'),
+  path.join(__dirname, 'public', 'assets', 'logo-tga.jpg'),
+  path.join(__dirname, 'public', 'assets', 'escudo-ecrv.jpg'),
+  path.join(__dirname, 'data', 'db.json')
+];
+
 const DATA_DIR = IS_VERCEL ? '/tmp' : path.join(__dirname, 'data');
 const DB_FILE = IS_VERCEL ? path.join('/tmp', 'db.json') : (
   fs.existsSync(path.join(__dirname, 'data', 'db.json'))
@@ -136,7 +153,6 @@ function ensureLocalDb() {
 }
 
 async function readDb() {
-  // 1. Tenta Upstash Redis / Vercel KV
   const kv = getKvConfig();
   if (kv) {
     try {
@@ -161,7 +177,6 @@ async function readDb() {
     }
   }
 
-  // 2. Tenta Firebase Realtime Database
   const fbUrl = getFirebaseUrl();
   if (fbUrl) {
     try {
@@ -184,7 +199,6 @@ async function readDb() {
     }
   }
 
-  // 3. Fallback local
   ensureLocalDb();
   try {
     const raw = fs.readFileSync(DB_FILE, 'utf8');
@@ -296,13 +310,13 @@ function findStaticFile(requestPathname) {
     path.join(PUBLIC_DIR, cleanRel),
     path.join(__dirname, cleanRel),
     path.join(PUBLIC_DIR, 'assets', baseName),
-    path.join(__dirname, baseName)
+    path.join(__dirname, baseName),
+    ...NFT_FILES.filter((p) => path.basename(p) === baseName)
   ];
 
   for (const candidate of candidates) {
     const resolved = path.normalize(candidate);
     if (!resolved.startsWith(__dirname)) continue;
-    // Impede servir arquivos de servidor
     if (baseName === 'server.js' || baseName === 'index.js' || baseName === 'package.json' || baseName === 'vercel.json') {
       continue;
     }
@@ -315,7 +329,7 @@ function findStaticFile(requestPathname) {
 
 async function requestHandler(req, res) {
   const host = req.headers.host || 'localhost:3000';
-  const parsedUrl = new URL(req.url, `http://${host}`);
+  const parsedUrl = new URL(req.url || '/', `http://${host}`);
   const pathname = parsedUrl.pathname;
 
   if (req.method === 'OPTIONS') {
@@ -501,7 +515,7 @@ async function requestHandler(req, res) {
     return sendJson(res, 500, { error: apiErr.message || 'Erro interno do servidor' });
   }
 
-  // Static Files (funciona tanto na estrutura com pasta public/ quanto todos os arquivos na raiz)
+  // Static Files
   const staticFile = findStaticFile(pathname) || findStaticFile('/index.html');
   if (staticFile) {
     const ext = path.extname(staticFile).toLowerCase();
@@ -514,15 +528,13 @@ async function requestHandler(req, res) {
   }
 }
 
-if (require.main === module) {
+// Inicializa o servidor HTTP tanto localmente quanto no preset Node.js da Vercel
+if (!global.__tgaServerStarted) {
+  global.__tgaServerStarted = true;
   ensureLocalDb();
   const server = http.createServer(requestHandler);
   server.listen(PORT, () => {
-    console.log(`\n=============================================================`);
-    console.log(`🟢⚪ PORTAL GARRA ALVIVERDE (TGA) - E.C. RIO VERDE RODANDO!`);
-    console.log(`👉 Acesse no navegador: http://localhost:${PORT}`);
-    console.log(`🔒 Senha padrão do Painel da Diretoria: 2015`);
-    console.log(`=============================================================\n`);
+    console.log(`Portal Garra Alviverde (TGA) rodando na porta ${PORT}`);
   });
 }
 

@@ -1,0 +1,17 @@
+{
+  "name": "torcida-alviverde-portal",
+  "version": "1.0.0",
+  "description": "Portal Oficial da Torcida Organizada Alviverde - Cadastro de Sócios, Inscrição de Caravanas, PIX e Painel Administrativo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "torcida-organizada",
+    "socio-torcedor",
+    "caravanas",
+    "alviverde",
+    "pix"
+  ],
+  "license": "MIT"
+}

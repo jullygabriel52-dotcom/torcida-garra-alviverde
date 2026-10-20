@@ -1,0 +1,67 @@
+{
+  "config": {
+    "nomeTorcida": "TORCIDA ORGANIZADA GARRA ALVIVERDE",
+    "sigla": "TGA",
+    "clubeApoiado": "Esporte Clube Rio Verde (E.C.R.V.)",
+    "estadio": "Estádio Mozart Veloso do Carmo (Velosão)",
+    "lema": "Apoiando o Esporte Clube Rio Verde desde 19/05/2015 — No Velosão ou em qualquer estádio de Goiás!",
+    "anoFundacao": "19/05/2015",
+    "instagramUrl": "https://www.instagram.com/torcidagarraalviverde15/",
+    "instagramHandle": "@torcidagarraalviverde15",
+    "whatsappDiretoria": "(64) 99220-9870",
+    "chavePix": "torcidagarraalviverde@gmail.com",
+    "tipoChavePix": "Chave PIX Oficial TGA (E-mail)",
+    "titularPix": "TORCIDA ORGANIZADA GARRA ALVIVERDE - TGA",
+    "cidadePix": "RIO VERDE - GO",
+    "senhaAdmin": "2015",
+    "planos": [
+      {
+        "id": "socio-unico",
+        "nome": "Sócio Oficial Garra Alviverde (TGA)",
+        "valor": 40,
+        "periodo": "Plano Único via PIX",
+        "destaque": true,
+        "beneficios": [
+          "Carteirinha Oficial da Torcida Garra Alviverde (TGA) + E.C.R.V.",
+          "Desconto exclusivo em todas as Caravanas da TGA acompanhando o Verdão do Sudoeste",
+          "Desconto nos materiais oficiais (camisas, regatas, bonés e faixas)",
+          "Acesso ao grupo oficial da TGA no WhatsApp e concentrações no Velosão"
+        ]
+      }
+    ]
+  },
+  "caravanas": [
+    {
+      "id": "car-1",
+      "jogo": "Caravana Goianão — Verdão do Sudoeste Fora de Casa",
+      "adversario": "Adversário Estadual vs. Esporte Clube Rio Verde (E.C.R.V.)",
+      "estadio": "Goiânia / Interior - GO (Setor Visitante Alviverde)",
+      "dataJogo": "2026-11-08",
+      "horarioSaida": "11:30",
+      "localSaida": "Estádio Mozart Veloso do Carmo - Velosão (Concentração às 09:30)",
+      "valorSocio": 70,
+      "valorNaoSocio": 100,
+      "vagasTotais": 90,
+      "vagasOcupadas": 0,
+      "incluiIngresso": "Ônibus Executivo Ida e Volta saindo de Rio Verde + Concentração TGA",
+      "status": "Aberta"
+    },
+    {
+      "id": "car-2",
+      "jogo": "Invasão Garra Alviverde — Decisão do Campeonato Goiano",
+      "adversario": "Clássico Regional vs. Esporte Clube Rio Verde (E.C.R.V.)",
+      "estadio": "Estádio Visitante — Sudoeste / Sul Goiano",
+      "dataJogo": "2026-11-22",
+      "horarioSaida": "13:00",
+      "localSaida": "Frente ao Estádio Velosão — Rio Verde - GO",
+      "valorSocio": 55,
+      "valorNaoSocio": 80,
+      "vagasTotais": 90,
+      "vagasOcupadas": 0,
+      "incluiIngresso": "Transporte Ida e Volta + Escolta + Esquenta com a Bateria TGA",
+      "status": "Aberta"
+    }
+  ],
+  "socios": [],
+  "inscricoesCaravana": []
+}

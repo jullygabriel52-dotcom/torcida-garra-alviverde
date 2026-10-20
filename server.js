@@ -528,14 +528,13 @@ async function requestHandler(req, res) {
   }
 }
 
-// Inicializa o servidor HTTP tanto localmente quanto no preset Node.js da Vercel
+// Inicializa o servidor HTTP (Vercel captura o server.listen automaticamente quando não há função exportada)
 if (!global.__tgaServerStarted) {
   global.__tgaServerStarted = true;
   ensureLocalDb();
   const server = http.createServer(requestHandler);
-  server.listen(PORT, () => {
+  server.listen(Number(process.env.PORT || 3000), () => {
     console.log(`Portal Garra Alviverde (TGA) rodando na porta ${PORT}`);
   });
 }
 
-module.exports = requestHandler;

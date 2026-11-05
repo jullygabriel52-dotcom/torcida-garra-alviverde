@@ -100,8 +100,99 @@ const DEFAULT_DB = {
     }
   ],
   socios: [],
-  inscricoesCaravana: []
+  inscricoesCaravana: [],
+  usuariosDiretoria: [
+    {
+      id: 'dir-master',
+      usuario: 'jully',
+      nome: 'Jully Gabriel (Master)',
+      cargo: 'Presidente / Master TGA',
+      senha: 'Tga@2015',
+      isMaster: true,
+      ativo: true,
+      permissoes: {
+        aprovarPixSocio: true,
+        editarSocio: true,
+        excluirSocio: true,
+        aprovarPixCaravana: true,
+        excluirPassageiroCaravana: true,
+        gerenciarCaravanas: true,
+        exportarPlanilhas: true,
+        alterarConfiguracoes: true
+      }
+    }
+  ],
+  auditoriaLogs: []
 };
+
+function ensureMasterAndCollections(db) {
+  db.socios = Array.isArray(db.socios) ? db.socios : [];
+  db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
+  db.inscricoesCaravana = Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [];
+  db.auditoriaLogs = Array.isArray(db.auditoriaLogs) ? db.auditoriaLogs : [];
+  db.usuariosDiretoria = Array.isArray(db.usuariosDiretoria) ? db.usuariosDiretoria : [];
+
+  if (db.config) {
+    if (!db.config.whatsappDiretoria || db.config.whatsappDiretoria === '(64) 99220-9870') {
+      db.config.whatsappDiretoria = '(64) 99330-2283';
+    }
+    if (!db.config.senhaAdmin || db.config.senhaAdmin === '2015') {
+      db.config.senhaAdmin = 'Tga@2015';
+    }
+  }
+
+  const masterPass = (db.config && db.config.senhaAdmin) ? db.config.senhaAdmin : 'Tga@2015';
+  const masterIdx = db.usuariosDiretoria.findIndex((u) => u.isMaster || u.id === 'dir-master' || (u.usuario && u.usuario.toLowerCase() === 'jully'));
+  const masterObj = {
+    id: 'dir-master',
+    usuario: 'jully',
+    nome: 'Jully Gabriel (Master)',
+    cargo: 'Presidente / Master TGA',
+    senha: masterPass,
+    isMaster: true,
+    ativo: true,
+    permissoes: {
+      aprovarPixSocio: true,
+      editarSocio: true,
+      excluirSocio: true,
+      aprovarPixCaravana: true,
+      excluirPassageiroCaravana: true,
+      gerenciarCaravanas: true,
+      exportarPlanilhas: true,
+      alterarConfiguracoes: true
+    }
+  };
+
+  if (masterIdx === -1) {
+    db.usuariosDiretoria.unshift(masterObj);
+  } else {
+    db.usuariosDiretoria[masterIdx] = {
+      ...db.usuariosDiretoria[masterIdx],
+      ...masterObj,
+      nome: db.usuariosDiretoria[masterIdx].nome || masterObj.nome,
+      usuario: db.usuariosDiretoria[masterIdx].usuario || 'jully',
+      senha: masterPass
+    };
+  }
+  return db;
+}
+
+function appendAuditLog(db, auditPayload) {
+  if (!auditPayload || typeof auditPayload !== 'object') return;
+  db.auditoriaLogs = Array.isArray(db.auditoriaLogs) ? db.auditoriaLogs : [];
+  db.auditoriaLogs.unshift({
+    id: 'log-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    dataHora: new Date().toISOString(),
+    diretorNome: auditPayload.diretorNome || 'Diretoria TGA',
+    diretorUsuario: auditPayload.diretorUsuario || 'diretoria',
+    categoria: auditPayload.categoria || 'Sistema',
+    acao: auditPayload.acao || 'Alteração realizada no painel',
+    detalhes: auditPayload.detalhes || ''
+  });
+  if (db.auditoriaLogs.length > 500) {
+    db.auditoriaLogs = db.auditoriaLogs.slice(0, 500);
+  }
+}
 
 function getKvConfig() {
   let url =
@@ -341,26 +432,14 @@ async function requestHandler(req, res) {
   // API Routes
   try {
     if (pathname === '/api/state' && req.method === 'GET') {
-      const db = await readDb();
-      db.socios = Array.isArray(db.socios) ? db.socios : [];
-      db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
-      db.inscricoesCaravana = Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [];
-      if (db.config) {
-        if (!db.config.whatsappDiretoria || db.config.whatsappDiretoria === '(64) 99220-9870') {
-          db.config.whatsappDiretoria = '(64) 99330-2283';
-        }
-        if (!db.config.senhaAdmin || db.config.senhaAdmin === '2015') {
-          db.config.senhaAdmin = 'Tga@2015';
-        }
-      }
+      const db = ensureMasterAndCollections(await readDb());
       db.storageMode = getKvConfig() ? 'upstash-redis' : (getFirebaseUrl() ? 'firebase' : 'local-file');
       return sendJson(res, 200, db);
     }
 
     if (pathname === '/api/socios' && req.method === 'POST') {
       const body = await parseBody(req);
-      const db = await readDb();
-      db.socios = Array.isArray(db.socios) ? db.socios : [];
+      const db = ensureMasterAndCollections(await readDb());
       const seq = 1 + db.socios.length;
       const sigla = (db.config && db.config.sigla) ? db.config.sigla : 'TGA';
       const numFormatted = String(seq).padStart(3, '0');
@@ -395,28 +474,29 @@ async function requestHandler(req, res) {
     if (pathname.startsWith('/api/socios/') && req.method === 'PATCH') {
       const id = pathname.replace('/api/socios/', '');
       const body = await parseBody(req);
-      const db = await readDb();
-      db.socios = Array.isArray(db.socios) ? db.socios : [];
+      const db = ensureMasterAndCollections(await readDb());
       const idx = db.socios.findIndex((s) => s.id === id);
       if (idx === -1) return sendJson(res, 404, { error: 'Sócio não encontrado' });
-      db.socios[idx] = { ...db.socios[idx], ...body };
+      const { _auditoria, ...fields } = body;
+      db.socios[idx] = { ...db.socios[idx], ...fields };
+      if (_auditoria) appendAuditLog(db, _auditoria);
       await writeDb(db);
-      return sendJson(res, 200, db.socios[idx]);
+      return sendJson(res, 200, { socio: db.socios[idx], auditoriaLogs: db.auditoriaLogs });
     }
 
     if (pathname.startsWith('/api/socios/') && req.method === 'DELETE') {
       const id = pathname.replace('/api/socios/', '');
-      const db = await readDb();
+      const body = await parseBody(req).catch(() => ({}));
+      const db = ensureMasterAndCollections(await readDb());
       db.socios = (db.socios || []).filter((s) => s.id !== id);
+      if (body && body._auditoria) appendAuditLog(db, body._auditoria);
       await writeDb(db);
-      return sendJson(res, 200, { deleted: id });
+      return sendJson(res, 200, { deleted: id, auditoriaLogs: db.auditoriaLogs });
     }
 
     if (pathname === '/api/inscricoes-caravana' && req.method === 'POST') {
       const body = await parseBody(req);
-      const db = await readDb();
-      db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
-      db.inscricoesCaravana = Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [];
+      const db = ensureMasterAndCollections(await readDb());
       const caravana = db.caravanas.find((c) => c.id === body.caravanaId);
       const novaInscricao = {
         id: 'ins-' + Date.now(),
@@ -444,20 +524,20 @@ async function requestHandler(req, res) {
     if (pathname.startsWith('/api/inscricoes-caravana/') && req.method === 'PATCH') {
       const id = pathname.replace('/api/inscricoes-caravana/', '');
       const body = await parseBody(req);
-      const db = await readDb();
-      db.inscricoesCaravana = Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [];
+      const db = ensureMasterAndCollections(await readDb());
       const idx = db.inscricoesCaravana.findIndex((i) => i.id === id);
       if (idx === -1) return sendJson(res, 404, { error: 'Inscrição não encontrada' });
-      db.inscricoesCaravana[idx] = { ...db.inscricoesCaravana[idx], ...body };
+      const { _auditoria, ...fields } = body;
+      db.inscricoesCaravana[idx] = { ...db.inscricoesCaravana[idx], ...fields };
+      if (_auditoria) appendAuditLog(db, _auditoria);
       await writeDb(db);
-      return sendJson(res, 200, db.inscricoesCaravana[idx]);
+      return sendJson(res, 200, { inscricao: db.inscricoesCaravana[idx], auditoriaLogs: db.auditoriaLogs });
     }
 
     if (pathname.startsWith('/api/inscricoes-caravana/') && req.method === 'DELETE') {
       const id = pathname.replace('/api/inscricoes-caravana/', '');
-      const db = await readDb();
-      db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
-      db.inscricoesCaravana = Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [];
+      const body = await parseBody(req).catch(() => ({}));
+      const db = ensureMasterAndCollections(await readDb());
       const target = db.inscricoesCaravana.find((i) => i.id === id);
       if (target) {
         const caravana = db.caravanas.find((c) => c.id === target.caravanaId);
@@ -466,30 +546,32 @@ async function requestHandler(req, res) {
         }
       }
       db.inscricoesCaravana = db.inscricoesCaravana.filter((i) => i.id !== id);
+      if (body && body._auditoria) appendAuditLog(db, body._auditoria);
       await writeDb(db);
-      return sendJson(res, 200, { deleted: id });
+      return sendJson(res, 200, { deleted: id, auditoriaLogs: db.auditoriaLogs });
     }
 
     if (pathname === '/api/caravanas' && req.method === 'POST') {
       const body = await parseBody(req);
-      const db = await readDb();
-      db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
+      const db = ensureMasterAndCollections(await readDb());
+      const { _auditoria, ...fields } = body;
       const novaCaravana = {
         id: 'car-' + Date.now(),
-        jogo: body.jogo || 'Nova Caravana Garra Alviverde',
-        adversario: body.adversario || '',
-        estadio: body.estadio || '',
-        dataJogo: body.dataJogo || '',
-        horarioSaida: body.horarioSaida || '',
-        localSaida: body.localSaida || 'Estádio Mozart Veloso do Carmo (Velosão)',
-        valorSocio: Number(body.valorSocio) || 0,
-        valorNaoSocio: Number(body.valorNaoSocio) || 0,
-        vagasTotais: Number(body.vagasTotais) || 45,
+        jogo: fields.jogo || 'Nova Caravana Garra Alviverde',
+        adversario: fields.adversario || '',
+        estadio: fields.estadio || '',
+        dataJogo: fields.dataJogo || '',
+        horarioSaida: fields.horarioSaida || '',
+        localSaida: fields.localSaida || 'Estádio Mozart Veloso do Carmo (Velosão)',
+        valorSocio: Number(fields.valorSocio) || 0,
+        valorNaoSocio: Number(fields.valorNaoSocio) || 0,
+        vagasTotais: Number(fields.vagasTotais) || 45,
         vagasOcupadas: 0,
-        incluiIngresso: body.incluiIngresso || 'Ônibus Ida e Volta saindo de Rio Verde - GO',
+        incluiIngresso: fields.incluiIngresso || 'Ônibus Ida e Volta saindo de Rio Verde - GO',
         status: 'Aberta'
       };
       db.caravanas.unshift(novaCaravana);
+      if (_auditoria) appendAuditLog(db, _auditoria);
       await writeDb(db);
       return sendJson(res, 201, novaCaravana);
     }
@@ -497,29 +579,121 @@ async function requestHandler(req, res) {
     if (pathname.startsWith('/api/caravanas/') && req.method === 'PATCH') {
       const id = pathname.replace('/api/caravanas/', '');
       const body = await parseBody(req);
-      const db = await readDb();
-      db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
+      const db = ensureMasterAndCollections(await readDb());
       const idx = db.caravanas.findIndex((c) => c.id === id);
       if (idx === -1) return sendJson(res, 404, { error: 'Caravana não encontrada' });
-      db.caravanas[idx] = { ...db.caravanas[idx], ...body };
+      const { _auditoria, ...fields } = body;
+      db.caravanas[idx] = { ...db.caravanas[idx], ...fields };
+      if (_auditoria) appendAuditLog(db, _auditoria);
       await writeDb(db);
       return sendJson(res, 200, db.caravanas[idx]);
     }
 
     if (pathname.startsWith('/api/caravanas/') && req.method === 'DELETE') {
       const id = pathname.replace('/api/caravanas/', '');
-      const db = await readDb();
+      const body = await parseBody(req).catch(() => ({}));
+      const db = ensureMasterAndCollections(await readDb());
       db.caravanas = (db.caravanas || []).filter((c) => c.id !== id);
+      if (body && body._auditoria) appendAuditLog(db, body._auditoria);
       await writeDb(db);
-      return sendJson(res, 200, { deleted: id });
+      return sendJson(res, 200, { deleted: id, auditoriaLogs: db.auditoriaLogs });
     }
 
     if (pathname === '/api/config' && req.method === 'PUT') {
       const body = await parseBody(req);
-      const db = await readDb();
-      db.config = { ...db.config, ...body };
+      const db = ensureMasterAndCollections(await readDb());
+      const { _auditoria, ...fields } = body;
+      db.config = { ...db.config, ...fields };
+      ensureMasterAndCollections(db);
+      if (_auditoria) appendAuditLog(db, _auditoria);
       await writeDb(db);
       return sendJson(res, 200, db.config);
+    }
+
+    if (pathname === '/api/diretores' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const db = ensureMasterAndCollections(await readDb());
+      const { _auditoria, ...fields } = body;
+      const loginClean = String(fields.usuario || '').trim().toLowerCase();
+      if (!loginClean) {
+        return sendJson(res, 400, { error: 'Usuário inválido' });
+      }
+      if (db.usuariosDiretoria.some((u) => String(u.usuario || '').toLowerCase() === loginClean)) {
+        return sendJson(res, 409, { error: 'Este nome de usuário já existe' });
+      }
+      const novoDiretor = {
+        id: 'dir-' + Date.now(),
+        usuario: loginClean,
+        nome: fields.nome || loginClean,
+        cargo: fields.cargo || 'Diretor TGA',
+        senha: fields.senha || 'Tga@2026',
+        isMaster: false,
+        ativo: true,
+        permissoes: {
+          aprovarPixSocio: Boolean(fields.permissoes?.aprovarPixSocio),
+          editarSocio: Boolean(fields.permissoes?.editarSocio),
+          excluirSocio: Boolean(fields.permissoes?.excluirSocio),
+          aprovarPixCaravana: Boolean(fields.permissoes?.aprovarPixCaravana),
+          excluirPassageiroCaravana: Boolean(fields.permissoes?.excluirPassageiroCaravana),
+          gerenciarCaravanas: Boolean(fields.permissoes?.gerenciarCaravanas),
+          exportarPlanilhas: Boolean(fields.permissoes?.exportarPlanilhas),
+          alterarConfiguracoes: false
+        },
+        createdAt: new Date().toISOString()
+      };
+      db.usuariosDiretoria.push(novoDiretor);
+      if (_auditoria) appendAuditLog(db, _auditoria);
+      await writeDb(db);
+      return sendJson(res, 201, { diretor: novoDiretor, usuariosDiretoria: db.usuariosDiretoria, auditoriaLogs: db.auditoriaLogs });
+    }
+
+    if (pathname.startsWith('/api/diretores/') && req.method === 'PATCH') {
+      const id = pathname.replace('/api/diretores/', '');
+      const body = await parseBody(req);
+      const db = ensureMasterAndCollections(await readDb());
+      const idx = db.usuariosDiretoria.findIndex((u) => u.id === id);
+      if (idx === -1) return sendJson(res, 404, { error: 'Diretor não encontrado' });
+      const { _auditoria, ...fields } = body;
+      const target = db.usuariosDiretoria[idx];
+      if (target.isMaster) {
+        if (fields.senha) {
+          target.senha = fields.senha;
+          if (db.config) db.config.senhaAdmin = fields.senha;
+        }
+        if (fields.nome) target.nome = fields.nome;
+      } else {
+        db.usuariosDiretoria[idx] = {
+          ...target,
+          ...fields,
+          isMaster: false,
+          permissoes: fields.permissoes ? { ...target.permissoes, ...fields.permissoes, alterarConfiguracoes: false } : target.permissoes
+        };
+      }
+      if (_auditoria) appendAuditLog(db, _auditoria);
+      await writeDb(db);
+      return sendJson(res, 200, { diretor: db.usuariosDiretoria[idx], usuariosDiretoria: db.usuariosDiretoria, auditoriaLogs: db.auditoriaLogs });
+    }
+
+    if (pathname.startsWith('/api/diretores/') && req.method === 'DELETE') {
+      const id = pathname.replace('/api/diretores/', '');
+      const body = await parseBody(req).catch(() => ({}));
+      const db = ensureMasterAndCollections(await readDb());
+      const target = db.usuariosDiretoria.find((u) => u.id === id);
+      if (target && target.isMaster) {
+        return sendJson(res, 403, { error: 'Não é permitido excluir o usuário Master' });
+      }
+      db.usuariosDiretoria = db.usuariosDiretoria.filter((u) => u.id !== id);
+      if (body && body._auditoria) appendAuditLog(db, body._auditoria);
+      await writeDb(db);
+      return sendJson(res, 200, { deleted: id, usuariosDiretoria: db.usuariosDiretoria, auditoriaLogs: db.auditoriaLogs });
+    }
+
+    if (pathname === '/api/auditoria' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const db = ensureMasterAndCollections(await readDb());
+      appendAuditLog(db, body);
+      await writeDb(db);
+      return sendJson(res, 201, { auditoriaLogs: db.auditoriaLogs });
     }
   } catch (apiErr) {
     console.error('Erro na API:', apiErr);

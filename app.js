@@ -66,12 +66,109 @@ const FALLBACK_STATE = {
     }
   ],
   socios: [],
-  inscricoesCaravana: []
+  inscricoesCaravana: [],
+  usuariosDiretoria: [
+    {
+      id: 'dir-master',
+      usuario: 'jully',
+      nome: 'Jully Gabriel (Master)',
+      cargo: 'Presidente / Master TGA',
+      senha: 'Tga@2015',
+      isMaster: true,
+      ativo: true,
+      permissoes: {
+        aprovarPixSocio: true,
+        editarSocio: true,
+        excluirSocio: true,
+        aprovarPixCaravana: true,
+        excluirPassageiroCaravana: true,
+        gerenciarCaravanas: true,
+        exportarPlanilhas: true,
+        alterarConfiguracoes: true
+      }
+    }
+  ],
+  auditoriaLogs: []
 };
 
 let appState = JSON.parse(JSON.stringify(FALLBACK_STATE));
 let currentPhotoDataUrl = '';
 let isAdminAuthenticated = false;
+let currentAdminUser = null;
+
+function ensureClientState(state) {
+  if (!state) return;
+  state.socios = Array.isArray(state.socios) ? state.socios : [];
+  state.caravanas = Array.isArray(state.caravanas) ? state.caravanas : [];
+  state.inscricoesCaravana = Array.isArray(state.inscricoesCaravana) ? state.inscricoesCaravana : [];
+  state.auditoriaLogs = Array.isArray(state.auditoriaLogs) ? state.auditoriaLogs : [];
+  state.usuariosDiretoria = Array.isArray(state.usuariosDiretoria) ? state.usuariosDiretoria : [];
+
+  if (state.config) {
+    if (!state.config.whatsappDiretoria || state.config.whatsappDiretoria === '(64) 99220-9870') {
+      state.config.whatsappDiretoria = '(64) 99330-2283';
+    }
+    if (!state.config.senhaAdmin || state.config.senhaAdmin === '2015') {
+      state.config.senhaAdmin = 'Tga@2015';
+    }
+  }
+
+  const masterPass = (state.config && state.config.senhaAdmin) ? state.config.senhaAdmin : 'Tga@2015';
+  const masterIdx = state.usuariosDiretoria.findIndex(
+    (u) => u.isMaster || u.id === 'dir-master' || (u.usuario && u.usuario.toLowerCase() === 'jully')
+  );
+  const masterDefault = {
+    id: 'dir-master',
+    usuario: 'jully',
+    nome: 'Jully Gabriel (Master)',
+    cargo: 'Presidente / Master TGA',
+    senha: masterPass,
+    isMaster: true,
+    ativo: true,
+    permissoes: {
+      aprovarPixSocio: true,
+      editarSocio: true,
+      excluirSocio: true,
+      aprovarPixCaravana: true,
+      excluirPassageiroCaravana: true,
+      gerenciarCaravanas: true,
+      exportarPlanilhas: true,
+      alterarConfiguracoes: true
+    }
+  };
+  if (masterIdx === -1) {
+    state.usuariosDiretoria.unshift(masterDefault);
+  } else {
+    state.usuariosDiretoria[masterIdx] = {
+      ...state.usuariosDiretoria[masterIdx],
+      ...masterDefault,
+      nome: state.usuariosDiretoria[masterIdx].nome || masterDefault.nome,
+      usuario: state.usuariosDiretoria[masterIdx].usuario || 'jully',
+      senha: masterPass
+    };
+  }
+}
+
+function hasPerm(permKey) {
+  if (!currentAdminUser) return false;
+  if (currentAdminUser.isMaster) return true;
+  return Boolean(currentAdminUser.permissoes && currentAdminUser.permissoes[permKey]);
+}
+
+function buildAuditPayload(categoria, acao, detalhes) {
+  const entry = {
+    id: 'log-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    dataHora: new Date().toISOString(),
+    diretorNome: currentAdminUser ? currentAdminUser.nome : 'Diretoria TGA',
+    diretorUsuario: currentAdminUser ? currentAdminUser.usuario : 'diretoria',
+    categoria,
+    acao,
+    detalhes: detalhes || ''
+  };
+  appState.auditoriaLogs = Array.isArray(appState.auditoriaLogs) ? appState.auditoriaLogs : [];
+  appState.auditoriaLogs.unshift(entry);
+  return entry;
+}
 
 // Utilitários
 function formatBRL(value) {
@@ -92,6 +189,17 @@ function formatDateBR(dateStr) {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
+}
+
+function formatDateTimeBR(isoStr) {
+  if (!isoStr) return '—';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (e) {
+    return isoStr;
+  }
 }
 
 function getSinglePlan() {
@@ -148,14 +256,7 @@ async function loadInitialState() {
     const res = await fetch('/api/state');
     if (res.ok) {
       appState = await res.json();
-      if (appState.config) {
-        if (!appState.config.whatsappDiretoria || appState.config.whatsappDiretoria === '(64) 99220-9870') {
-          appState.config.whatsappDiretoria = '(64) 99330-2283';
-        }
-        if (!appState.config.senhaAdmin || appState.config.senhaAdmin === '2015') {
-          appState.config.senhaAdmin = 'Tga@2015';
-        }
-      }
+      ensureClientState(appState);
       saveLocalBackup();
       renderAll();
       checkUrlWindowParam();
@@ -169,18 +270,12 @@ async function loadInitialState() {
   if (saved) {
     try {
       appState = JSON.parse(saved);
-      if (appState.config) {
-        if (!appState.config.whatsappDiretoria || appState.config.whatsappDiretoria === '(64) 99220-9870') {
-          appState.config.whatsappDiretoria = '(64) 99330-2283';
-        }
-        if (!appState.config.senhaAdmin || appState.config.senhaAdmin === '2015') {
-          appState.config.senhaAdmin = 'Tga@2015';
-        }
-      }
+      ensureClientState(appState);
     } catch (e) {
       appState = JSON.parse(JSON.stringify(FALLBACK_STATE));
     }
   }
+  ensureClientState(appState);
   renderAll();
   checkUrlWindowParam();
 }
@@ -450,6 +545,58 @@ function openSuccessModal({ titulo, descricao, valor, mensagemWhatsapp }) {
 
 // Painel Administrativo da Diretoria
 function renderAdminDashboard() {
+  ensureClientState(appState);
+
+  // Atualiza banner do diretor logado
+  if (currentAdminUser) {
+    const freshUser = appState.usuariosDiretoria.find(u => u.id === currentAdminUser.id);
+    if (freshUser) currentAdminUser = freshUser;
+
+    const nameEl = document.getElementById('adminLoggedName');
+    const badgeEl = document.getElementById('adminLoggedRoleBadge');
+    const summaryEl = document.getElementById('adminLoggedPermsSummary');
+    if (nameEl) {
+      nameEl.textContent = `${currentAdminUser.isMaster ? '👑' : '👤'} ${currentAdminUser.nome} (@${currentAdminUser.usuario})`;
+    }
+    if (badgeEl) {
+      badgeEl.textContent = currentAdminUser.isMaster ? 'USUÁRIO MASTER • ACESSO TOTAL' : (currentAdminUser.cargo || 'DIRETOR TGA').toUpperCase();
+      badgeEl.style.background = currentAdminUser.isMaster ? '#047857' : '#0369a1';
+    }
+    if (summaryEl) {
+      if (currentAdminUser.isMaster) {
+        summaryEl.textContent = 'Você está no comando Master: pode criar diretores, liberar/bloquear permissões e auditar todas as alterações.';
+      } else {
+        const p = currentAdminUser.permissoes || {};
+        const liberadas = [
+          p.aprovarPixSocio ? 'Confirmar PIX Sócio' : null,
+          p.editarSocio ? 'Editar Ficha Sócio' : null,
+          p.excluirSocio ? 'Excluir Sócio' : null,
+          p.aprovarPixCaravana ? 'PIX Caravana' : null,
+          p.gerenciarCaravanas ? 'Gerenciar Caravanas' : null,
+          p.exportarPlanilhas ? 'Exportar Excel' : null
+        ].filter(Boolean);
+        summaryEl.textContent = `Permissões ativas no seu usuário: ${liberadas.length ? liberadas.join(' • ') : 'Somente visualização'}. Toda ação fica registrada em seu nome.`;
+      }
+    }
+  }
+
+  // Controle de visibilidade das abas e botões conforme permissão do diretor
+  const isMaster = Boolean(currentAdminUser && currentAdminUser.isMaster);
+  const btnTabCar = document.getElementById('btnTabGerenciarCaravanas');
+  const btnTabDir = document.getElementById('btnTabDiretores');
+  const btnTabAud = document.getElementById('btnTabAuditoria');
+  const btnTabCfg = document.getElementById('btnTabConfig');
+
+  if (btnTabCar) btnTabCar.hidden = !hasPerm('gerenciarCaravanas');
+  if (btnTabDir) btnTabDir.hidden = !isMaster;
+  if (btnTabAud) btnTabAud.hidden = !isMaster;
+  if (btnTabCfg) btnTabCfg.hidden = !isMaster;
+
+  const btnExpSoc = document.getElementById('btnExportSociosCsv');
+  const btnExpCar = document.getElementById('btnExportCaravanasCsv');
+  if (btnExpSoc) btnExpSoc.hidden = !hasPerm('exportarPlanilhas');
+  if (btnExpCar) btnExpCar.hidden = !hasPerm('exportarPlanilhas');
+
   // KPIs
   document.getElementById('kpiTotalSocios').textContent = appState.socios.length;
   document.getElementById('kpiTotalCaravanasInscritos').textContent = appState.inscricoesCaravana.length;
@@ -464,15 +611,25 @@ function renderAdminDashboard() {
 
   document.getElementById('tabCountSocios').textContent = appState.socios.length;
   document.getElementById('tabCountCaravanas').textContent = appState.inscricoesCaravana.length;
+  const countDirEl = document.getElementById('tabCountDiretores');
+  if (countDirEl) countDirEl.textContent = (appState.usuariosDiretoria || []).length;
+  const countAudEl = document.getElementById('tabCountAuditoria');
+  if (countAudEl) countAudEl.textContent = (appState.auditoriaLogs || []).length;
 
   renderAdminSociosTable();
   renderAdminCaravanasFilterOptions();
   renderAdminCaravanasInscritosTable();
   renderAdminManageCaravanasList();
+  renderAdminDiretoresList();
+  renderAdminAuditoriaTable();
   populateAdminConfigForm();
 }
 
 function openEditSocioModal(socioId) {
+  if (!hasPerm('editarSocio')) {
+    showToast('🚫 Seu usuário não tem permissão para editar dados de sócios.');
+    return;
+  }
   const socio = appState.socios.find(s => s.id === socioId);
   if (!socio) return;
   document.getElementById('editSocId').value = socio.id;
@@ -491,6 +648,12 @@ function openEditSocioModal(socioId) {
   document.getElementById('editSocValor').value = Number(socio.valorPlano) || 35;
   document.getElementById('editSocStatus').value = socio.statusPagamento || 'Pendente PIX';
   document.getElementById('editSocObs').value = socio.observacoes || '';
+
+  // Se o diretor não tiver permissão de aprovar PIX, trava os campos de Status PIX e Valor no modal
+  const canApprovePix = hasPerm('aprovarPixSocio');
+  document.getElementById('editSocStatus').disabled = !canApprovePix;
+  document.getElementById('editSocValor').disabled = !canApprovePix;
+
   document.getElementById('modalEditSocio').hidden = false;
 }
 
@@ -510,6 +673,10 @@ function renderAdminSociosTable() {
     return;
   }
 
+  const canPix = hasPerm('aprovarPixSocio');
+  const canEdit = hasPerm('editarSocio');
+  const canDel = hasPerm('excluirSocio');
+
   tbody.innerHTML = filtrados.map((s) => {
     const isPaid = s.statusPagamento === 'Pago / Ativo';
     const cleanPhone = (s.whatsapp || '').replace(/\D/g, '');
@@ -517,6 +684,19 @@ function renderAdminSociosTable() {
       `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de sócio.`
     )}`;
     const numCamisaDisplay = s.numeroCamisa ? `Nº ${s.numeroCamisa}` : 'Nº —';
+
+    const aprovadoInfoHtml = s.aprovadoPor
+      ? `<div style="font-size:0.72rem; color:#047857; margin-top:4px; line-height:1.25;">
+           👤 Por: <strong>${s.aprovadoPor.nome}</strong><br>
+           <span>${formatDateTimeBR(s.aprovadoPor.dataHora)}</span>
+         </div>`
+      : '';
+
+    const editadoInfoHtml = s.ultimaEdicao
+      ? `<div style="font-size:0.72rem; color:#0369a1; margin-top:3px; line-height:1.25;" title="${(s.ultimaEdicao.resumo || '').replace(/"/g, '&quot;')}">
+           ✏️ Editado por: <strong>${s.ultimaEdicao.nome}</strong> (${formatDateTimeBR(s.ultimaEdicao.dataHora)})
+         </div>`
+      : '';
 
     return `
       <tr>
@@ -527,6 +707,7 @@ function renderAdminSociosTable() {
         <td>
           <strong>${s.nome}</strong><br>
           <small>Apelido: ${s.apelido || '—'} | Nasc: ${formatDateBR(s.dataNascimento)}</small>
+          ${editadoInfoHtml}
         </td>
         <td>
           CPF: ${s.cpf}<br>
@@ -544,21 +725,28 @@ function renderAdminSociosTable() {
           <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
             ${s.statusPagamento}
           </span>
+          ${aprovadoInfoHtml}
         </td>
         <td>
           <div class="action-btns">
-            <button type="button" class="btn-table btn-approve" data-toggle-socio="${s.id}">
-              ${isPaid ? 'Marcar Pendente' : '✔ Confirmar PIX'}
-            </button>
-            <button type="button" class="btn-table btn-edit" data-edit-socio="${s.id}" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;">
-              ✏️ Editar
-            </button>
+            ${canPix ? `
+              <button type="button" class="btn-table btn-approve" data-toggle-socio="${s.id}">
+                ${isPaid ? 'Marcar Pendente' : '✔ Confirmar PIX'}
+              </button>
+            ` : ''}
+            ${canEdit ? `
+              <button type="button" class="btn-table btn-edit" data-edit-socio="${s.id}" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;">
+                ✏️ Editar
+              </button>
+            ` : ''}
             <a href="${waLink}" target="_blank" rel="noopener" class="btn-table btn-wa">
               💬 WhatsApp
             </a>
-            <button type="button" class="btn-table btn-del" data-del-socio="${s.id}">
-              🗑️
-            </button>
+            ${canDel ? `
+              <button type="button" class="btn-table btn-del" data-del-socio="${s.id}">
+                🗑️
+              </button>
+            ` : ''}
           </div>
         </td>
       </tr>
@@ -567,21 +755,47 @@ function renderAdminSociosTable() {
 
   tbody.querySelectorAll('[data-toggle-socio]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (!hasPerm('aprovarPixSocio')) {
+        showToast('🚫 Você não tem permissão para alterar status de pagamento PIX.');
+        return;
+      }
       const id = btn.getAttribute('data-toggle-socio');
       const socio = appState.socios.find(x => x.id === id);
       if (!socio) return;
-      const novoStatus = socio.statusPagamento === 'Pago / Ativo' ? 'Pendente PIX' : 'Pago / Ativo';
+      const statusAntigo = socio.statusPagamento;
+      const novoStatus = statusAntigo === 'Pago / Ativo' ? 'Pendente PIX' : 'Pago / Ativo';
+      const dirNome = currentAdminUser ? currentAdminUser.nome : 'Diretoria';
+
+      const ok = window.confirm(
+        `Confirmar alteração do status PIX de "${socio.nome}" para "${novoStatus}"?\n\nEsta ação ficará registrada em seu usuário: ${dirNome}.`
+      );
+      if (!ok) return;
+
+      const aprovadoPor = {
+        nome: dirNome,
+        usuario: currentAdminUser ? currentAdminUser.usuario : 'diretoria',
+        dataHora: new Date().toISOString(),
+        status: novoStatus
+      };
       socio.statusPagamento = novoStatus;
+      socio.aprovadoPor = aprovadoPor;
+
+      const audit = buildAuditPayload(
+        'PIX Sócio',
+        `${novoStatus === 'Pago / Ativo' ? 'Confirmou pagamento PIX' : 'Voltou PIX para Pendente'} do sócio ${socio.nome}`,
+        `Status PIX: "${statusAntigo}" ➔ "${novoStatus}" (Camisa Nº ${socio.numeroCamisa || '—'})`
+      );
+
       try {
         await fetch(`/api/socios/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ statusPagamento: novoStatus })
+          body: JSON.stringify({ statusPagamento: novoStatus, aprovadoPor, _auditoria: audit })
         });
       } catch (e) {}
       saveLocalBackup();
       renderAll();
-      showToast(`Status do sócio ${socio.nome} atualizado para: ${novoStatus}`);
+      showToast(`Status do sócio ${socio.nome} atualizado por ${dirNome}: ${novoStatus}`);
     });
   });
 
@@ -594,14 +808,35 @@ function renderAdminSociosTable() {
 
   tbody.querySelectorAll('[data-del-socio]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (!hasPerm('excluirSocio')) {
+        showToast('🚫 Apenas usuários com permissão de exclusão podem remover sócios.');
+        return;
+      }
       const id = btn.getAttribute('data-del-socio');
+      const socio = appState.socios.find(x => x.id === id);
+      if (!socio) return;
+      const ok = window.confirm(
+        `Tem certeza que deseja EXCLUIR o cadastro do sócio "${socio.nome}"?\n\nEsta exclusão ficará registrada no Histórico de Auditoria em nome de ${currentAdminUser?.nome || 'Diretoria'}.`
+      );
+      if (!ok) return;
+
+      const audit = buildAuditPayload(
+        'Exclusão de Sócio',
+        `Excluiu o cadastro do sócio ${socio.nome}`,
+        `CPF: ${socio.cpf} | Camisa Nº ${socio.numeroCamisa || '—'} | Status era: ${socio.statusPagamento}`
+      );
+
       appState.socios = appState.socios.filter(x => x.id !== id);
       try {
-        await fetch(`/api/socios/${id}`, { method: 'DELETE' });
+        await fetch(`/api/socios/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _auditoria: audit })
+        });
       } catch (e) {}
       saveLocalBackup();
       renderAll();
-      showToast('Cadastro de sócio removido.');
+      showToast('Cadastro de sócio removido e registrado na auditoria.');
     });
   });
 }
@@ -639,12 +874,21 @@ function renderAdminCaravanasInscritosTable() {
     return;
   }
 
+  const canPixCar = hasPerm('aprovarPixCaravana');
+  const canDelCar = hasPerm('excluirPassageiroCaravana');
+
   tbody.innerHTML = filtrados.map((i) => {
     const isPaid = i.statusPix === 'PIX Confirmado';
     const cleanPhone = (i.whatsapp || '').replace(/\D/g, '');
     const waLink = `https://api.whatsapp.com/send?phone=55${cleanPhone.replace(/^55/, '')}&text=${encodeURIComponent(
       `Salve ${i.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} sobre sua reserva na caravana "${i.caravanaTitulo}" (${i.onibusEscolhido}).`
     )}`;
+    const aprovadoCarHtml = i.aprovadoPor
+      ? `<div style="font-size:0.72rem; color:#047857; margin-top:4px; line-height:1.25;">
+           👤 Por: <strong>${i.aprovadoPor.nome}</strong><br>
+           <span>${formatDateTimeBR(i.aprovadoPor.dataHora)}</span>
+         </div>`
+      : '';
 
     return `
       <tr>
@@ -671,18 +915,23 @@ function renderAdminCaravanasInscritosTable() {
           <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
             ${i.statusPix}
           </span>
+          ${aprovadoCarHtml}
         </td>
         <td>
           <div class="action-btns">
-            <button type="button" class="btn-table btn-approve" data-toggle-car-ins="${i.id}">
-              ${isPaid ? 'Pendente' : '✔ Confirmar PIX'}
-            </button>
+            ${canPixCar ? `
+              <button type="button" class="btn-table btn-approve" data-toggle-car-ins="${i.id}">
+                ${isPaid ? 'Pendente' : '✔ Confirmar PIX'}
+              </button>
+            ` : ''}
             <a href="${waLink}" target="_blank" rel="noopener" class="btn-table btn-wa">
               💬 WhatsApp
             </a>
-            <button type="button" class="btn-table btn-del" data-del-car-ins="${i.id}">
-              🗑️
-            </button>
+            ${canDelCar ? `
+              <button type="button" class="btn-table btn-del" data-del-car-ins="${i.id}">
+                🗑️
+              </button>
+            ` : ''}
           </div>
         </td>
       </tr>
@@ -691,35 +940,71 @@ function renderAdminCaravanasInscritosTable() {
 
   tbody.querySelectorAll('[data-toggle-car-ins]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (!hasPerm('aprovarPixCaravana')) return;
       const id = btn.getAttribute('data-toggle-car-ins');
       const item = appState.inscricoesCaravana.find(x => x.id === id);
       if (!item) return;
-      const novoStatus = item.statusPix === 'PIX Confirmado' ? 'Aguardando PIX' : 'PIX Confirmado';
+      const statusAntigo = item.statusPix;
+      const novoStatus = statusAntigo === 'PIX Confirmado' ? 'Aguardando PIX' : 'PIX Confirmado';
+      const dirNome = currentAdminUser ? currentAdminUser.nome : 'Diretoria';
+
+      const ok = window.confirm(
+        `Confirmar alteração do PIX do passageiro "${item.nome}" para "${novoStatus}"?\n\nEsta ação ficará registrada em seu usuário: ${dirNome}.`
+      );
+      if (!ok) return;
+
+      const aprovadoPor = {
+        nome: dirNome,
+        usuario: currentAdminUser ? currentAdminUser.usuario : 'diretoria',
+        dataHora: new Date().toISOString(),
+        status: novoStatus
+      };
       item.statusPix = novoStatus;
+      item.aprovadoPor = aprovadoPor;
+
+      const audit = buildAuditPayload(
+        'PIX Caravana',
+        `Alterou status PIX do passageiro ${item.nome} na caravana "${item.caravanaTitulo}"`,
+        `Status PIX: "${statusAntigo}" ➔ "${novoStatus}" (${item.onibusEscolhido})`
+      );
+
       try {
         await fetch(`/api/inscricoes-caravana/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ statusPix: novoStatus })
+          body: JSON.stringify({ statusPix: novoStatus, aprovadoPor, _auditoria: audit })
         });
       } catch (e) {}
       saveLocalBackup();
       renderAll();
-      showToast(`Status do passageiro ${item.nome} atualizado para: ${novoStatus}`);
+      showToast(`Status do passageiro ${item.nome} atualizado por ${dirNome}: ${novoStatus}`);
     });
   });
 
   tbody.querySelectorAll('[data-del-car-ins]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (!hasPerm('excluirPassageiroCaravana')) return;
       const id = btn.getAttribute('data-del-car-ins');
       const target = appState.inscricoesCaravana.find(x => x.id === id);
-      if (target) {
-        const car = appState.caravanas.find(c => c.id === target.caravanaId);
-        if (car && car.vagasOcupadas > 0) car.vagasOcupadas -= 1;
-      }
+      if (!target) return;
+      const ok = window.confirm(`Deseja remover o passageiro "${target.nome}" da lista da caravana?`);
+      if (!ok) return;
+
+      const audit = buildAuditPayload(
+        'PIX Caravana',
+        `Removeu o passageiro ${target.nome} da caravana "${target.caravanaTitulo}"`,
+        `Doc: ${target.documento} | Ônibus: ${target.onibusEscolhido} | Status era: ${target.statusPix}`
+      );
+
+      const car = appState.caravanas.find(c => c.id === target.caravanaId);
+      if (car && car.vagasOcupadas > 0) car.vagasOcupadas -= 1;
       appState.inscricoesCaravana = appState.inscricoesCaravana.filter(x => x.id !== id);
       try {
-        await fetch(`/api/inscricoes-caravana/${id}`, { method: 'DELETE' });
+        await fetch(`/api/inscricoes-caravana/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _auditoria: audit })
+        });
       } catch (e) {}
       saveLocalBackup();
       renderAll();
@@ -731,6 +1016,7 @@ function renderAdminCaravanasInscritosTable() {
 function renderAdminManageCaravanasList() {
   const list = document.getElementById('adminManageCaravanasList');
   if (!list) return;
+  const canManage = hasPerm('gerenciarCaravanas');
   list.innerHTML = appState.caravanas.map((c) => `
     <div class="manage-item">
       <div>
@@ -738,23 +1024,278 @@ function renderAdminManageCaravanasList() {
         <small>${c.adversario} • ${formatDateBR(c.dataJogo)} • Sócio TGA: ${formatBRL(c.valorSocio)} / Não-Sócio: ${formatBRL(c.valorNaoSocio)}</small>
       </div>
       <div class="action-btns">
-        <button type="button" class="btn-table btn-del" data-del-caravana="${c.id}">Excluir</button>
+        ${canManage ? `<button type="button" class="btn-table btn-del" data-del-caravana="${c.id}">Excluir</button>` : ''}
       </div>
     </div>
   `).join('');
 
   list.querySelectorAll('[data-del-caravana]').forEach((btn) => {
     btn.addEventListener('click', async () => {
+      if (!hasPerm('gerenciarCaravanas')) return;
       const id = btn.getAttribute('data-del-caravana');
+      const car = appState.caravanas.find(c => c.id === id);
+      if (!car) return;
+      const ok = window.confirm(`Deseja excluir a caravana "${car.jogo}"?`);
+      if (!ok) return;
+
+      const audit = buildAuditPayload(
+        'Caravanas',
+        `Excluiu a caravana "${car.jogo}"`,
+        `Data: ${formatDateBR(car.dataJogo)} | Adversário: ${car.adversario}`
+      );
+
       appState.caravanas = appState.caravanas.filter(c => c.id !== id);
       try {
-        await fetch(`/api/caravanas/${id}`, { method: 'DELETE' });
+        await fetch(`/api/caravanas/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _auditoria: audit })
+        });
       } catch (e) {}
       saveLocalBackup();
       renderAll();
       showToast('Caravana removida.');
     });
   });
+}
+
+function renderAdminDiretoresList() {
+  const container = document.getElementById('adminDiretoresList');
+  if (!container) return;
+  ensureClientState(appState);
+
+  const permLabels = [
+    { key: 'aprovarPixSocio', label: '✔ Confirmar PIX de Sócios' },
+    { key: 'editarSocio', label: '✏️ Editar Ficha de Sócio' },
+    { key: 'excluirSocio', label: '🗑️ Excluir Cadastro de Sócio' },
+    { key: 'aprovarPixCaravana', label: '🚌 Confirmar PIX Caravana' },
+    { key: 'excluirPassageiroCaravana', label: '🚫 Remover Passageiro Caravana' },
+    { key: 'gerenciarCaravanas', label: '➕ Criar/Excluir Caravanas' },
+    { key: 'exportarPlanilhas', label: '📥 Baixar Planilhas Excel' }
+  ];
+
+  container.innerHTML = appState.usuariosDiretoria.map((d) => {
+    if (d.isMaster) {
+      return `
+        <div class="manage-item" style="flex-direction:column; align-items:stretch; gap:8px; background:#ecfdf5; border:2px solid #10b981;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <strong style="color:#065f46; font-size:1rem;">👑 ${d.nome}</strong>
+              <span class="status-badge status-paid" style="margin-left:6px;">MASTER PRINCIPAL</span><br>
+              <small>Usuário de login: <strong>${d.usuario}</strong> (ou <strong>master</strong>) • Senha atual: <code>${d.senha}</code></small>
+            </div>
+            <button type="button" class="btn-table btn-approve" data-change-pass-dir="${d.id}">
+              🔑 Alterar Senha Master
+            </button>
+          </div>
+          <small style="color:#047857;">Possui todas as permissões liberadas permanentemente e controle sobre todos os diretores.</small>
+        </div>
+      `;
+    }
+
+    const p = d.permissoes || {};
+    const isAtivo = d.ativo !== false;
+
+    return `
+      <div class="manage-item" style="flex-direction:column; align-items:stretch; gap:10px; opacity:${isAtivo ? '1' : '0.68'};">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+          <div>
+            <strong style="font-size:0.98rem;">👤 ${d.nome}</strong>
+            <span class="status-badge ${isAtivo ? 'status-paid' : 'status-pending'}" style="margin-left:6px;">
+              ${isAtivo ? 'Acesso Ativo' : 'Bloqueado'}
+            </span><br>
+            <small>Cargo: <strong>${d.cargo || 'Diretor'}</strong> • Login: <code>${d.usuario}</code> • Senha: <code>${d.senha}</code></small>
+          </div>
+          <div class="action-btns">
+            <button type="button" class="btn-table" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;" data-change-pass-dir="${d.id}">
+              🔑 Senha
+            </button>
+            <button type="button" class="btn-table btn-approve" data-toggle-active-dir="${d.id}">
+              ${isAtivo ? '🚫 Bloquear' : '✅ Liberar'}
+            </button>
+            <button type="button" class="btn-table btn-del" data-del-dir="${d.id}">
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px;">
+          <div style="font-size:0.76rem; font-weight:700; color:#475569; margin-bottom:6px; text-transform:uppercase;">
+            Permissões deste Diretor (Clique para ativar/desativar na hora):
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr)); gap:6px; font-size:0.82rem;">
+            ${permLabels.map((item) => `
+              <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <input type="checkbox" data-perm-dir="${d.id}" data-perm-key="${item.key}" ${p[item.key] ? 'checked' : ''} />
+                <span>${item.label}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Eventos de ligar/desligar permissão em tempo real
+  container.querySelectorAll('[data-perm-dir]').forEach((checkbox) => {
+    checkbox.addEventListener('change', async () => {
+      const dirId = checkbox.getAttribute('data-perm-dir');
+      const permKey = checkbox.getAttribute('data-perm-key');
+      const dir = appState.usuariosDiretoria.find(u => u.id === dirId);
+      if (!dir || dir.isMaster) return;
+
+      dir.permissoes = dir.permissoes || {};
+      const novoValor = checkbox.checked;
+      dir.permissoes[permKey] = novoValor;
+
+      const audit = buildAuditPayload(
+        'Diretoria',
+        `${novoValor ? 'Liberou' : 'Removeu'} permissão "${permKey}" do diretor ${dir.nome} (@${dir.usuario})`,
+        `Permissão ${permKey}: ${novoValor ? 'ATIVADA' : 'DESATIVADA'}`
+      );
+
+      try {
+        await fetch(`/api/diretores/${dirId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ permissoes: dir.permissoes, _auditoria: audit })
+        });
+      } catch (e) {}
+      saveLocalBackup();
+      renderAdminAuditoriaTable();
+      showToast(`✅ Permissão de ${dir.nome} atualizada!`);
+    });
+  });
+
+  // Trocar senha de um diretor (ou Master)
+  container.querySelectorAll('[data-change-pass-dir]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const dirId = btn.getAttribute('data-change-pass-dir');
+      const dir = appState.usuariosDiretoria.find(u => u.id === dirId);
+      if (!dir) return;
+      const novaSenha = window.prompt(`Digite a nova senha para ${dir.nome} (@${dir.usuario}):`, dir.senha);
+      if (!novaSenha || !novaSenha.trim()) return;
+      dir.senha = novaSenha.trim();
+      if (dir.isMaster) {
+        appState.config.senhaAdmin = dir.senha;
+      }
+
+      const audit = buildAuditPayload(
+        'Diretoria',
+        `Alterou a senha de acesso de ${dir.nome} (@${dir.usuario})`,
+        `Credencial atualizada pelo Master`
+      );
+
+      try {
+        await fetch(`/api/diretores/${dirId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ senha: dir.senha, _auditoria: audit })
+        });
+      } catch (e) {}
+      saveLocalBackup();
+      renderAdminDashboard();
+      showToast(`🔑 Nova senha salva para ${dir.nome}!`);
+    });
+  });
+
+  // Bloquear / Desbloquear diretor
+  container.querySelectorAll('[data-toggle-active-dir]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const dirId = btn.getAttribute('data-toggle-active-dir');
+      const dir = appState.usuariosDiretoria.find(u => u.id === dirId);
+      if (!dir || dir.isMaster) return;
+      dir.ativo = dir.ativo === false ? true : false;
+
+      const audit = buildAuditPayload(
+        'Diretoria',
+        `${dir.ativo ? 'Desbloqueou' : 'Bloqueou'} o acesso do diretor ${dir.nome} (@${dir.usuario})`,
+        `Status da conta: ${dir.ativo ? 'Ativo' : 'Bloqueado'}`
+      );
+
+      try {
+        await fetch(`/api/diretores/${dirId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ativo: dir.ativo, _auditoria: audit })
+        });
+      } catch (e) {}
+      saveLocalBackup();
+      renderAdminDashboard();
+      showToast(`${dir.ativo ? '✅ Acesso liberado' : '🚫 Acesso bloqueado'} para ${dir.nome}.`);
+    });
+  });
+
+  // Excluir diretor
+  container.querySelectorAll('[data-del-dir]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const dirId = btn.getAttribute('data-del-dir');
+      const dir = appState.usuariosDiretoria.find(u => u.id === dirId);
+      if (!dir || dir.isMaster) return;
+      const ok = window.confirm(`Tem certeza que deseja excluir o usuário do diretor "${dir.nome}" (@${dir.usuario})?`);
+      if (!ok) return;
+
+      const audit = buildAuditPayload(
+        'Diretoria',
+        `Excluiu a credencial do diretor ${dir.nome} (@${dir.usuario})`,
+        `Cargo: ${dir.cargo}`
+      );
+
+      appState.usuariosDiretoria = appState.usuariosDiretoria.filter(u => u.id !== dirId);
+      try {
+        await fetch(`/api/diretores/${dirId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ _auditoria: audit })
+        });
+      } catch (e) {}
+      saveLocalBackup();
+      renderAdminDashboard();
+      showToast(`🗑️ Credencial de ${dir.nome} removida.`);
+    });
+  });
+}
+
+function renderAdminAuditoriaTable() {
+  const tbody = document.getElementById('adminAuditoriaTableBody');
+  if (!tbody) return;
+  const query = (document.getElementById('searchAuditoriaInput')?.value || '').toLowerCase();
+  const catFilter = document.getElementById('filterAuditoriaCategoria')?.value || 'todas';
+
+  const logs = Array.isArray(appState.auditoriaLogs) ? appState.auditoriaLogs : [];
+  const filtrados = logs.filter((l) => {
+    const matchCat = catFilter === 'todas' || l.categoria === catFilter;
+    const text = `${l.diretorNome} ${l.diretorUsuario} ${l.categoria} ${l.acao} ${l.detalhes}`.toLowerCase();
+    return matchCat && text.includes(query);
+  });
+
+  if (filtrados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;">Nenhum registro de alteração até o momento. Toda aprovação de PIX ou edição de dados aparecerá aqui com nome do diretor, data e hora!</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtrados.map((l) => `
+    <tr>
+      <td style="white-space:nowrap;">
+        <strong>${formatDateTimeBR(l.dataHora)}</strong>
+      </td>
+      <td>
+        <strong>👤 ${l.diretorNome}</strong><br>
+        <small>@${l.diretorUsuario}</small>
+      </td>
+      <td>
+        <span class="status-badge status-paid" style="background:#e0f2fe;color:#0369a1;">
+          ${l.categoria}
+        </span>
+      </td>
+      <td>
+        <strong>${l.acao}</strong>
+      </td>
+      <td>
+        <small style="color:#334155; font-size:0.83rem;">${l.detalhes || '—'}</small>
+      </td>
+    </tr>
+  `).join('');
 }
 
 function populateAdminConfigForm() {
@@ -1043,9 +1584,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('formEditSocio')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!hasPerm('editarSocio')) {
+      showToast('🚫 Você não tem permissão para editar dados de sócios.');
+      return;
+    }
     const id = document.getElementById('editSocId').value;
     const idx = appState.socios.findIndex(s => s.id === id);
     if (idx === -1) return;
+
+    const oldSocio = appState.socios[idx];
+    const canApprovePix = hasPerm('aprovarPixSocio');
 
     const updates = {
       nome: document.getElementById('editSocNome').value.trim(),
@@ -1060,24 +1608,76 @@ document.addEventListener('DOMContentLoaded', () => {
       tamanhoCamisa: document.getElementById('editSocCamisa').value,
       numeroCamisa: document.getElementById('editSocNumeroCamisa').value.trim(),
       tipoSanguineo: document.getElementById('editSocSangue').value,
-      valorPlano: Number(document.getElementById('editSocValor').value) || 35,
-      statusPagamento: document.getElementById('editSocStatus').value,
+      valorPlano: canApprovePix ? (Number(document.getElementById('editSocValor').value) || 35) : oldSocio.valorPlano,
+      statusPagamento: canApprovePix ? document.getElementById('editSocStatus').value : oldSocio.statusPagamento,
       observacoes: document.getElementById('editSocObs').value.trim()
     };
 
-    appState.socios[idx] = { ...appState.socios[idx], ...updates };
+    const fieldMap = [
+      { key: 'nome', label: 'Nome' },
+      { key: 'apelido', label: 'Apelido' },
+      { key: 'cpf', label: 'CPF' },
+      { key: 'rg', label: 'RG' },
+      { key: 'dataNascimento', label: 'Nascimento' },
+      { key: 'whatsapp', label: 'WhatsApp' },
+      { key: 'pelotao', label: 'Bairro' },
+      { key: 'cidade', label: 'Cidade' },
+      { key: 'tamanhoCamisa', label: 'Tamanho Camisa' },
+      { key: 'numeroCamisa', label: 'Nº Camiseta' },
+      { key: 'tipoSanguineo', label: 'Sangue' },
+      { key: 'valorPlano', label: 'Valor' },
+      { key: 'statusPagamento', label: 'Status PIX' },
+      { key: 'observacoes', label: 'Obs' }
+    ];
+
+    const diffs = [];
+    fieldMap.forEach(({ key, label }) => {
+      const before = String(oldSocio[key] ?? '');
+      const after = String(updates[key] ?? '');
+      if (before !== after) {
+        diffs.push(`${label}: "${before || '—'}" ➔ "${after || '—'}"`);
+      }
+    });
+
+    const dirNome = currentAdminUser ? currentAdminUser.nome : 'Diretoria';
+    const dirUsuario = currentAdminUser ? currentAdminUser.usuario : 'diretoria';
+    const resumoMudancas = diffs.length > 0 ? diffs.join(' | ') : 'Dados salvos sem alteração de valores';
+
+    updates.ultimaEdicao = {
+      nome: dirNome,
+      usuario: dirUsuario,
+      dataHora: new Date().toISOString(),
+      resumo: resumoMudancas
+    };
+
+    if (oldSocio.statusPagamento !== updates.statusPagamento) {
+      updates.aprovadoPor = {
+        nome: dirNome,
+        usuario: dirUsuario,
+        dataHora: new Date().toISOString(),
+        status: updates.statusPagamento
+      };
+    }
+
+    const audit = buildAuditPayload(
+      oldSocio.statusPagamento !== updates.statusPagamento ? 'PIX Sócio' : 'Edição de Sócio',
+      `Editou ficha do sócio ${updates.nome}`,
+      resumoMudancas
+    );
+
+    appState.socios[idx] = { ...oldSocio, ...updates };
     try {
       await fetch(`/api/socios/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates)
+        body: JSON.stringify({ ...updates, _auditoria: audit })
       });
     } catch (err) {}
 
     saveLocalBackup();
     document.getElementById('modalEditSocio').hidden = true;
     renderAll();
-    showToast(`✅ Dados do sócio ${updates.nome} atualizados com sucesso!`);
+    showToast(`✅ Dados do sócio ${updates.nome} atualizados por ${dirNome}!`);
   });
 
   // Fechar Modal de Sucesso
@@ -1091,55 +1691,103 @@ document.addEventListener('DOMContentLoaded', () => {
   ['btnOpenAdmin', 'btnFooterAdmin'].forEach((id) => {
     document.getElementById(id)?.addEventListener('click', () => {
       document.getElementById('modalAdmin').hidden = false;
-      if (isAdminAuthenticated) {
+      if (isAdminAuthenticated && currentAdminUser) {
         renderAdminDashboard();
       } else {
+        const userInput = document.getElementById('adminUsernameInput');
         const passInput = document.getElementById('adminPasswordInput');
-        if (passInput) {
-          passInput.value = '';
-          passInput.focus();
-        }
+        if (passInput) passInput.value = '';
+        if (userInput) userInput.focus();
       }
     });
   });
 
-  document.getElementById('btnCloseAdmin')?.addEventListener('click', () => {
-    document.getElementById('modalAdmin').hidden = true;
+  function logoutAdminSession() {
     isAdminAuthenticated = false;
+    currentAdminUser = null;
     document.getElementById('adminLoginView').hidden = false;
     document.getElementById('adminDashboardView').hidden = true;
     const passInput = document.getElementById('adminPasswordInput');
     if (passInput) passInput.value = '';
+    // Volta para a primeira aba por padrão
+    document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('btnTabSocios')?.classList.add('active');
+    ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-config'].forEach((panelId) => {
+      const el = document.getElementById(panelId);
+      if (el) el.hidden = panelId !== 'tab-socios';
+    });
+  }
+
+  document.getElementById('btnLogoutAdmin')?.addEventListener('click', () => {
+    logoutAdminSession();
+    showToast('🔒 Sessão encerrada. Faça login com seu usuário de diretor.');
   });
 
-  // Login no Painel Admin (Estrito: sem senhas antigas ou dicas públicas)
+  document.getElementById('btnCloseAdmin')?.addEventListener('click', () => {
+    document.getElementById('modalAdmin').hidden = true;
+    logoutAdminSession();
+  });
+
+  // Login no Painel Admin por Usuário + Senha (Master + Diretores Individuais)
   document.getElementById('formAdminLogin')?.addEventListener('submit', (e) => {
     e.preventDefault();
+    ensureClientState(appState);
+    const userInput = document.getElementById('adminUsernameInput');
     const passInput = document.getElementById('adminPasswordInput');
-    const pass = passInput.value.trim();
-    const savedPass = String(appState.config.senhaAdmin || 'Tga@2015');
-    const validPass = savedPass === '2015' ? 'Tga@2015' : savedPass;
-    if (pass === validPass) {
+    const loginTyped = (userInput?.value || '').trim().toLowerCase();
+    const passTyped = (passInput?.value || '').trim();
+
+    const matchedUser = appState.usuariosDiretoria.find((u) => {
+      const uLogin = String(u.usuario || '').toLowerCase();
+      if (u.isMaster && (loginTyped === uLogin || loginTyped === 'jully' || loginTyped === 'master' || loginTyped === 'admin')) {
+        return true;
+      }
+      return uLogin === loginTyped;
+    });
+
+    if (!matchedUser) {
+      if (passInput) passInput.value = '';
+      showToast('❌ Usuário não encontrado! Verifique seu login com o Administrador Master.');
+      return;
+    }
+
+    if (matchedUser.ativo === false && !matchedUser.isMaster) {
+      if (passInput) passInput.value = '';
+      showToast('🚫 Seu usuário de diretor está bloqueado pelo Administrador Master.');
+      return;
+    }
+
+    const expectedPass = matchedUser.isMaster
+      ? ((appState.config.senhaAdmin && appState.config.senhaAdmin !== '2015') ? appState.config.senhaAdmin : 'Tga@2015')
+      : String(matchedUser.senha || '');
+
+    if (passTyped === expectedPass) {
       isAdminAuthenticated = true;
-      passInput.value = '';
+      currentAdminUser = matchedUser;
+      if (passInput) passInput.value = '';
       document.getElementById('adminLoginView').hidden = true;
       document.getElementById('adminDashboardView').hidden = false;
       renderAdminDashboard();
-      showToast('🔓 Bem-vindo ao Painel da Diretoria TGA!');
+      showToast(`🔓 Bem-vindo(a), ${matchedUser.nome}!`);
     } else {
-      passInput.value = '';
-      showToast('❌ Senha incorreta! Acesso restrito exclusivamente à Diretoria da TGA.');
+      if (passInput) passInput.value = '';
+      showToast('❌ Senha incorreta para este usuário!');
     }
   });
 
   // Troca de Abas no Admin
   document.querySelectorAll('.admin-tab').forEach((tabBtn) => {
     tabBtn.addEventListener('click', () => {
+      const targetId = tabBtn.getAttribute('data-tab');
+      if ((targetId === 'tab-diretores' || targetId === 'tab-auditoria' || targetId === 'tab-config') && !(currentAdminUser && currentAdminUser.isMaster)) {
+        showToast('🚫 Esta aba é exclusiva do Usuário Master.');
+        return;
+      }
       document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
       tabBtn.classList.add('active');
-      const targetId = tabBtn.getAttribute('data-tab');
-      ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-config'].forEach((panelId) => {
-        document.getElementById(panelId).hidden = panelId !== targetId;
+      ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-config'].forEach((panelId) => {
+        const panel = document.getElementById(panelId);
+        if (panel) panel.hidden = panelId !== targetId;
       });
     });
   });
@@ -1149,18 +1797,100 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filterSociosStatus')?.addEventListener('change', renderAdminSociosTable);
   document.getElementById('filterCaravanaSelect')?.addEventListener('change', renderAdminCaravanasInscritosTable);
   document.getElementById('searchCaravanaInscritos')?.addEventListener('input', renderAdminCaravanasInscritosTable);
+  document.getElementById('searchAuditoriaInput')?.addEventListener('input', renderAdminAuditoriaTable);
+  document.getElementById('filterAuditoriaCategoria')?.addEventListener('change', renderAdminAuditoriaTable);
+
+  // Cadastrar Novo Diretor (Exclusivo Master)
+  document.getElementById('formNovoDiretor')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentAdminUser || !currentAdminUser.isMaster) {
+      showToast('🚫 Apenas o Usuário Master pode cadastrar diretores.');
+      return;
+    }
+
+    const nome = document.getElementById('dirNome').value.trim();
+    const cargo = document.getElementById('dirCargo').value.trim();
+    const usuario = document.getElementById('dirUsuario').value.trim().toLowerCase().replace(/\s+/g, '');
+    const senha = document.getElementById('dirSenha').value.trim();
+
+    if (appState.usuariosDiretoria.some(u => String(u.usuario || '').toLowerCase() === usuario)) {
+      showToast('⚠️ Já existe um diretor cadastrado com esse nome de usuário!');
+      return;
+    }
+
+    const permissoes = {
+      aprovarPixSocio: document.getElementById('permAprovarPixSocio').checked,
+      editarSocio: document.getElementById('permEditarSocio').checked,
+      excluirSocio: document.getElementById('permExcluirSocio').checked,
+      aprovarPixCaravana: document.getElementById('permAprovarPixCaravana').checked,
+      excluirPassageiroCaravana: document.getElementById('permExcluirPassageiroCaravana').checked,
+      gerenciarCaravanas: document.getElementById('permGerenciarCaravanas').checked,
+      exportarPlanilhas: document.getElementById('permExportarPlanilhas').checked,
+      alterarConfiguracoes: false
+    };
+
+    const audit = buildAuditPayload(
+      'Diretoria',
+      `Cadastrou novo diretor: ${nome} (@${usuario})`,
+      `Cargo: ${cargo}`
+    );
+
+    const payload = { nome, cargo, usuario, senha, permissoes, _auditoria: audit };
+
+    try {
+      const res = await fetch('/api/diretores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.usuariosDiretoria)) {
+          appState.usuariosDiretoria = data.usuariosDiretoria;
+        }
+      } else {
+        throw new Error('Fallback local');
+      }
+    } catch (err) {
+      appState.usuariosDiretoria.push({
+        id: 'dir-' + Date.now(),
+        nome,
+        cargo,
+        usuario,
+        senha,
+        isMaster: false,
+        ativo: true,
+        permissoes,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    saveLocalBackup();
+    e.target.reset();
+    document.getElementById('permAprovarPixSocio').checked = true;
+    document.getElementById('permEditarSocio').checked = true;
+    document.getElementById('permAprovarPixCaravana').checked = true;
+    document.getElementById('permGerenciarCaravanas').checked = true;
+    document.getElementById('permExportarPlanilhas').checked = true;
+    renderAdminDashboard();
+    showToast(`👑 Credencial criada para ${nome}! Usuário: ${usuario}`);
+  });
 
   // Exportar Sócios CSV
   document.getElementById('btnExportSociosCsv')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
     const headers = [
       'Nº Camiseta', 'Matrícula', 'Nome Completo', 'Apelido', 'CPF', 'RG', 'Nascimento',
       'WhatsApp', 'E-mail', 'Setor/Bairro', 'Cidade', 'Camisa', 'Tipo Sanguíneo',
-      'Plano', 'Valor (R$)', 'Status PIX', 'Observações', 'Data Inscrição'
+      'Plano', 'Valor (R$)', 'Status PIX', 'PIX Confirmado Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
     ];
     const rows = appState.socios.map(s => [
       s.numeroCamisa || '', s.matricula, s.nome, s.apelido, s.cpf, s.rg, s.dataNascimento,
       s.whatsapp, s.email, s.pelotao, s.cidade, s.tamanhoCamisa, s.tipoSanguineo,
-      s.planoNome, s.valorPlano, s.statusPagamento, s.observacoes, formatDateBR(s.createdAt)
+      s.planoNome, s.valorPlano, s.statusPagamento,
+      s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : '',
+      s.ultimaEdicao ? `${s.ultimaEdicao.nome} (${formatDateTimeBR(s.ultimaEdicao.dataHora)})` : '',
+      s.observacoes, formatDateBR(s.createdAt)
     ]);
     downloadCsv(`socios_${appState.config.sigla.toLowerCase()}.csv`, headers, rows);
     showToast('📥 Planilha de Sócios TGA baixada com sucesso!');
@@ -1168,21 +1898,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Exportar Passageiros das Caravanas CSV
   document.getElementById('btnExportCaravanasCsv')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
     const headers = [
       'Caravana', 'Ônibus', 'Nome do Passageiro', 'Documento (RG/CPF)',
-      'WhatsApp', 'Setor/Bairro', 'Modalidade', 'Matrícula Sócio', 'Valor (R$)', 'Status PIX', 'Data Reserva'
+      'WhatsApp', 'Setor/Bairro', 'Modalidade', 'Matrícula Sócio', 'Valor (R$)', 'Status PIX', 'Confirmado Por', 'Data Reserva'
     ];
     const rows = appState.inscricoesCaravana.map(i => [
       i.caravanaTitulo, i.onibusEscolhido, i.nome, i.documento,
-      i.whatsapp, i.pelotao, i.tipoPassageiro, i.numeroMatricula, i.valorPago, i.statusPix, formatDateBR(i.createdAt)
+      i.whatsapp, i.pelotao, i.tipoPassageiro, i.numeroMatricula, i.valorPago, i.statusPix,
+      i.aprovadoPor ? `${i.aprovadoPor.nome} (${formatDateTimeBR(i.aprovadoPor.dataHora)})` : '',
+      formatDateBR(i.createdAt)
     ]);
     downloadCsv(`lista_passageiros_caravanas_${appState.config.sigla.toLowerCase()}.csv`, headers, rows);
     showToast('📥 Lista de Passageiros das Caravanas baixada!');
   });
 
+  // Exportar Relatório de Auditoria CSV
+  document.getElementById('btnExportAuditoriaCsv')?.addEventListener('click', () => {
+    const headers = ['Data e Hora', 'Diretor Responsável', 'Usuário', 'Categoria', 'Ação Realizada', 'Detalhes (Antes -> Depois)'];
+    const rows = (appState.auditoriaLogs || []).map(l => [
+      formatDateTimeBR(l.dataHora), l.diretorNome, l.diretorUsuario, l.categoria, l.acao, l.detalhes
+    ]);
+    downloadCsv(`auditoria_diretoria_${appState.config.sigla.toLowerCase()}.csv`, headers, rows);
+    showToast('📥 Relatório de Auditoria baixado com sucesso!');
+  });
+
   // Criar Nova Caravana pelo Admin
   document.getElementById('formNovaCaravana')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!hasPerm('gerenciarCaravanas')) {
+      showToast('🚫 Você não tem permissão para criar caravanas.');
+      return;
+    }
     const payload = {
       jogo: document.getElementById('newCarJogo').value.trim(),
       adversario: document.getElementById('newCarAdversario').value.trim(),
@@ -1196,11 +1943,17 @@ document.addEventListener('DOMContentLoaded', () => {
       incluiIngresso: document.getElementById('newCarIncluso').value.trim()
     };
 
+    const audit = buildAuditPayload(
+      'Caravanas',
+      `Publicou nova caravana: "${payload.jogo}"`,
+      `Data: ${formatDateBR(payload.dataJogo)} | Sócio: ${formatBRL(payload.valorSocio)} / Não-Sócio: ${formatBRL(payload.valorNaoSocio)}`
+    );
+
     try {
       const res = await fetch('/api/caravanas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, _auditoria: audit })
       });
       if (res.ok) {
         const nova = await res.json();
@@ -1227,6 +1980,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Salvar Configurações do Plano Único, PIX, WhatsApp, Instagram e Torcida
   document.getElementById('formAdminConfig')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!currentAdminUser || !currentAdminUser.isMaster) {
+      showToast('🚫 Apenas o Usuário Master pode alterar as configurações gerais.');
+      return;
+    }
     const planoAtual = getSinglePlan();
     const novoPlanoUnico = {
       ...planoAtual,
@@ -1248,12 +2005,19 @@ document.addEventListener('DOMContentLoaded', () => {
       planos: [novoPlanoUnico]
     };
 
+    const audit = buildAuditPayload(
+      'Configurações',
+      `Atualizou configurações gerais do portal TGA`,
+      `PIX: ${novasConfigs.chavePix} | WhatsApp: ${novasConfigs.whatsappDiretoria} | Valor Sócio: ${formatBRL(novoPlanoUnico.valor)}`
+    );
+
     appState.config = { ...appState.config, ...novasConfigs };
+    ensureClientState(appState);
     try {
       await fetch('/api/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(novasConfigs)
+        body: JSON.stringify({ ...novasConfigs, _auditoria: audit })
       });
     } catch (err) {}
 

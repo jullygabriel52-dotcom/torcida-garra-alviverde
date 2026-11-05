@@ -781,20 +781,35 @@
         <button type="button" class="modal-close" id="btnCloseAdmin">✕</button>
       </div>
 
-      <!-- TELA DE LOGIN DO ADMIN (RESTRITA À DIRETORIA, SEM EXIBIR A SENHA) -->
+      <!-- TELA DE LOGIN DO ADMIN (RESTRITA À DIRETORIA, POR USUÁRIO E SENHA) -->
       <div id="adminLoginView" class="admin-login-view">
         <div class="login-card">
-          <h3>🔒 Acesso Restrito — Diretoria Garra Alviverde</h3>
-          <p>Esta área é exclusiva para diretores autorizados da TGA. Digite sua credencial de acesso para gerenciar sócios, listas de caravanas e configurações.</p>
-          <form id="formAdminLogin" class="login-form-inline">
-            <input type="password" id="adminPasswordInput" placeholder="Digite a senha exclusiva da diretoria" autocomplete="current-password" required />
-            <button type="submit" class="btn btn-primary">Entrar no Painel</button>
+          <h3>🔒 Acesso Individual — Diretoria Garra Alviverde</h3>
+          <p>Digite seu <strong>Usuário</strong> e <strong>Senha</strong> de diretor. Todas as aprovações de PIX e edições de cadastros ficam registradas no nome do diretor responsável.</p>
+          <form id="formAdminLogin" style="display:flex; flex-direction:column; gap:12px; max-width:360px; margin:16px auto 0;">
+            <input type="text" id="adminUsernameInput" placeholder="Seu Usuário (Ex: jully)" autocomplete="username" required style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:0.95rem;" />
+            <input type="password" id="adminPasswordInput" placeholder="Sua Senha de Acesso" autocomplete="current-password" required style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:0.95rem;" />
+            <button type="submit" class="btn btn-primary btn-block">Entrar no Painel da Diretoria</button>
           </form>
         </div>
       </div>
 
       <!-- CONTEÚDO DO PAINEL ADMIN -->
       <div id="adminDashboardView" class="admin-dashboard-view" hidden>
+        <!-- BARRA DO DIRETOR LOGADO -->
+        <div id="adminLoggedBanner" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:12px 16px; margin-bottom:16px;">
+          <div>
+            <strong id="adminLoggedName" style="color:#065f46; font-size:0.98rem;">👑 Jully Gabriel (Master)</strong>
+            <span id="adminLoggedRoleBadge" style="display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:700; background:#047857; color:#fff;">ACESSO MASTER TOTAL</span>
+            <div id="adminLoggedPermsSummary" style="font-size:0.8rem; color:#047857; margin-top:3px;">
+              Todas as ações realizadas nesta sessão são registradas em seu usuário.
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnLogoutAdmin">
+            🚪 Trocar Usuário / Sair
+          </button>
+        </div>
+
         <!-- KPI CARDS -->
         <div class="admin-kpis">
           <div class="kpi-card">
@@ -817,16 +832,22 @@
 
         <!-- ABAS DO ADMIN -->
         <div class="admin-tabs">
-          <button type="button" class="admin-tab active" data-tab="tab-socios">
+          <button type="button" class="admin-tab active" data-tab="tab-socios" id="btnTabSocios">
             🪪 Inscritos Sócio TGA (<span id="tabCountSocios">0</span>)
           </button>
-          <button type="button" class="admin-tab" data-tab="tab-caravanas-inscritos">
+          <button type="button" class="admin-tab" data-tab="tab-caravanas-inscritos" id="btnTabCaravanasInscritos">
             🚌 Inscritos nas Caravanas (<span id="tabCountCaravanas">0</span>)
           </button>
-          <button type="button" class="admin-tab" data-tab="tab-gerenciar-caravanas">
+          <button type="button" class="admin-tab" data-tab="tab-gerenciar-caravanas" id="btnTabGerenciarCaravanas">
             ➕ Criar / Editar Caravanas E.C.R.V.
           </button>
-          <button type="button" class="admin-tab" data-tab="tab-config">
+          <button type="button" class="admin-tab" data-tab="tab-diretores" id="btnTabDiretores">
+            👑 Diretores & Permissões (<span id="tabCountDiretores">1</span>)
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-auditoria" id="btnTabAuditoria">
+            🕵️‍♂️ Auditoria / Histórico (<span id="tabCountAuditoria">0</span>)
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-config" id="btnTabConfig">
             ⚙️ Configurar Plano Único, PIX e WhatsApp
           </button>
         </div>
@@ -1051,6 +1072,132 @@
                 💾 Salvar Configurações da Garra Alviverde
               </button>
             </form>
+          </div>
+        </div>
+
+        <!-- ABA 5: GESTÃO DE DIRETORES & PERMISSÕES (EXCLUSIVO MASTER) -->
+        <div class="admin-tab-panel" id="tab-diretores" hidden>
+          <div class="admin-split-grid">
+            <div class="admin-subcard">
+              <h3>👑 Criar Credencial de Diretor TGA</h3>
+              <p class="admin-helper-text">
+                Crie um usuário e senha individual para cada membro da Diretoria e escolha abaixo exatamente o que ele terá permissão para fazer no painel.
+              </p>
+              <form id="formNovoDiretor">
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label for="dirNome">Nome do Diretor (Aparece nas Aprovações) *</label>
+                    <input type="text" id="dirNome" required placeholder="Ex: Carlos da Garra" />
+                  </div>
+                  <div class="form-group">
+                    <label for="dirCargo">Cargo / Função na Diretoria *</label>
+                    <input type="text" id="dirCargo" required placeholder="Ex: Tesoureiro / Diretor de Caravanas" />
+                  </div>
+                </div>
+
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label for="dirUsuario">Usuário para Login (Sem espaços) *</label>
+                    <input type="text" id="dirUsuario" required placeholder="Ex: carlos" />
+                  </div>
+                  <div class="form-group">
+                    <label for="dirSenha">Senha de Acesso deste Diretor *</label>
+                    <input type="text" id="dirSenha" required placeholder="Ex: Carlos@2026" />
+                  </div>
+                </div>
+
+                <div class="form-group" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-bottom:16px;">
+                  <label style="display:block; font-weight:700; color:#0f172a; margin-bottom:10px;">
+                    🛡️ Permissões Liberadas para este Diretor:
+                  </label>
+                  <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:0.9rem;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+                      <input type="checkbox" id="permAprovarPixSocio" checked />
+                      <span>✔ Pode confirmar / alterar Status de Pagamento PIX de <strong>Sócios</strong></span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+                      <input type="checkbox" id="permEditarSocio" checked />
+                      <span>✏️ Pode editar dados cadastrais na Ficha de <strong>Sócio</strong></span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+                      <input type="checkbox" id="permExcluirSocio" />
+                      <span>🗑️ Pode excluir cadastros de <strong>Sócios</strong> (Recomendado deixar desmarcado)</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+                      <input type="checkbox" id="permAprovarPixCaravana" checked />
+                      <span>🚌 Pode confirmar PIX de passageiros nas <strong>Caravanas</strong></span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+                      <input type="checkbox" id="permExcluirPassageiroCaravana" />
+                      <span>🚫 Pode remover passageiros da lista de <strong>Caravanas</strong></span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+                      <input type="checkbox" id="permGerenciarCaravanas" checked />
+                      <span>➕ Pode criar e encerrar <strong>Caravanas do E.C.R.V.</strong></span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:500;">
+                      <input type="checkbox" id="permExportarPlanilhas" checked />
+                      <span>📥 Pode baixar planilhas em <strong>Excel / CSV</strong></span>
+                    </label>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                  ➕ Cadastrar Diretor e Liberar Credencial
+                </button>
+              </form>
+            </div>
+
+            <div class="admin-subcard">
+              <h3>👥 Diretores Cadastrados & Controle de Permissões</h3>
+              <p class="admin-helper-text">
+                Marque ou desmarque abaixo o que cada diretor pode fazer em tempo real, altere senhas ou bloqueie acessos:
+              </p>
+              <div id="adminDiretoresList" class="admin-manage-list" style="max-height:540px; overflow-y:auto;">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ABA 6: HISTÓRICO DE AUDITORIA / ALTERAÇÕES (EXCLUSIVO MASTER) -->
+        <div class="admin-tab-panel" id="tab-auditoria" hidden>
+          <div class="admin-toolbar">
+            <div class="admin-filters">
+              <input type="search" id="searchAuditoriaInput" placeholder="Buscar por nome do diretor, sócio alterado ou ação..." />
+              <select id="filterAuditoriaCategoria">
+                <option value="todas">Todas as Categorias</option>
+                <option value="PIX Sócio">PIX Sócio</option>
+                <option value="Edição de Sócio">Edição de Sócio</option>
+                <option value="Exclusão de Sócio">Exclusão de Sócio</option>
+                <option value="PIX Caravana">PIX Caravana</option>
+                <option value="Caravanas">Caravanas</option>
+                <option value="Diretoria">Credenciais da Diretoria</option>
+                <option value="Configurações">Configurações</option>
+              </select>
+            </div>
+            <div class="admin-export-btns">
+              <button type="button" class="btn btn-primary btn-sm" id="btnExportAuditoriaCsv">
+                📥 Baixar Relatório de Auditoria (Excel / CSV)
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Data e Hora</th>
+                  <th>Diretor Responsável</th>
+                  <th>Categoria</th>
+                  <th>Ação Realizada</th>
+                  <th>Detalhes (Antes ➔ Depois)</th>
+                </tr>
+              </thead>
+              <tbody id="adminAuditoriaTableBody">
+                <!-- Preenchido via JS -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

@@ -12,12 +12,14 @@ const NFT_FILES = [
   path.join(__dirname, 'app.js'),
   path.join(__dirname, 'logo-tga.jpg'),
   path.join(__dirname, 'escudo-ecrv.jpg'),
+  path.join(__dirname, 'qrcode-pix.jpg'),
   path.join(__dirname, 'db.json'),
   path.join(__dirname, 'public', 'index.html'),
   path.join(__dirname, 'public', 'styles.css'),
   path.join(__dirname, 'public', 'app.js'),
   path.join(__dirname, 'public', 'assets', 'logo-tga.jpg'),
   path.join(__dirname, 'public', 'assets', 'escudo-ecrv.jpg'),
+  path.join(__dirname, 'public', 'assets', 'qrcode-pix.jpg'),
   path.join(__dirname, 'data', 'db.json')
 ];
 
@@ -43,12 +45,12 @@ const DEFAULT_DB = {
     anoFundacao: '19/05/2015',
     instagramUrl: 'https://www.instagram.com/torcidagarraalviverde15/',
     instagramHandle: '@torcidagarraalviverde15',
-    whatsappDiretoria: '(64) 99220-9870',
+    whatsappDiretoria: '(64) 99330-2283',
     chavePix: 'torcidagarraalviverde@gmail.com',
     tipoChavePix: 'Chave PIX Oficial TGA (E-mail)',
     titularPix: 'TORCIDA ORGANIZADA GARRA ALVIVERDE - TGA',
     cidadePix: 'RIO VERDE - GO',
-    senhaAdmin: '2015',
+    senhaAdmin: 'Tga@2015',
     planos: [
       {
         id: 'socio-unico',

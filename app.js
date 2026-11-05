@@ -11,12 +11,12 @@ const FALLBACK_STATE = {
     anoFundacao: '19/05/2015',
     instagramUrl: 'https://www.instagram.com/torcidagarraalviverde15/',
     instagramHandle: '@torcidagarraalviverde15',
-    whatsappDiretoria: '(64) 99220-9870',
+    whatsappDiretoria: '(64) 99330-2283',
     chavePix: 'torcidagarraalviverde@gmail.com',
     tipoChavePix: 'Chave PIX Oficial TGA (E-mail)',
     titularPix: 'TORCIDA ORGANIZADA GARRA ALVIVERDE - TGA',
     cidadePix: 'RIO VERDE - GO',
-    senhaAdmin: '2015',
+    senhaAdmin: 'Tga@2015',
     planos: [
       {
         id: 'socio-unico',
@@ -192,59 +192,11 @@ function checkUrlWindowParam() {
   if (janela === 'historia') openFeatureWindow('windowHistoria');
 }
 
-// Gerador visual de QR Code em SVG para a chave PIX
-function renderPixQrSvg(textKey) {
+// Exibe o QR Code Oficial da Chave PIX da Torcida Garra Alviverde
+function renderPixQrSvg() {
   const container = document.getElementById('pixQrContainer');
   if (!container) return;
-
-  const size = 21;
-  let hash = 2166136261;
-  for (let i = 0; i < textKey.length; i++) {
-    hash ^= textKey.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  function isFinderPattern(r, c) {
-    const inTL = r < 7 && c < 7;
-    const inTR = r < 7 && c >= size - 7;
-    const inBL = r >= size - 7 && c < 7;
-    return inTL || inTR || inBL;
-  }
-
-  function finderCell(r, c, topR, leftC) {
-    const lr = r - topR;
-    const lc = c - leftC;
-    if (lr === 0 || lr === 6 || lc === 0 || lc === 6) return true;
-    if (lr >= 2 && lr <= 4 && lc >= 2 && lc <= 4) return true;
-    return false;
-  }
-
-  let rects = '';
-  for (let r = 0; r < size; r++) {
-    for (let c = 0; c < size; c++) {
-      let dark = false;
-      if (r < 7 && c < 7) {
-        dark = finderCell(r, c, 0, 0);
-      } else if (r < 7 && c >= size - 7) {
-        dark = finderCell(r, c, 0, size - 7);
-      } else if (r >= size - 7 && c < 7) {
-        dark = finderCell(r, c, size - 7, 0);
-      } else if (!isFinderPattern(r, c)) {
-        const seed = (r * 31 + c * 17 + (hash >>> 0)) % 11;
-        dark = seed % 2 === 0 || (r % 3 === 0 && c % 2 === 1);
-      }
-      if (dark) {
-        rects += `<rect x="${c * 7}" y="${r * 7}" width="7" height="7" fill="#004c29" rx="1"/>`;
-      }
-    }
-  }
-
-  container.innerHTML = `
-    <svg viewBox="0 0 ${size * 7} ${size * 7}" width="140" height="140" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#ffffff"/>
-      ${rects}
-    </svg>
-  `;
+  container.innerHTML = `<img src="/assets/qrcode-pix.jpg" alt="QR Code PIX Oficial TGA" class="qr-official-img" />`;
 }
 
 // Renderização Geral da Página
@@ -292,6 +244,17 @@ function renderAll() {
   const waMsg = encodeURIComponent(`Salve Diretoria da ${cfg.nomeTorcida}! Vim pelo site oficial e gostaria de tirar uma dúvida.`);
   document.getElementById('topWhatsappLink').href = `https://wa.me/${cleanWa}?text=${waMsg}`;
   document.getElementById('topWhatsappLink').textContent = `💬 ${cfg.whatsappDiretoria}`;
+  document.querySelectorAll('.wa-dynamic-text').forEach((el) => {
+    el.textContent = cfg.whatsappDiretoria;
+  });
+  const footerSub = document.getElementById('footerSubText');
+  if (footerSub) {
+    footerSub.textContent = `Fundada em ${cfg.anoFundacao} • Apoio ao Esporte Clube Rio Verde (E.C.R.V.) • WhatsApp: ${cfg.whatsappDiretoria}`;
+  }
+  const btnWaSuccess = document.getElementById('btnSuccessWhatsapp');
+  if (btnWaSuccess) {
+    btnWaSuccess.textContent = `📲 Enviar Comprovante no WhatsApp ${cfg.whatsappDiretoria}`;
+  }
 
   // Contadores (Começa em 0 até cadastrarem)
   const totalNotifications = appState.socios.length + appState.inscricoesCaravana.length;
@@ -757,7 +720,7 @@ function populateAdminConfigForm() {
   document.getElementById('cfgTitularPix').value = cfg.titularPix || '';
   document.getElementById('cfgCidadePix').value = cfg.cidadePix || '';
   document.getElementById('cfgWhatsapp').value = cfg.whatsappDiretoria || '';
-  document.getElementById('cfgSenhaAdmin').value = cfg.senhaAdmin || '2015';
+  document.getElementById('cfgSenhaAdmin').value = (!cfg.senhaAdmin || cfg.senhaAdmin === '2015') ? 'Tga@2015' : cfg.senhaAdmin;
 }
 
 // Exportação para Excel (CSV com BOM UTF-8)
@@ -1031,27 +994,42 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('modalAdmin').hidden = false;
       if (isAdminAuthenticated) {
         renderAdminDashboard();
+      } else {
+        const passInput = document.getElementById('adminPasswordInput');
+        if (passInput) {
+          passInput.value = '';
+          passInput.focus();
+        }
       }
     });
   });
 
   document.getElementById('btnCloseAdmin')?.addEventListener('click', () => {
     document.getElementById('modalAdmin').hidden = true;
+    isAdminAuthenticated = false;
+    document.getElementById('adminLoginView').hidden = false;
+    document.getElementById('adminDashboardView').hidden = true;
+    const passInput = document.getElementById('adminPasswordInput');
+    if (passInput) passInput.value = '';
   });
 
-  // Login no Painel Admin
+  // Login no Painel Admin (Estrito: sem senhas antigas ou dicas públicas)
   document.getElementById('formAdminLogin')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const pass = document.getElementById('adminPasswordInput').value.trim();
-    const currentAdminPass = String(appState.config.senhaAdmin || '2015');
-    if (pass === currentAdminPass || pass === '2015' || pass === '1914') {
+    const passInput = document.getElementById('adminPasswordInput');
+    const pass = passInput.value.trim();
+    const savedPass = String(appState.config.senhaAdmin || 'Tga@2015');
+    const validPass = savedPass === '2015' ? 'Tga@2015' : savedPass;
+    if (pass === validPass) {
       isAdminAuthenticated = true;
+      passInput.value = '';
       document.getElementById('adminLoginView').hidden = true;
       document.getElementById('adminDashboardView').hidden = false;
       renderAdminDashboard();
       showToast('🔓 Bem-vindo ao Painel da Diretoria TGA!');
     } else {
-      showToast('❌ Senha incorreta! A senha padrão é 2015.');
+      passInput.value = '';
+      showToast('❌ Senha incorreta! Acesso restrito exclusivamente à Diretoria da TGA.');
     }
   });
 
@@ -1167,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       titularPix: document.getElementById('cfgTitularPix').value.trim(),
       cidadePix: document.getElementById('cfgCidadePix').value.trim().toUpperCase(),
       whatsappDiretoria: document.getElementById('cfgWhatsapp').value.trim(),
-      senhaAdmin: document.getElementById('cfgSenhaAdmin').value.trim() || '2015',
+      senhaAdmin: document.getElementById('cfgSenhaAdmin').value.trim() || 'Tga@2015',
       planos: [novoPlanoUnico]
     };
 

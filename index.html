@@ -28,7 +28,7 @@
           📸 @torcidagarraalviverde15
         </a>
         <button type="button" class="topbar-btn-link" data-open-window="windowCaravanas">🚌 Caravanas da TGA</button>
-        <a href="#" id="topWhatsappLink" target="_blank" rel="noopener" class="topbar-link">💬 (64) 99220-9870</a>
+        <a href="#" id="topWhatsappLink" target="_blank" rel="noopener" class="topbar-link">💬 (64) 99330-2283</a>
         <button type="button" class="btn-admin-trigger" id="btnOpenAdmin">
           🔒 Painel da Diretoria <span class="admin-counter" id="adminBadgeCount">0</span>
         </button>
@@ -51,7 +51,7 @@
       </a>
 
       <nav class="nav-links" id="navMenu">
-        <button type="button" class="nav-btn-link" data-open-window="windowHistoria">A TGA & O E.C.R.V.</button>
+        <button type="button" class="nav-btn-link" data-open-window="windowHistoria">ECRV e a TGA</button>
         <button type="button" class="nav-btn-link" data-open-window="windowCaravanas">Caravanas da TGA</button>
         <a href="https://www.instagram.com/torcidagarraalviverde15/" id="navInstagramLink" target="_blank" rel="noopener" class="nav-insta-pill">
           📸 Instagram
@@ -75,12 +75,12 @@
           <!-- EMBLEMAS OFICIAIS EM DESTAQUE NO HERO -->
           <div class="hero-emblems-banner">
             <div class="emblem-showcase">
-              <img src="/assets/logo-tga.jpg" alt="Garra Alviverde 19-05-2015" class="hero-emblem-tga" />
-              <span class="emblem-plus">+</span>
               <img src="/assets/escudo-ecrv.jpg" alt="Esporte Clube Rio Verde E.C.R.V." class="hero-emblem-ecrv" />
+              <span class="emblem-plus">+</span>
+              <img src="/assets/logo-tga.jpg" alt="Garra Alviverde 19-05-2015" class="hero-emblem-tga" />
             </div>
             <div class="emblem-showcase-text">
-              <strong>GARRA ALVIVERDE (TGA) & ESPORTE CLUBE RIO VERDE</strong>
+              <strong>ECRV e a TGA</strong>
               <span>O Pulso da Arquibancada do Verdão do Sudoeste no Estádio Mozart Veloso do Carmo (Velosão)</span>
             </div>
           </div>
@@ -99,7 +99,7 @@
               🚌 Caravanas da TGA
             </button>
             <button type="button" class="btn btn-insta btn-lg" data-open-window="windowHistoria">
-              🟢⚪ A TGA & O E.C.R.V.
+              🟢⚪ ECRV e a TGA
             </button>
           </div>
 
@@ -134,7 +134,7 @@
             <h3>PIX Oficial, Sócio & Caravanas</h3>
           </div>
 
-          <!-- CHAVE PIX OFICIAL -->
+          <!-- CHAVE PIX OFICIAL + QR CODE OFICIAL -->
           <div class="quick-pix-box">
             <div class="quick-pix-top">
               <div>
@@ -145,6 +145,13 @@
               <button type="button" class="btn btn-gold btn-sm" id="btnCopyHeroPix">
                 📋 Copiar PIX
               </button>
+            </div>
+            <div class="hero-qr-inline">
+              <img src="/assets/qrcode-pix.jpg" alt="QR Code PIX Oficial Garra Alviverde" class="hero-qr-img" />
+              <div class="hero-qr-text">
+                <strong>📲 Escaneie o QR Code PIX</strong>
+                <span>Abra o aplicativo do seu banco e aponte a câmera para pagar o Sócio TGA ou Caravana.</span>
+              </div>
             </div>
           </div>
 
@@ -198,7 +205,7 @@
         <div class="hub-shortcut-card" data-open-window="windowHistoria">
           <div class="hub-shortcut-icon">🥁</div>
           <div class="hub-shortcut-body">
-            <h4>A TGA & O E.C.R.V.</h4>
+            <h4>ECRV e a TGA</h4>
             <p>Conheça nossa história desde 19/05/2015 no Velosão, materiais oficiais e Instagram da torcida.</p>
           </div>
           <span class="hub-shortcut-arrow">Abrir Janela ↗</span>
@@ -217,7 +224,7 @@
         </div>
         <div class="footer-brand">
           <strong id="footerTorcidaNome">TORCIDA ORGANIZADA GARRA ALVIVERDE (TGA)</strong>
-          <p>Fundada em 19/05/2015 • Apoio ao Esporte Clube Rio Verde (E.C.R.V.) • WhatsApp: (64) 99220-9870</p>
+          <p id="footerSubText">Fundada em 19/05/2015 • Apoio ao Esporte Clube Rio Verde (E.C.R.V.) • WhatsApp: (64) 99330-2283</p>
         </div>
       </div>
       <div class="footer-actions">
@@ -385,9 +392,13 @@
                   📋 Copiar PIX da Torcida
                 </button>
               </div>
-              <p class="payment-hint">
-                Chave PIX Oficial: <strong id="formSocioPixText">torcidagarraalviverde@gmail.com</strong>. Após finalizar a inscrição, seus dados ficam salvos para a diretoria e você pode enviar o comprovante no WhatsApp <strong>(64) 99220-9870</strong>.
-              </p>
+              <div class="payment-qr-row">
+                <img src="/assets/qrcode-pix.jpg" alt="QR Code PIX Oficial TGA" class="form-qr-img" />
+                <p class="payment-hint">
+                  Chave PIX Oficial: <strong id="formSocioPixText">torcidagarraalviverde@gmail.com</strong>.<br>
+                  Escaneie o QR Code ao lado ou copie a chave PIX. Após finalizar a inscrição, envie o comprovante no WhatsApp <strong class="wa-dynamic-text">(64) 99330-2283</strong>.
+                </p>
+              </div>
             </div>
 
             <button type="submit" class="btn btn-primary btn-block btn-lg">
@@ -526,7 +537,7 @@
             </div>
             <div>
               <span>Cidade / WhatsApp:</span>
-              <strong id="bannerPixCidade">RIO VERDE - GO • (64) 99220-9870</strong>
+              <strong id="bannerPixCidade">RIO VERDE - GO • (64) 99330-2283</strong>
             </div>
           </div>
         </div>
@@ -534,9 +545,9 @@
         <div class="pix-banner-right">
           <div class="qr-box">
             <div class="qr-svg-container" id="pixQrContainer" aria-label="QR Code PIX da Torcida">
-              <!-- Gerado dinamicamente via JS -->
+              <img src="/assets/qrcode-pix.jpg" alt="QR Code PIX Oficial TGA" class="qr-official-img" />
             </div>
-            <span class="qr-caption">Escaneie ou use o botão Copiar PIX</span>
+            <span class="qr-caption">Escaneie o QR Code Oficial ou copie o PIX</span>
           </div>
         </div>
       </div>
@@ -632,7 +643,7 @@
                   </button>
                 </div>
                 <p class="payment-hint">
-                  Chave PIX: <strong id="formCaravanaPixText">torcidagarraalviverde@gmail.com</strong>. Após confirmar abaixo, você também poderá enviar o comprovante direto no WhatsApp da diretoria <strong>(64) 99220-9870</strong>.
+                  Chave PIX: <strong id="formCaravanaPixText">torcidagarraalviverde@gmail.com</strong>. Após confirmar abaixo, você também poderá enviar o comprovante direto no WhatsApp da diretoria <strong class="wa-dynamic-text">(64) 99330-2283</strong>.
                 </p>
               </div>
 
@@ -647,17 +658,17 @@
   </div>
 
   <!-- =========================================================================
-       JANELA INTERATIVA 3: A TGA & O ESPORTE CLUBE RIO VERDE (HISTÓRIA & MATERIAIS)
+       JANELA INTERATIVA 3: ECRV E A TGA (HISTÓRIA & MATERIAIS)
        ========================================================================= -->
   <div class="modal-backdrop" id="windowHistoria" hidden>
     <div class="modal-box modal-feature-window">
       <div class="window-header">
         <div class="window-header-left">
-          <img src="/assets/logo-tga.jpg" alt="TGA" class="window-header-logo" />
           <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." class="window-header-logo" />
+          <img src="/assets/logo-tga.jpg" alt="TGA" class="window-header-logo" />
           <div>
             <span class="pill-green">FUNDADA EM 19 DE MAIO DE 2015 • RIO VERDE - GO</span>
-            <h2>A Garra Alviverde (TGA) & O Esporte Clube Rio Verde</h2>
+            <h2>ECRV e a TGA</h2>
           </div>
         </div>
         <div class="window-header-actions">
@@ -745,7 +756,10 @@
       </p>
 
       <div class="success-pix-reminder">
-        <span>Chave PIX Oficial da Garra Alviverde:</span>
+        <span>QR Code e Chave PIX Oficial da Garra Alviverde:</span>
+        <div class="success-qr-wrap">
+          <img src="/assets/qrcode-pix.jpg" alt="QR Code PIX Oficial TGA" class="success-qr-img" />
+        </div>
         <div class="success-pix-row">
           <code id="successModalPix">torcidagarraalviverde@gmail.com</code>
           <button type="button" class="btn btn-gold btn-sm" id="btnCopySuccessPix">📋 Copiar PIX</button>
@@ -755,7 +769,7 @@
 
       <div class="success-actions">
         <a href="#" id="btnSuccessWhatsapp" target="_blank" rel="noopener" class="btn btn-whatsapp btn-block btn-lg">
-          📲 Enviar Comprovante no WhatsApp (64) 99220-9870
+          📲 Enviar Comprovante no WhatsApp (64) 99330-2283
         </a>
         <button type="button" class="btn btn-secondary btn-block" id="btnSuccessDone">
           Voltar ao Início
@@ -778,14 +792,13 @@
         <button type="button" class="modal-close" id="btnCloseAdmin">✕</button>
       </div>
 
-      <!-- TELA DE LOGIN DO ADMIN -->
+      <!-- TELA DE LOGIN DO ADMIN (RESTRITA À DIRETORIA, SEM EXIBIR A SENHA) -->
       <div id="adminLoginView" class="admin-login-view">
         <div class="login-card">
-          <h3>🔒 Acesso da Diretoria — Garra Alviverde</h3>
-          <p>Digite a senha de administrador para visualizar as fichas de sócios, listas de ônibus das caravanas do E.C.R.V. e configurar o PIX e o Plano de Sócio.</p>
-          <p class="login-hint">💡 <strong>Senha padrão da diretoria:</strong> <code>2015</code> (ano de fundação da TGA — você pode alterar na aba Configurações)</p>
+          <h3>🔒 Acesso Restrito — Diretoria Garra Alviverde</h3>
+          <p>Esta área é exclusiva para diretores autorizados da TGA. Digite sua credencial de acesso para gerenciar sócios, listas de caravanas e configurações.</p>
           <form id="formAdminLogin" class="login-form-inline">
-            <input type="password" id="adminPasswordInput" placeholder="Digite a senha (2015)" value="2015" required />
+            <input type="password" id="adminPasswordInput" placeholder="Digite a senha exclusiva da diretoria" autocomplete="current-password" required />
             <button type="submit" class="btn btn-primary">Entrar no Painel</button>
           </form>
         </div>
@@ -1037,7 +1050,7 @@
                 </div>
                 <div class="form-group">
                   <label>WhatsApp da Diretoria *</label>
-                  <input type="text" id="cfgWhatsapp" required placeholder="(64) 99220-9870" />
+                  <input type="text" id="cfgWhatsapp" required placeholder="(64) 99330-2283" />
                 </div>
                 <div class="form-group">
                   <label>Senha deste Painel da Diretoria *</label>

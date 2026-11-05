@@ -148,6 +148,14 @@ async function loadInitialState() {
     const res = await fetch('/api/state');
     if (res.ok) {
       appState = await res.json();
+      if (appState.config) {
+        if (!appState.config.whatsappDiretoria || appState.config.whatsappDiretoria === '(64) 99220-9870') {
+          appState.config.whatsappDiretoria = '(64) 99330-2283';
+        }
+        if (!appState.config.senhaAdmin || appState.config.senhaAdmin === '2015') {
+          appState.config.senhaAdmin = 'Tga@2015';
+        }
+      }
       saveLocalBackup();
       renderAll();
       checkUrlWindowParam();
@@ -161,6 +169,14 @@ async function loadInitialState() {
   if (saved) {
     try {
       appState = JSON.parse(saved);
+      if (appState.config) {
+        if (!appState.config.whatsappDiretoria || appState.config.whatsappDiretoria === '(64) 99220-9870') {
+          appState.config.whatsappDiretoria = '(64) 99330-2283';
+        }
+        if (!appState.config.senhaAdmin || appState.config.senhaAdmin === '2015') {
+          appState.config.senhaAdmin = 'Tga@2015';
+        }
+      }
     } catch (e) {
       appState = JSON.parse(JSON.stringify(FALLBACK_STATE));
     }
@@ -242,7 +258,7 @@ function renderAll() {
   const rawWa = (cfg.whatsappDiretoria || '').replace(/\D/g, '');
   const cleanWa = rawWa.startsWith('55') ? rawWa : `55${rawWa}`;
   const waMsg = encodeURIComponent(`Salve Diretoria da ${cfg.nomeTorcida}! Vim pelo site oficial e gostaria de tirar uma dúvida.`);
-  document.getElementById('topWhatsappLink').href = `https://wa.me/${cleanWa}?text=${waMsg}`;
+  document.getElementById('topWhatsappLink').href = `https://api.whatsapp.com/send?phone=${cleanWa}&text=${waMsg}`;
   document.getElementById('topWhatsappLink').textContent = `💬 ${cfg.whatsappDiretoria}`;
   document.querySelectorAll('.wa-dynamic-text').forEach((el) => {
     el.textContent = cfg.whatsappDiretoria;
@@ -398,21 +414,24 @@ function updateSocioCardPreview() {
   const nome = document.getElementById('socNome')?.value.trim();
   const apelido = document.getElementById('socApelido')?.value.trim();
   const cpf = document.getElementById('socCpf')?.value.trim();
-  const pelotao = document.getElementById('socPelotao')?.value || 'Sede Central / Velosão';
+  const pelotao = document.getElementById('socPelotao')?.value.trim();
   const camisa = document.getElementById('socCamisa')?.value || 'G';
+  const numeroCamisa = document.getElementById('socNumeroCamisa')?.value.trim();
   const sangue = document.getElementById('socSangue')?.value || 'O+';
 
   document.getElementById('previewNome').textContent = nome ? nome.toUpperCase() : 'NOME DO TORCEDOR ALVIVERDE';
   document.getElementById('previewApelido').textContent = apelido ? apelido.toUpperCase() : '—';
-  document.getElementById('previewPelotao').textContent = pelotao;
+  document.getElementById('previewPelotao').textContent = pelotao || '—';
   document.getElementById('previewCpf').textContent = cpf || '000.000.000-00';
   document.getElementById('previewCamisaSangue').textContent = `${camisa} • ${sangue}`;
 
-  const nextNum = String(1 + appState.socios.length).padStart(3, '0');
-  document.getElementById('previewMatricula').textContent = `${appState.config.sigla}-${new Date().getFullYear()}-${nextNum}`;
+  const previewNumEl = document.getElementById('previewNumeroCamisa');
+  if (previewNumEl) {
+    previewNumEl.textContent = numeroCamisa ? `Nº ${numeroCamisa}` : 'Nº —';
+  }
 }
 
-// Modal de Sucesso com botão direto para WhatsApp
+// Modal de Sucesso com botão direto para WhatsApp (usando api.whatsapp.com/send para preservar emojis)
 function openSuccessModal({ titulo, descricao, valor, mensagemWhatsapp }) {
   closeFeatureWindows();
   const modal = document.getElementById('modalSuccess');
@@ -424,7 +443,7 @@ function openSuccessModal({ titulo, descricao, valor, mensagemWhatsapp }) {
   const rawWa = (appState.config.whatsappDiretoria || '').replace(/\D/g, '');
   const cleanWa = rawWa.startsWith('55') ? rawWa : `55${rawWa}`;
   const encoded = encodeURIComponent(mensagemWhatsapp);
-  document.getElementById('btnSuccessWhatsapp').href = `https://wa.me/${cleanWa}?text=${encoded}`;
+  document.getElementById('btnSuccessWhatsapp').href = `https://api.whatsapp.com/send?phone=${cleanWa}&text=${encoded}`;
 
   modal.hidden = false;
 }
@@ -453,6 +472,28 @@ function renderAdminDashboard() {
   populateAdminConfigForm();
 }
 
+function openEditSocioModal(socioId) {
+  const socio = appState.socios.find(s => s.id === socioId);
+  if (!socio) return;
+  document.getElementById('editSocId').value = socio.id;
+  document.getElementById('editSocNome').value = socio.nome || '';
+  document.getElementById('editSocApelido').value = socio.apelido || '';
+  document.getElementById('editSocCpf').value = socio.cpf || '';
+  document.getElementById('editSocRg').value = socio.rg || '';
+  document.getElementById('editSocNascimento').value = socio.dataNascimento || '';
+  document.getElementById('editSocWhatsapp').value = socio.whatsapp || '';
+  document.getElementById('editSocEmail').value = socio.email || '';
+  document.getElementById('editSocPelotao').value = socio.pelotao || '';
+  document.getElementById('editSocCidade').value = socio.cidade || 'Rio Verde - GO';
+  document.getElementById('editSocCamisa').value = socio.tamanhoCamisa || 'G';
+  document.getElementById('editSocNumeroCamisa').value = socio.numeroCamisa || '';
+  document.getElementById('editSocSangue').value = socio.tipoSanguineo || 'O+';
+  document.getElementById('editSocValor').value = Number(socio.valorPlano) || 35;
+  document.getElementById('editSocStatus').value = socio.statusPagamento || 'Pendente PIX';
+  document.getElementById('editSocObs').value = socio.observacoes || '';
+  document.getElementById('modalEditSocio').hidden = false;
+}
+
 function renderAdminSociosTable() {
   const tbody = document.getElementById('adminSociosTableBody');
   const query = (document.getElementById('searchSociosInput')?.value || '').toLowerCase();
@@ -460,7 +501,7 @@ function renderAdminSociosTable() {
 
   const filtrados = appState.socios.filter((s) => {
     const matchStatus = statusFilter === 'todos' || s.statusPagamento === statusFilter;
-    const text = `${s.matricula} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade}`.toLowerCase();
+    const text = `${s.numeroCamisa || ''} ${s.matricula || ''} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade}`.toLowerCase();
     return matchStatus && text.includes(query);
   });
 
@@ -472,14 +513,15 @@ function renderAdminSociosTable() {
   tbody.innerHTML = filtrados.map((s) => {
     const isPaid = s.statusPagamento === 'Pago / Ativo';
     const cleanPhone = (s.whatsapp || '').replace(/\D/g, '');
-    const waLink = `https://wa.me/55${cleanPhone.replace(/^55/, '')}?text=${encodeURIComponent(
-      `Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de sócio (${s.matricula}).`
+    const waLink = `https://api.whatsapp.com/send?phone=55${cleanPhone.replace(/^55/, '')}&text=${encodeURIComponent(
+      `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de sócio.`
     )}`;
+    const numCamisaDisplay = s.numeroCamisa ? `Nº ${s.numeroCamisa}` : 'Nº —';
 
     return `
       <tr>
         <td>
-          <strong>${s.matricula}</strong><br>
+          <strong>\uD83D\uDC55 ${numCamisaDisplay}</strong><br>
           <small>${formatDateBR(s.createdAt)}</small>
         </td>
         <td>
@@ -492,11 +534,11 @@ function renderAdminSociosTable() {
         </td>
         <td>
           ${s.whatsapp}<br>
-          <small>${s.pelotao} (${s.cidade || ''})</small>
+          <small>${s.pelotao || '—'} (${s.cidade || ''})</small>
         </td>
         <td>
           <strong>${s.planoNome}</strong> (${formatBRL(s.valorPlano)})<br>
-          <small>Camisa: <strong>${s.tamanhoCamisa}</strong> | Sangue: ${s.tipoSanguineo}</small>
+          <small>Camisa: <strong>${s.tamanhoCamisa} (${numCamisaDisplay})</strong> | Sangue: ${s.tipoSanguineo}</small>
         </td>
         <td>
           <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
@@ -507,6 +549,9 @@ function renderAdminSociosTable() {
           <div class="action-btns">
             <button type="button" class="btn-table btn-approve" data-toggle-socio="${s.id}">
               ${isPaid ? 'Marcar Pendente' : '✔ Confirmar PIX'}
+            </button>
+            <button type="button" class="btn-table btn-edit" data-edit-socio="${s.id}" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;">
+              ✏️ Editar
             </button>
             <a href="${waLink}" target="_blank" rel="noopener" class="btn-table btn-wa">
               💬 WhatsApp
@@ -537,6 +582,13 @@ function renderAdminSociosTable() {
       saveLocalBackup();
       renderAll();
       showToast(`Status do sócio ${socio.nome} atualizado para: ${novoStatus}`);
+    });
+  });
+
+  tbody.querySelectorAll('[data-edit-socio]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-edit-socio');
+      openEditSocioModal(id);
     });
   });
 
@@ -590,7 +642,7 @@ function renderAdminCaravanasInscritosTable() {
   tbody.innerHTML = filtrados.map((i) => {
     const isPaid = i.statusPix === 'PIX Confirmado';
     const cleanPhone = (i.whatsapp || '').replace(/\D/g, '');
-    const waLink = `https://wa.me/55${cleanPhone.replace(/^55/, '')}?text=${encodeURIComponent(
+    const waLink = `https://api.whatsapp.com/send?phone=55${cleanPhone.replace(/^55/, '')}&text=${encodeURIComponent(
       `Salve ${i.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} sobre sua reserva na caravana "${i.caravanaTitulo}" (${i.onibusEscolhido}).`
     )}`;
 
@@ -792,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('carTipoPassageiro')?.addEventListener('change', updateCaravanaPriceDisplay);
 
   // Atualização em tempo real da Carteirinha de Sócio
-  ['socNome', 'socApelido', 'socCpf', 'socPelotao', 'socCamisa', 'socSangue'].forEach((id) => {
+  ['socNome', 'socApelido', 'socCpf', 'socPelotao', 'socCamisa', 'socNumeroCamisa', 'socSangue'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('input', updateSocioCardPreview);
@@ -884,15 +936,15 @@ document.addEventListener('DOMContentLoaded', () => {
     e.target.reset();
     updateCaravanaPriceDisplay();
 
-    const msgWa = `🟢⚪ *INSCRIÇÃO EM CARAVANA - ${appState.config.nomeTorcida} (E.C.R.V.)*\n\n` +
-      `🚌 *Caravana:* ${payload.caravanaTitulo}\n` +
-      `👤 *Passageiro:* ${payload.nome}\n` +
-      `🪪 *Documento (RG/CPF):* ${payload.documento}\n` +
-      `📍 *Setor/Bairro:* ${payload.pelotao}\n` +
-      `🚍 *Ônibus:* ${payload.onibusEscolhido}\n` +
-      `🎟️ *Modalidade:* ${payload.tipoPassageiro}\n` +
-      `💰 *Valor no PIX:* ${formatBRL(payload.valorPago)}\n\n` +
-      `Estou enviando o comprovante do PIX (${appState.config.chavePix}) para confirmar meu lugar no ônibus!`;
+    const msgWa = `\uD83D\uDFE2\u26AA *INSCRIÇÃO EM CARAVANA - ${appState.config.nomeTorcida} (ECRV)* \uD83D\uDFE2\u26AA\n\n` +
+      `\uD83D\uDE8C *Caravana:* ${payload.caravanaTitulo}\n` +
+      `\uD83D\uDC64 *Passageiro:* ${payload.nome}\n` +
+      `\uD83C\uDD94 *Documento (RG/CPF):* ${payload.documento}\n` +
+      `\uD83D\uDCCD *Setor/Bairro:* ${payload.pelotao}\n` +
+      `\uD83D\uDE8D *Ônibus:* ${payload.onibusEscolhido}\n` +
+      `\u26BD *Modalidade:* ${payload.tipoPassageiro}\n` +
+      `\u2705 *Valor no PIX:* ${formatBRL(payload.valorPago)}\n\n` +
+      `Segue meu comprovante do PIX (${appState.config.chavePix}) para confirmar meu lugar no ônibus!`;
 
     openSuccessModal({
       titulo: '🚌 Reserva na Caravana Registrada!',
@@ -915,9 +967,10 @@ document.addEventListener('DOMContentLoaded', () => {
       dataNascimento: document.getElementById('socNascimento').value,
       whatsapp: document.getElementById('socWhatsapp').value.trim(),
       email: document.getElementById('socEmail').value.trim(),
-      pelotao: document.getElementById('socPelotao').value,
+      pelotao: document.getElementById('socPelotao').value.trim(),
       cidade: document.getElementById('socCidade').value.trim(),
       tamanhoCamisa: document.getElementById('socCamisa').value,
+      numeroCamisa: document.getElementById('socNumeroCamisa').value.trim(),
       tipoSanguineo: document.getElementById('socSangue').value,
       planoId: plano.id,
       planoNome: plano.nome,
@@ -964,21 +1017,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateSocioCardPreview();
 
-    const msgWa = `🟢⚪ *NOVA INSCRIÇÃO DE SÓCIO - ${appState.config.nomeTorcida}*\n\n` +
-      `🪪 *Matrícula Gerada:* ${criado.matricula}\n` +
-      `👤 *Nome:* ${criado.nome} (${criado.apelido || 'Sem apelido'})\n` +
-      `📄 *CPF:* ${criado.cpf} | *RG:* ${criado.rg}\n` +
-      `📍 *Setor/Cidade:* ${criado.pelotao} - ${criado.cidade}\n` +
-      `👕 *Camisa:* Tam. ${criado.tamanhoCamisa} | *Sangue:* ${criado.tipoSanguineo}\n` +
-      `⭐ *Plano:* ${criado.planoNome} (${formatBRL(criado.valorPlano)})\n\n` +
-      `Segue meu comprovante do PIX para ativar minha carteirinha de sócio da Garra Alviverde!`;
+    const msgWa = `\uD83D\uDFE2\u26AA *NOVA INSCRIÇÃO DE SÓCIO - ${appState.config.nomeTorcida}* \uD83D\uDFE2\u26AA\n\n` +
+      `\uD83D\uDC64 *Nome:* ${criado.nome} (${criado.apelido || 'Sem apelido'})\n` +
+      `\uD83C\uDD94 *CPF:* ${criado.cpf} | *RG:* ${criado.rg}\n` +
+      `\uD83D\uDCCD *Bairro/Cidade:* ${criado.pelotao} - ${criado.cidade}\n` +
+      `\uD83D\uDC55 *Camiseta:* Tam. ${criado.tamanhoCamisa} | *Nº da Camiseta:* ${criado.numeroCamisa || '—'}\n` +
+      `\u2764\uFE0F *Sangue:* ${criado.tipoSanguineo}\n` +
+      `\u2B50 *Plano:* ${criado.planoNome} (${formatBRL(criado.valorPlano)})\n\n` +
+      `\u2705 Segue meu comprovante do PIX para ativar minha carteirinha de sócio da Garra Alviverde!`;
 
     openSuccessModal({
-      titulo: `🪪 Ficha de Sócio TGA Enviada! (${criado.matricula})`,
+      titulo: `🪪 Ficha de Sócio TGA Enviada! (Camisa Nº ${criado.numeroCamisa || '—'})`,
       descricao: `Bem-vindo à Garra Alviverde, ${criado.nome}! Seus dados já chegaram no Painel da Diretoria.`,
       valor: criado.valorPlano,
       mensagemWhatsapp: msgWa
     });
+  });
+
+  // Fechar / Salvar Modal de Edição de Sócio (Diretoria)
+  ['btnCloseEditSocio', 'btnCancelEditSocio'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      document.getElementById('modalEditSocio').hidden = true;
+    });
+  });
+
+  document.getElementById('formEditSocio')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editSocId').value;
+    const idx = appState.socios.findIndex(s => s.id === id);
+    if (idx === -1) return;
+
+    const updates = {
+      nome: document.getElementById('editSocNome').value.trim(),
+      apelido: document.getElementById('editSocApelido').value.trim(),
+      cpf: document.getElementById('editSocCpf').value.trim(),
+      rg: document.getElementById('editSocRg').value.trim(),
+      dataNascimento: document.getElementById('editSocNascimento').value,
+      whatsapp: document.getElementById('editSocWhatsapp').value.trim(),
+      email: document.getElementById('editSocEmail').value.trim(),
+      pelotao: document.getElementById('editSocPelotao').value.trim(),
+      cidade: document.getElementById('editSocCidade').value.trim(),
+      tamanhoCamisa: document.getElementById('editSocCamisa').value,
+      numeroCamisa: document.getElementById('editSocNumeroCamisa').value.trim(),
+      tipoSanguineo: document.getElementById('editSocSangue').value,
+      valorPlano: Number(document.getElementById('editSocValor').value) || 35,
+      statusPagamento: document.getElementById('editSocStatus').value,
+      observacoes: document.getElementById('editSocObs').value.trim()
+    };
+
+    appState.socios[idx] = { ...appState.socios[idx], ...updates };
+    try {
+      await fetch(`/api/socios/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+    } catch (err) {}
+
+    saveLocalBackup();
+    document.getElementById('modalEditSocio').hidden = true;
+    renderAll();
+    showToast(`✅ Dados do sócio ${updates.nome} atualizados com sucesso!`);
   });
 
   // Fechar Modal de Sucesso
@@ -1054,12 +1153,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Exportar Sócios CSV
   document.getElementById('btnExportSociosCsv')?.addEventListener('click', () => {
     const headers = [
-      'Matrícula', 'Nome Completo', 'Apelido', 'CPF', 'RG', 'Nascimento',
+      'Nº Camiseta', 'Matrícula', 'Nome Completo', 'Apelido', 'CPF', 'RG', 'Nascimento',
       'WhatsApp', 'E-mail', 'Setor/Bairro', 'Cidade', 'Camisa', 'Tipo Sanguíneo',
       'Plano', 'Valor (R$)', 'Status PIX', 'Observações', 'Data Inscrição'
     ];
     const rows = appState.socios.map(s => [
-      s.matricula, s.nome, s.apelido, s.cpf, s.rg, s.dataNascimento,
+      s.numeroCamisa || '', s.matricula, s.nome, s.apelido, s.cpf, s.rg, s.dataNascimento,
       s.whatsapp, s.email, s.pelotao, s.cidade, s.tamanhoCamisa, s.tipoSanguineo,
       s.planoNome, s.valorPlano, s.statusPagamento, s.observacoes, formatDateBR(s.createdAt)
     ]);

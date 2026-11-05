@@ -345,6 +345,14 @@ async function requestHandler(req, res) {
       db.socios = Array.isArray(db.socios) ? db.socios : [];
       db.caravanas = Array.isArray(db.caravanas) ? db.caravanas : [];
       db.inscricoesCaravana = Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [];
+      if (db.config) {
+        if (!db.config.whatsappDiretoria || db.config.whatsappDiretoria === '(64) 99220-9870') {
+          db.config.whatsappDiretoria = '(64) 99330-2283';
+        }
+        if (!db.config.senhaAdmin || db.config.senhaAdmin === '2015') {
+          db.config.senhaAdmin = 'Tga@2015';
+        }
+      }
       db.storageMode = getKvConfig() ? 'upstash-redis' : (getFirebaseUrl() ? 'firebase' : 'local-file');
       return sendJson(res, 200, db);
     }
@@ -366,9 +374,10 @@ async function requestHandler(req, res) {
         dataNascimento: body.dataNascimento || '',
         whatsapp: body.whatsapp || '',
         email: body.email || '',
-        pelotao: body.pelotao || 'Sede Central / Velosão',
+        pelotao: body.pelotao || '',
         cidade: body.cidade || 'Rio Verde - GO',
         tamanhoCamisa: body.tamanhoCamisa || 'G',
+        numeroCamisa: body.numeroCamisa || '',
         tipoSanguineo: body.tipoSanguineo || 'Não informado',
         planoId: body.planoId || 'socio-unico',
         planoNome: body.planoNome || 'Sócio Oficial Garra Alviverde (TGA)',

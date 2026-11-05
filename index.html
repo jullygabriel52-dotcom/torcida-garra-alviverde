@@ -328,17 +328,8 @@
 
             <div class="form-row-2">
               <div class="form-group">
-                <label for="socPelotao">Setor / Bairro em Rio Verde *</label>
-                <select id="socPelotao" required>
-                  <option value="Sede Central / Velosão">Sede Central / Velosão</option>
-                  <option value="Centro / Rio Verde">Centro / Rio Verde</option>
-                  <option value="Parque Bandeirante / Popular">Parque Bandeirante / Popular</option>
-                  <option value="Morada do Sol / Maranata">Morada do Sol / Maranata</option>
-                  <option value="Vila Amália / Promissão">Vila Amália / Promissão</option>
-                  <option value="Jardim Goiás / Santo Agostinho">Jardim Goiás / Santo Agostinho</option>
-                  <option value="Bairro Odília / Martins">Bairro Odília / Martins</option>
-                  <option value="Outra Cidade (Sudoeste Goiano)">Outra Cidade (Sudoeste Goiano)</option>
-                </select>
+                <label for="socPelotao">Setor / Bairro *</label>
+                <input type="text" id="socPelotao" required placeholder="Digite seu Setor ou Bairro (Ex: Centro, Popular...)" />
               </div>
               <div class="form-group">
                 <label for="socCidade">Cidade / UF *</label>
@@ -346,7 +337,7 @@
               </div>
             </div>
 
-            <div class="form-row-3">
+            <div class="form-row-2">
               <div class="form-group">
                 <label for="socCamisa">Tamanho da Camisa / Regata *</label>
                 <select id="socCamisa" required>
@@ -357,6 +348,13 @@
                   <option value="XG">XG / Especial</option>
                 </select>
               </div>
+              <div class="form-group">
+                <label for="socNumeroCamisa">Número da Camiseta *</label>
+                <input type="text" id="socNumeroCamisa" required placeholder="Digite o nº da camiseta (Ex: 10, 15...)" maxlength="10" />
+              </div>
+            </div>
+
+            <div class="form-row-2">
               <div class="form-group">
                 <label for="socSangue">Tipo Sanguíneo</label>
                 <select id="socSangue">
@@ -445,7 +443,7 @@
                     </div>
                     <div>
                       <small>SETOR / BAIRRO</small>
-                      <strong id="previewPelotao">Sede Central / Velosão</strong>
+                      <strong id="previewPelotao">—</strong>
                     </div>
                   </div>
                   <div class="id-field-row">
@@ -463,8 +461,8 @@
 
               <div class="id-card-footer">
                 <div>
-                  <small>MATRÍCULA OFICIAL</small>
-                  <strong id="previewMatricula">TGA-2026-001</strong>
+                  <small>NÚMERO DA CAMISETA</small>
+                  <strong id="previewNumeroCamisa">Nº —</strong>
                 </div>
                 <div class="id-status-chip">
                   🟢 E.C.R.V. • 19-05-2015
@@ -610,16 +608,7 @@
               <div class="form-row-2">
                 <div class="form-group">
                   <label for="carPelotao">Bairro / Setor (Rio Verde e Região) *</label>
-                  <select id="carPelotao" required>
-                    <option value="Sede Central / Velosão">Sede Central / Velosão</option>
-                    <option value="Centro / Rio Verde">Centro / Rio Verde</option>
-                    <option value="Parque Bandeirante / Popular">Parque Bandeirante / Popular</option>
-                    <option value="Morada do Sol / Maranata">Morada do Sol / Maranata</option>
-                    <option value="Vila Amália / Promissão">Vila Amália / Promissão</option>
-                    <option value="Jardim Goiás / Santo Agostinho">Jardim Goiás / Santo Agostinho</option>
-                    <option value="Bairro Odília / Martins">Bairro Odília / Martins</option>
-                    <option value="Outra Cidade (Sudoeste Goiano)">Outra Cidade (Sudoeste Goiano)</option>
-                  </select>
+                  <input type="text" id="carPelotao" required placeholder="Digite seu Setor ou Bairro" />
                 </div>
                 <div class="form-group">
                   <label for="carOnibus">Ônibus / Setor de Embarque *</label>
@@ -864,7 +853,7 @@
             <table class="admin-table">
               <thead>
                 <tr>
-                  <th>Matrícula / Data</th>
+                  <th>Nº Camisa / Data</th>
                   <th>Sócio / Apelido</th>
                   <th>CPF / RG</th>
                   <th>WhatsApp / Setor</th>
@@ -1065,6 +1054,128 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE EDIÇÃO DE DADOS DO SÓCIO (EXCLUSIVO DA DIRETORIA) -->
+  <div class="modal-backdrop" id="modalEditSocio" hidden>
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="admin-modal-header">
+        <div class="admin-header-left">
+          <img src="/assets/logo-tga.jpg" alt="TGA" class="admin-header-logo" />
+          <div>
+            <span class="pill-green">EDIÇÃO DE CADASTRO — DIRETORIA TGA</span>
+            <h2>✏️ Editar Dados do Sócio</h2>
+          </div>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseEditSocio">✕</button>
+      </div>
+
+      <form id="formEditSocio">
+        <input type="hidden" id="editSocId" />
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editSocNome">Nome Completo *</label>
+            <input type="text" id="editSocNome" required />
+          </div>
+          <div class="form-group">
+            <label for="editSocApelido">Apelido na Bancada</label>
+            <input type="text" id="editSocApelido" />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="editSocCpf">CPF *</label>
+            <input type="text" id="editSocCpf" required />
+          </div>
+          <div class="form-group">
+            <label for="editSocRg">RG</label>
+            <input type="text" id="editSocRg" />
+          </div>
+          <div class="form-group">
+            <label for="editSocNascimento">Data de Nascimento</label>
+            <input type="date" id="editSocNascimento" />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editSocWhatsapp">WhatsApp *</label>
+            <input type="text" id="editSocWhatsapp" required />
+          </div>
+          <div class="form-group">
+            <label for="editSocEmail">E-mail</label>
+            <input type="email" id="editSocEmail" />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editSocPelotao">Setor / Bairro *</label>
+            <input type="text" id="editSocPelotao" required />
+          </div>
+          <div class="form-group">
+            <label for="editSocCidade">Cidade / UF *</label>
+            <input type="text" id="editSocCidade" required />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="editSocCamisa">Tamanho da Camisa *</label>
+            <select id="editSocCamisa">
+              <option value="P">P</option>
+              <option value="M">M</option>
+              <option value="G">G</option>
+              <option value="GG">GG</option>
+              <option value="XG">XG / Especial</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editSocNumeroCamisa">Número da Camiseta *</label>
+            <input type="text" id="editSocNumeroCamisa" placeholder="Ex: 10, 15..." />
+          </div>
+          <div class="form-group">
+            <label for="editSocSangue">Tipo Sanguíneo</label>
+            <select id="editSocSangue">
+              <option value="O+">O+</option>
+              <option value="O-">O-</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+              <option value="Não sei">Não sei informar</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editSocValor">Valor do Plano (R$)</label>
+            <input type="number" step="0.01" id="editSocValor" required />
+          </div>
+          <div class="form-group">
+            <label for="editSocStatus">Status do Pagamento PIX</label>
+            <select id="editSocStatus">
+              <option value="Pendente PIX">Pendente PIX</option>
+              <option value="Pago / Ativo">Pago / Ativo</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editSocObs">Observações / Função na Torcida</label>
+          <input type="text" id="editSocObs" />
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+          <button type="button" class="btn btn-secondary" id="btnCancelEditSocio">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Salvar Alterações do Sócio</button>
+        </div>
+      </form>
     </div>
   </div>
 

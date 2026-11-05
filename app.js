@@ -20,15 +20,16 @@ const FALLBACK_STATE = {
     planos: [
       {
         id: 'socio-unico',
-        nome: 'Sócio Oficial Garra Alviverde (TGA)',
-        valor: 35.0,
-        periodo: 'Plano Único via PIX',
+        nome: 'Sócio Garra Alviverde (TGA)',
+        valor: 105.0,
+        valorParcela: 35.0,
+        maxParcelas: 3,
+        periodo: 'R$ 105,00 à vista ou em até 3x de R$ 35,00',
         destaque: true,
         beneficios: [
-          'Carteirinha Oficial da Torcida Garra Alviverde (TGA) + E.C.R.V.',
-          'Desconto exclusivo em todas as Caravanas da TGA acompanhando o Verdão do Sudoeste',
-          'Desconto nos materiais oficiais (camisas, regatas, bonés e faixas)',
-          'Acesso ao grupo oficial da TGA no WhatsApp e concentrações no Velosão'
+          '🎟️ Ingressos garantidos nos jogos em casa',
+          '👕 Descontos exclusivos nos materiais oficiais da Garra (pague a 1ª parcela de entrada e já garanta na hora!)',
+          '🚌 Prioridade em caravanas e viagens no grupo de sócios'
         ]
       }
     ]
@@ -110,6 +111,13 @@ function ensureClientState(state) {
     }
     if (!state.config.senhaAdmin || state.config.senhaAdmin === '2015') {
       state.config.senhaAdmin = 'Tga@2015';
+    }
+    if (!Array.isArray(state.config.planos) || state.config.planos.length === 0 || Number(state.config.planos[0].valor) < 105) {
+      state.config.planos = JSON.parse(JSON.stringify(FALLBACK_STATE.config.planos));
+    } else {
+      state.config.planos[0].valorParcela = Number(state.config.planos[0].valorParcela) || Math.round((Number(state.config.planos[0].valor) / 3) * 100) / 100;
+      state.config.planos[0].maxParcelas = 3;
+      state.config.planos[0].beneficios = FALLBACK_STATE.config.planos[0].beneficios;
     }
   }
 
@@ -500,11 +508,31 @@ function updateCaravanaPriceDisplay() {
 
 function updateSocioCardPreview() {
   const plano = getSinglePlan();
+  const valorTotal = Number(plano?.valor) || 105;
+  const valorParcela = Number(plano?.valorParcela) || Math.round((valorTotal / 3) * 100) / 100;
+  const formaSelect = document.getElementById('socFormaPagamento');
+  const isParcelado = formaSelect && formaSelect.value === 'parcelado_3x';
 
-  if (plano) {
-    document.getElementById('socValorCalculado').textContent = formatBRL(plano.valor);
-    document.getElementById('previewPlanoNome').textContent = 'SÓCIO OFICIAL TGA';
+  const labelEl = document.getElementById('socValorLabel');
+  const priceEl = document.getElementById('socValorCalculado');
+  const hintEl = document.getElementById('socPaymentMethodHint');
+
+  if (isParcelado) {
+    if (labelEl) labelEl.textContent = 'Valor da 1ª Parcela de Entrada no PIX (1/3):';
+    if (priceEl) priceEl.textContent = `${formatBRL(valorParcela)} (de ${formatBRL(valorTotal)})`;
+    if (hintEl) {
+      hintEl.textContent = `✔ Pague a 1ª parcela de ${formatBRL(valorParcela)} de entrada no PIX e já garanta o benefício dos materiais na hora! Os boletos da 2ª e 3ª parcela serão gerados e enviados no seu WhatsApp.`;
+    }
+  } else {
+    if (labelEl) labelEl.textContent = 'Valor para pagar agora no PIX (À Vista):';
+    if (priceEl) priceEl.textContent = formatBRL(valorTotal);
+    if (hintEl) {
+      hintEl.textContent = `✔ Pagamento à vista de ${formatBRL(valorTotal)} no PIX. Garante todos os benefícios do Sócio Garra na hora!`;
+    }
   }
+
+  const previewPlanoEl = document.getElementById('previewPlanoNome');
+  if (previewPlanoEl) previewPlanoEl.textContent = 'SÓCIO GARRA TGA';
 
   const nome = document.getElementById('socNome')?.value.trim();
   const apelido = document.getElementById('socApelido')?.value.trim();
@@ -527,13 +555,13 @@ function updateSocioCardPreview() {
 }
 
 // Modal de Sucesso com botão direto para WhatsApp (usando api.whatsapp.com/send para preservar emojis)
-function openSuccessModal({ titulo, descricao, valor, mensagemWhatsapp }) {
+function openSuccessModal({ titulo, descricao, valor, subtextoValor, mensagemWhatsapp }) {
   closeFeatureWindows();
   const modal = document.getElementById('modalSuccess');
   document.getElementById('successModalTitle').textContent = titulo;
   document.getElementById('successModalDesc').textContent = descricao;
   document.getElementById('successModalPix').textContent = appState.config.chavePix;
-  document.getElementById('successModalValor').textContent = `Valor para PIX: ${formatBRL(valor)}`;
+  document.getElementById('successModalValor').textContent = subtextoValor || `Valor para PIX agora: ${formatBRL(valor)}`;
 
   const rawWa = (appState.config.whatsappDiretoria || '').replace(/\D/g, '');
   const cleanWa = rawWa.startsWith('55') ? rawWa : `55${rawWa}`;
@@ -541,6 +569,16 @@ function openSuccessModal({ titulo, descricao, valor, mensagemWhatsapp }) {
   document.getElementById('btnSuccessWhatsapp').href = `https://api.whatsapp.com/send?phone=${cleanWa}&text=${encoded}`;
 
   modal.hidden = false;
+}
+
+function getSocioValorPagoEfetivo(s) {
+  if (typeof s.valorPago === 'number' && !isNaN(s.valorPago)) {
+    return s.valorPago;
+  }
+  if (s.statusPagamento === 'Pago / Ativo') return Number(s.valorPlano) || 105;
+  if (s.statusPagamento === '2ª Parcela Paga (R$ 70)') return 70;
+  if (s.statusPagamento === '1ª Parcela Paga (R$ 35)') return 35;
+  return 0;
 }
 
 // Painel Administrativo da Diretoria
@@ -605,9 +643,14 @@ function renderAdminDashboard() {
   const pendentesCar = appState.inscricoesCaravana.filter(i => i.statusPix !== 'PIX Confirmado').length;
   document.getElementById('kpiTotalPendentes').textContent = pendentesSocios + pendentesCar;
 
-  const somaSocios = appState.socios.reduce((acc, s) => acc + (Number(s.valorPlano) || 0), 0);
-  const somaCaravanas = appState.inscricoesCaravana.reduce((acc, i) => acc + (Number(i.valorPago) || 0), 0);
-  document.getElementById('kpiReceitaTotal').textContent = formatBRL(somaSocios + somaCaravanas);
+  const recebidoSocios = appState.socios.reduce((acc, s) => acc + getSocioValorPagoEfetivo(s), 0);
+  const previstoSocios = appState.socios.reduce((acc, s) => acc + (Number(s.valorPlano) || 105), 0);
+  const recebidoCaravanas = appState.inscricoesCaravana.reduce((acc, i) => acc + (i.statusPix === 'PIX Confirmado' ? (Number(i.valorPago) || 0) : 0), 0);
+  const previstoCaravanas = appState.inscricoesCaravana.reduce((acc, i) => acc + (Number(i.valorPago) || 0), 0);
+
+  const totalRecebido = recebidoSocios + recebidoCaravanas;
+  const totalPrevisto = previstoSocios + previstoCaravanas;
+  document.getElementById('kpiReceitaTotal').textContent = `${formatBRL(totalRecebido)} / ${formatBRL(totalPrevisto)}`;
 
   document.getElementById('tabCountSocios').textContent = appState.socios.length;
   document.getElementById('tabCountCaravanas').textContent = appState.inscricoesCaravana.length;
@@ -645,14 +688,28 @@ function openEditSocioModal(socioId) {
   document.getElementById('editSocCamisa').value = socio.tamanhoCamisa || 'G';
   document.getElementById('editSocNumeroCamisa').value = socio.numeroCamisa || '';
   document.getElementById('editSocSangue').value = socio.tipoSanguineo || 'O+';
-  document.getElementById('editSocValor').value = Number(socio.valorPlano) || 35;
+
+  const formaEl = document.getElementById('editSocFormaPagamento');
+  if (formaEl) {
+    formaEl.value = (socio.formaPagamento && socio.formaPagamento.includes('3x'))
+      ? 'Parcelado em 3x de R$ 35,00'
+      : 'À Vista no PIX (R$ 105,00)';
+  }
+  document.getElementById('editSocValor').value = Number(socio.valorPlano) || 105;
+  const valPagoEl = document.getElementById('editSocValorPago');
+  if (valPagoEl) valPagoEl.value = getSocioValorPagoEfetivo(socio);
   document.getElementById('editSocStatus').value = socio.statusPagamento || 'Pendente PIX';
+  const bolEl = document.getElementById('editSocBoletosEnviados');
+  if (bolEl) bolEl.checked = Boolean(socio.boletosEnviados);
   document.getElementById('editSocObs').value = socio.observacoes || '';
 
-  // Se o diretor não tiver permissão de aprovar PIX, trava os campos de Status PIX e Valor no modal
+  // Se o diretor não tiver permissão de aprovar PIX, trava os campos financeiros no modal
   const canApprovePix = hasPerm('aprovarPixSocio');
   document.getElementById('editSocStatus').disabled = !canApprovePix;
   document.getElementById('editSocValor').disabled = !canApprovePix;
+  if (valPagoEl) valPagoEl.disabled = !canApprovePix;
+  if (formaEl) formaEl.disabled = !canApprovePix;
+  if (bolEl) bolEl.disabled = !canApprovePix;
 
   document.getElementById('modalEditSocio').hidden = false;
 }
@@ -664,7 +721,7 @@ function renderAdminSociosTable() {
 
   const filtrados = appState.socios.filter((s) => {
     const matchStatus = statusFilter === 'todos' || s.statusPagamento === statusFilter;
-    const text = `${s.numeroCamisa || ''} ${s.matricula || ''} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade}`.toLowerCase();
+    const text = `${s.numeroCamisa || ''} ${s.matricula || ''} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade} ${s.formaPagamento || ''}`.toLowerCase();
     return matchStatus && text.includes(query);
   });
 
@@ -679,11 +736,36 @@ function renderAdminSociosTable() {
 
   tbody.innerHTML = filtrados.map((s) => {
     const isPaid = s.statusPagamento === 'Pago / Ativo';
+    const isPartial = s.statusPagamento === '1ª Parcela Paga (R$ 35)' || s.statusPagamento === '2ª Parcela Paga (R$ 70)';
+    const isParcelado = String(s.formaPagamento || '').includes('3x');
+    const valorTotal = Number(s.valorPlano) || 105;
+    const valorJaPago = getSocioValorPagoEfetivo(s);
+    const faltaPagar = Math.max(0, valorTotal - valorJaPago);
+
     const cleanPhone = (s.whatsapp || '').replace(/\D/g, '');
-    const waLink = `https://api.whatsapp.com/send?phone=55${cleanPhone.replace(/^55/, '')}&text=${encodeURIComponent(
-      `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de sócio.`
-    )}`;
+    const msgCobrancaOuContato = isParcelado
+      ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente ao seu Sócio Garra (${s.formaPagamento}) e envio dos boletos das parcelas.`
+      : `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de Sócio Garra Alviverde.`;
+    const waLink = `https://api.whatsapp.com/send?phone=55${cleanPhone.replace(/^55/, '')}&text=${encodeURIComponent(msgCobrancaOuContato)}`;
     const numCamisaDisplay = s.numeroCamisa ? `Nº ${s.numeroCamisa}` : 'Nº —';
+
+    let btnPixLabel = '✔ Confirmar PIX (R$ 105)';
+    if (isParcelado) {
+      if (s.statusPagamento === 'Pendente PIX') btnPixLabel = '✔ Confirmar 1ª Parc. (R$ 35)';
+      else if (s.statusPagamento === '1ª Parcela Paga (R$ 35)') btnPixLabel = '✔ Confirmar 2ª Parc. (R$ 70)';
+      else if (s.statusPagamento === '2ª Parcela Paga (R$ 70)') btnPixLabel = '✔ Quitar 3ª Parc. (R$ 105)';
+      else btnPixLabel = 'Voltar p/ Pendente';
+    } else {
+      btnPixLabel = isPaid ? 'Marcar Pendente' : '✔ Confirmar PIX (R$ 105)';
+    }
+
+    const boletoBadgeHtml = isParcelado
+      ? `<div style="margin-top:5px;">
+           <button type="button" class="btn-table" data-toggle-boleto="${s.id}" style="font-size:0.72rem; padding:3px 8px; background:${s.boletosEnviados ? '#dcfce7' : '#fef3c7'}; color:${s.boletosEnviados ? '#166534' : '#92400e'}; border:1px solid ${s.boletosEnviados ? '#86efac' : '#fde68a'};">
+             ${s.boletosEnviados ? '📄 Boletos Enviados ✔' : '📄 Marcar Boleto Enviado'}
+           </button>
+         </div>`
+      : '';
 
     const aprovadoInfoHtml = s.aprovadoPor
       ? `<div style="font-size:0.72rem; color:#047857; margin-top:4px; line-height:1.25;">
@@ -718,20 +800,24 @@ function renderAdminSociosTable() {
           <small>${s.pelotao || '—'} (${s.cidade || ''})</small>
         </td>
         <td>
-          <strong>${s.planoNome}</strong> (${formatBRL(s.valorPlano)})<br>
+          <strong>${s.formaPagamento || 'À Vista no PIX (R$ 105,00)'}</strong><br>
+          <small style="color:${faltaPagar === 0 ? '#047857' : '#b45309'}; font-weight:700;">
+            Pago: ${formatBRL(valorJaPago)} de ${formatBRL(valorTotal)} ${faltaPagar > 0 ? `(Falta ${formatBRL(faltaPagar)})` : '(Quitado)'}
+          </small><br>
           <small>Camisa: <strong>${s.tamanhoCamisa} (${numCamisaDisplay})</strong> | Sangue: ${s.tipoSanguineo}</small>
         </td>
         <td>
-          <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}">
+          <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}" style="${isPartial ? 'background:#e0f2fe;color:#0369a1;' : ''}">
             ${s.statusPagamento}
           </span>
+          ${boletoBadgeHtml}
           ${aprovadoInfoHtml}
         </td>
         <td>
           <div class="action-btns">
             ${canPix ? `
               <button type="button" class="btn-table btn-approve" data-toggle-socio="${s.id}">
-                ${isPaid ? 'Marcar Pendente' : '✔ Confirmar PIX'}
+                ${btnPixLabel}
               </button>
             ` : ''}
             ${canEdit ? `
@@ -762,12 +848,46 @@ function renderAdminSociosTable() {
       const id = btn.getAttribute('data-toggle-socio');
       const socio = appState.socios.find(x => x.id === id);
       if (!socio) return;
-      const statusAntigo = socio.statusPagamento;
-      const novoStatus = statusAntigo === 'Pago / Ativo' ? 'Pendente PIX' : 'Pago / Ativo';
-      const dirNome = currentAdminUser ? currentAdminUser.nome : 'Diretoria';
 
+      const isParcelado = String(socio.formaPagamento || '').includes('3x');
+      const statusAntigo = socio.statusPagamento;
+      let novoStatus = 'Pago / Ativo';
+      let novoValorPago = 105;
+      let novasParcelas = 1;
+
+      if (isParcelado) {
+        if (statusAntigo === 'Pendente PIX') {
+          novoStatus = '1ª Parcela Paga (R$ 35)';
+          novoValorPago = 35;
+          novasParcelas = 1;
+        } else if (statusAntigo === '1ª Parcela Paga (R$ 35)') {
+          novoStatus = '2ª Parcela Paga (R$ 70)';
+          novoValorPago = 70;
+          novasParcelas = 2;
+        } else if (statusAntigo === '2ª Parcela Paga (R$ 70)') {
+          novoStatus = 'Pago / Ativo';
+          novoValorPago = 105;
+          novasParcelas = 3;
+        } else {
+          novoStatus = 'Pendente PIX';
+          novoValorPago = 0;
+          novasParcelas = 0;
+        }
+      } else {
+        if (statusAntigo === 'Pago / Ativo') {
+          novoStatus = 'Pendente PIX';
+          novoValorPago = 0;
+          novasParcelas = 0;
+        } else {
+          novoStatus = 'Pago / Ativo';
+          novoValorPago = Number(socio.valorPlano) || 105;
+          novasParcelas = 1;
+        }
+      }
+
+      const dirNome = currentAdminUser ? currentAdminUser.nome : 'Diretoria';
       const ok = window.confirm(
-        `Confirmar alteração do status PIX de "${socio.nome}" para "${novoStatus}"?\n\nEsta ação ficará registrada em seu usuário: ${dirNome}.`
+        `Confirmar atualização financeira de "${socio.nome}" para:\n• Status: ${novoStatus}\n• Total Pago: ${formatBRL(novoValorPago)}\n\nEsta ação ficará registrada em seu usuário: ${dirNome}.`
       );
       if (!ok) return;
 
@@ -778,24 +898,64 @@ function renderAdminSociosTable() {
         status: novoStatus
       };
       socio.statusPagamento = novoStatus;
+      socio.valorPago = novoValorPago;
+      socio.parcelasPagas = novasParcelas;
       socio.aprovadoPor = aprovadoPor;
 
       const audit = buildAuditPayload(
         'PIX Sócio',
-        `${novoStatus === 'Pago / Ativo' ? 'Confirmou pagamento PIX' : 'Voltou PIX para Pendente'} do sócio ${socio.nome}`,
-        `Status PIX: "${statusAntigo}" ➔ "${novoStatus}" (Camisa Nº ${socio.numeroCamisa || '—'})`
+        `Atualizou pagamento do sócio ${socio.nome} para "${novoStatus}"`,
+        `Status: "${statusAntigo}" ➔ "${novoStatus}" | Valor Pago: ${formatBRL(novoValorPago)} de ${formatBRL(socio.valorPlano || 105)}`
       );
 
       try {
         await fetch(`/api/socios/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ statusPagamento: novoStatus, aprovadoPor, _auditoria: audit })
+          body: JSON.stringify({
+            statusPagamento: novoStatus,
+            valorPago: novoValorPago,
+            parcelasPagas: novasParcelas,
+            aprovadoPor,
+            _auditoria: audit
+          })
         });
       } catch (e) {}
       saveLocalBackup();
       renderAll();
-      showToast(`Status do sócio ${socio.nome} atualizado por ${dirNome}: ${novoStatus}`);
+      showToast(`Financeiro de ${socio.nome} atualizado por ${dirNome}: ${novoStatus}`);
+    });
+  });
+
+  // Botão rápido de marcar/desmarcar Boletos Enviados no WhatsApp
+  tbody.querySelectorAll('[data-toggle-boleto]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!hasPerm('aprovarPixSocio') && !hasPerm('editarSocio')) {
+        showToast('🚫 Você não tem permissão para alterar status de boletos.');
+        return;
+      }
+      const id = btn.getAttribute('data-toggle-boleto');
+      const socio = appState.socios.find(x => x.id === id);
+      if (!socio) return;
+      socio.boletosEnviados = !socio.boletosEnviados;
+      const dirNome = currentAdminUser ? currentAdminUser.nome : 'Diretoria';
+
+      const audit = buildAuditPayload(
+        'PIX Sócio',
+        `${socio.boletosEnviados ? 'Marcou que enviou os boletos no WhatsApp' : 'Desmarcou envio de boletos'} do sócio ${socio.nome}`,
+        `Boletos WhatsApp: ${socio.boletosEnviados ? 'Enviados ✔' : 'Pendente'}`
+      );
+
+      try {
+        await fetch(`/api/socios/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boletosEnviados: socio.boletosEnviados, _auditoria: audit })
+        });
+      } catch (e) {}
+      saveLocalBackup();
+      renderAll();
+      showToast(`📄 Boletos de ${socio.nome}: ${socio.boletosEnviados ? 'Marcado como Enviado no WhatsApp!' : 'Marcado como Pendente'}`);
     });
   });
 
@@ -1301,8 +1461,8 @@ function renderAdminAuditoriaTable() {
 function populateAdminConfigForm() {
   const cfg = appState.config;
   const planoUnico = getSinglePlan();
-  document.getElementById('cfgPlanoUnicoNome').value = planoUnico.nome || 'Sócio Oficial Garra Alviverde (TGA)';
-  document.getElementById('cfgPlanoUnicoValor').value = planoUnico.valor ?? 35;
+  document.getElementById('cfgPlanoUnicoNome').value = planoUnico.nome || 'Sócio Garra Alviverde (TGA)';
+  document.getElementById('cfgPlanoUnicoValor').value = planoUnico.valor ?? 105;
   document.getElementById('cfgNomeTorcida').value = cfg.nomeTorcida || '';
   document.getElementById('cfgSigla').value = cfg.sigla || '';
   document.getElementById('cfgAnoFundacao').value = cfg.anoFundacao || '';
@@ -1384,8 +1544,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('carSelectJogo')?.addEventListener('change', updateCaravanaPriceDisplay);
   document.getElementById('carTipoPassageiro')?.addEventListener('change', updateCaravanaPriceDisplay);
 
-  // Atualização em tempo real da Carteirinha de Sócio
-  ['socNome', 'socApelido', 'socCpf', 'socPelotao', 'socCamisa', 'socNumeroCamisa', 'socSangue'].forEach((id) => {
+  // Atualização em tempo real da Carteirinha de Sócio e Forma de Pagamento
+  ['socNome', 'socApelido', 'socCpf', 'socPelotao', 'socCamisa', 'socNumeroCamisa', 'socSangue', 'socFormaPagamento'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('input', updateSocioCardPreview);
@@ -1495,10 +1655,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Envio do Formulário de Inscrição de Sócio (Plano Único)
+  // Envio do Formulário de Inscrição de Sócio (À Vista R$ 105,00 ou Parcelado 3x de R$ 35,00)
   document.getElementById('formCadastroSocio')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const plano = getSinglePlan();
+    const valorTotal = Number(plano.valor) || 105;
+    const valorParcela = Number(plano.valorParcela) || Math.round((valorTotal / 3) * 100) / 100;
+    const isParcelado = document.getElementById('socFormaPagamento')?.value === 'parcelado_3x';
+    const formaPagamentoDesc = isParcelado ? 'Parcelado em 3x de R$ 35,00' : 'À Vista no PIX (R$ 105,00)';
+    const valorPagarAgora = isParcelado ? valorParcela : valorTotal;
 
     const payload = {
       nome: document.getElementById('socNome').value.trim(),
@@ -1514,8 +1679,13 @@ document.addEventListener('DOMContentLoaded', () => {
       numeroCamisa: document.getElementById('socNumeroCamisa').value.trim(),
       tipoSanguineo: document.getElementById('socSangue').value,
       planoId: plano.id,
-      planoNome: plano.nome,
-      valorPlano: plano.valor,
+      planoNome: plano.nome || 'Sócio Garra Alviverde (TGA)',
+      formaPagamento: formaPagamentoDesc,
+      valorPlano: valorTotal,
+      valorEntradaPix: valorPagarAgora,
+      valorPago: 0,
+      parcelasPagas: 0,
+      boletosEnviados: false,
       fotoDataUrl: currentPhotoDataUrl,
       observacoes: document.getElementById('socObs').value.trim(),
       statusPagamento: 'Pendente PIX'
@@ -1558,21 +1728,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateSocioCardPreview();
 
-    const msgWa = `\uD83D\uDFE2\u26AA *NOVA INSCRIÇÃO DE SÓCIO - ${appState.config.nomeTorcida}* \uD83D\uDFE2\u26AA\n\n` +
+    const linhaFinanceiraWa = isParcelado
+      ? `\uD83D\uDCB0 *Forma de Pagamento:* Parcelado em 3x de ${formatBRL(valorParcela)} (Total ${formatBRL(valorTotal)})\n` +
+        `\uD83D\uDCB5 *1ª Parcela de Entrada (PIX):* ${formatBRL(valorParcela)}\n` +
+        `\uD83D\uDCC4 *Boletos:* Aguardo o envio dos boletos das demais parcelas aqui no WhatsApp!\n\n` +
+        `\u2705 Segue meu comprovante da 1ª parcela (${formatBRL(valorParcela)}) para já garantir o benefício dos materiais na hora!`
+      : `\uD83D\uDCB0 *Forma de Pagamento:* À Vista no PIX (${formatBRL(valorTotal)})\n\n` +
+        `\u2705 Segue meu comprovante do PIX à vista (${formatBRL(valorTotal)}) para ativar meu Sócio Garra Alviverde!`;
+
+    const msgWa = `\uD83D\uDFE2\u26AA *NOVA INSCRIÇÃO - SÓCIO GARRA ALVIVERDE* \uD83D\uDFE2\u26AA\n\n` +
       `\uD83D\uDC64 *Nome:* ${criado.nome} (${criado.apelido || 'Sem apelido'})\n` +
       `\uD83C\uDD94 *CPF:* ${criado.cpf} | *RG:* ${criado.rg}\n` +
       `\uD83D\uDCCD *Bairro/Cidade:* ${criado.pelotao} - ${criado.cidade}\n` +
       `\uD83D\uDC55 *Camiseta:* Tam. ${criado.tamanhoCamisa} | *Nº da Camiseta:* ${criado.numeroCamisa || '—'}\n` +
       `\u2764\uFE0F *Sangue:* ${criado.tipoSanguineo}\n` +
-      `\u2B50 *Plano:* ${criado.planoNome} (${formatBRL(criado.valorPlano)})\n\n` +
-      `\u2705 Segue meu comprovante do PIX para ativar minha carteirinha de sócio da Garra Alviverde!`;
+      linhaFinanceiraWa;
 
     openSuccessModal({
       titulo: `🪪 Ficha de Sócio TGA Enviada! (Camisa Nº ${criado.numeroCamisa || '—'})`,
-      descricao: `Bem-vindo à Garra Alviverde, ${criado.nome}! Seus dados já chegaram no Painel da Diretoria.`,
-      valor: criado.valorPlano,
+      descricao: isParcelado
+        ? `Bem-vindo à Garra Alviverde, ${criado.nome}! Faça o PIX da 1ª parcela (${formatBRL(valorParcela)}) abaixo e envie o comprovante no WhatsApp para receber seus boletos das próximas parcelas.`
+        : `Bem-vindo à Garra Alviverde, ${criado.nome}! Faça o PIX à vista (${formatBRL(valorTotal)}) abaixo e envie o comprovante no WhatsApp da Diretoria.`,
+      valor: valorPagarAgora,
+      subtextoValor: isParcelado
+        ? `Valor da 1ª Parcela de Entrada no PIX: ${formatBRL(valorParcela)} (Plano 3x de ${formatBRL(valorParcela)})`
+        : `Valor à Vista no PIX: ${formatBRL(valorTotal)}`,
       mensagemWhatsapp: msgWa
     });
+  });
+
+  // Quando o diretor muda o Status de Pagamento no modal de edição, preenche automaticamente o Valor Pago correspondente
+  document.getElementById('editSocStatus')?.addEventListener('change', (e) => {
+    const st = e.target.value;
+    const valPagoEl = document.getElementById('editSocValorPago');
+    if (!valPagoEl) return;
+    if (st === 'Pendente PIX') valPagoEl.value = 0;
+    else if (st === '1ª Parcela Paga (R$ 35)') valPagoEl.value = 35;
+    else if (st === '2ª Parcela Paga (R$ 70)') valPagoEl.value = 70;
+    else if (st === 'Pago / Ativo') valPagoEl.value = Number(document.getElementById('editSocValor')?.value) || 105;
   });
 
   // Fechar / Salvar Modal de Edição de Sócio (Diretoria)
@@ -1608,8 +1801,13 @@ document.addEventListener('DOMContentLoaded', () => {
       tamanhoCamisa: document.getElementById('editSocCamisa').value,
       numeroCamisa: document.getElementById('editSocNumeroCamisa').value.trim(),
       tipoSanguineo: document.getElementById('editSocSangue').value,
-      valorPlano: canApprovePix ? (Number(document.getElementById('editSocValor').value) || 35) : oldSocio.valorPlano,
+      formaPagamento: canApprovePix
+        ? (document.getElementById('editSocFormaPagamento')?.value || oldSocio.formaPagamento || 'À Vista no PIX (R$ 105,00)')
+        : oldSocio.formaPagamento,
+      valorPlano: canApprovePix ? (Number(document.getElementById('editSocValor').value) || 105) : oldSocio.valorPlano,
+      valorPago: canApprovePix ? (Number(document.getElementById('editSocValorPago')?.value) || 0) : getSocioValorPagoEfetivo(oldSocio),
       statusPagamento: canApprovePix ? document.getElementById('editSocStatus').value : oldSocio.statusPagamento,
+      boletosEnviados: canApprovePix ? Boolean(document.getElementById('editSocBoletosEnviados')?.checked) : Boolean(oldSocio.boletosEnviados),
       observacoes: document.getElementById('editSocObs').value.trim()
     };
 
@@ -1625,8 +1823,11 @@ document.addEventListener('DOMContentLoaded', () => {
       { key: 'tamanhoCamisa', label: 'Tamanho Camisa' },
       { key: 'numeroCamisa', label: 'Nº Camiseta' },
       { key: 'tipoSanguineo', label: 'Sangue' },
-      { key: 'valorPlano', label: 'Valor' },
+      { key: 'formaPagamento', label: 'Modalidade' },
+      { key: 'valorPlano', label: 'Valor Total' },
+      { key: 'valorPago', label: 'Valor Pago' },
       { key: 'statusPagamento', label: 'Status PIX' },
+      { key: 'boletosEnviados', label: 'Boletos Enviados' },
       { key: 'observacoes', label: 'Obs' }
     ];
 
@@ -1650,7 +1851,7 @@ document.addEventListener('DOMContentLoaded', () => {
       resumo: resumoMudancas
     };
 
-    if (oldSocio.statusPagamento !== updates.statusPagamento) {
+    if (oldSocio.statusPagamento !== updates.statusPagamento || getSocioValorPagoEfetivo(oldSocio) !== updates.valorPago) {
       updates.aprovadoPor = {
         nome: dirNome,
         usuario: dirUsuario,
@@ -1882,12 +2083,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const headers = [
       'Nº Camiseta', 'Matrícula', 'Nome Completo', 'Apelido', 'CPF', 'RG', 'Nascimento',
       'WhatsApp', 'E-mail', 'Setor/Bairro', 'Cidade', 'Camisa', 'Tipo Sanguíneo',
-      'Plano', 'Valor (R$)', 'Status PIX', 'PIX Confirmado Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
+      'Modalidade Pagamento', 'Valor Total (R$)', 'Valor Pago (R$)', 'Status PIX / Parcelas', 'Boletos Enviados',
+      'PIX Confirmado Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
     ];
     const rows = appState.socios.map(s => [
       s.numeroCamisa || '', s.matricula, s.nome, s.apelido, s.cpf, s.rg, s.dataNascimento,
       s.whatsapp, s.email, s.pelotao, s.cidade, s.tamanhoCamisa, s.tipoSanguineo,
-      s.planoNome, s.valorPlano, s.statusPagamento,
+      s.formaPagamento || 'À Vista no PIX (R$ 105,00)', s.valorPlano || 105, getSocioValorPagoEfetivo(s), s.statusPagamento,
+      s.boletosEnviados ? 'Sim' : 'Não',
       s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : '',
       s.ultimaEdicao ? `${s.ultimaEdicao.nome} (${formatDateTimeBR(s.ultimaEdicao.dataHora)})` : '',
       s.observacoes, formatDateBR(s.createdAt)
@@ -1985,10 +2188,13 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     const planoAtual = getSinglePlan();
+    const valorNovo = Number(document.getElementById('cfgPlanoUnicoValor').value) || 105;
     const novoPlanoUnico = {
       ...planoAtual,
-      nome: document.getElementById('cfgPlanoUnicoNome').value.trim() || 'Sócio Oficial Garra Alviverde (TGA)',
-      valor: Number(document.getElementById('cfgPlanoUnicoValor').value) || 35
+      nome: document.getElementById('cfgPlanoUnicoNome').value.trim() || 'Sócio Garra Alviverde (TGA)',
+      valor: valorNovo,
+      valorParcela: Math.round((valorNovo / 3) * 100) / 100,
+      maxParcelas: 3
     };
 
     const novasConfigs = {

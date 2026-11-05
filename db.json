@@ -17,15 +17,16 @@
     "planos": [
       {
         "id": "socio-unico",
-        "nome": "Sócio Oficial Garra Alviverde (TGA)",
-        "valor": 40,
-        "periodo": "Plano Único via PIX",
+        "nome": "Sócio Garra Alviverde (TGA)",
+        "valor": 105,
+        "valorParcela": 35,
+        "maxParcelas": 3,
+        "periodo": "R$ 105,00 à vista ou em até 3x de R$ 35,00",
         "destaque": true,
         "beneficios": [
-          "Carteirinha Oficial da Torcida Garra Alviverde (TGA) + E.C.R.V.",
-          "Desconto exclusivo em todas as Caravanas da TGA acompanhando o Verdão do Sudoeste",
-          "Desconto nos materiais oficiais (camisas, regatas, bonés e faixas)",
-          "Acesso ao grupo oficial da TGA no WhatsApp e concentrações no Velosão"
+          "🎟️ Ingressos garantidos nos jogos em casa",
+          "👕 Descontos exclusivos nos materiais oficiais da Garra (pague a 1ª parcela de entrada e já garanta na hora!)",
+          "🚌 Prioridade em caravanas e viagens no grupo de sócios"
         ]
       }
     ]

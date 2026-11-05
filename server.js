@@ -54,15 +54,16 @@ const DEFAULT_DB = {
     planos: [
       {
         id: 'socio-unico',
-        nome: 'Sócio Oficial Garra Alviverde (TGA)',
-        valor: 35.0,
-        periodo: 'Plano Único via PIX',
+        nome: 'Sócio Garra Alviverde (TGA)',
+        valor: 105.0,
+        valorParcela: 35.0,
+        maxParcelas: 3,
+        periodo: 'R$ 105,00 à vista ou em até 3x de R$ 35,00',
         destaque: true,
         beneficios: [
-          'Carteirinha Oficial da Torcida Garra Alviverde (TGA) + E.C.R.V.',
-          'Desconto exclusivo em todas as Caravanas da TGA acompanhando o Verdão do Sudoeste',
-          'Desconto nos materiais oficiais (camisas, regatas, bonés e faixas)',
-          'Acesso ao grupo oficial da TGA no WhatsApp e concentrações no Velosão'
+          '🎟️ Ingressos garantidos nos jogos em casa',
+          '👕 Descontos exclusivos nos materiais oficiais da Garra (pague a 1ª parcela de entrada e já garanta na hora!)',
+          '🚌 Prioridade em caravanas e viagens no grupo de sócios'
         ]
       }
     ]
@@ -138,6 +139,13 @@ function ensureMasterAndCollections(db) {
     }
     if (!db.config.senhaAdmin || db.config.senhaAdmin === '2015') {
       db.config.senhaAdmin = 'Tga@2015';
+    }
+    if (!Array.isArray(db.config.planos) || db.config.planos.length === 0 || Number(db.config.planos[0].valor) < 105) {
+      db.config.planos = JSON.parse(JSON.stringify(DEFAULT_DB.config.planos));
+    } else {
+      db.config.planos[0].valorParcela = Number(db.config.planos[0].valorParcela) || Math.round((Number(db.config.planos[0].valor) / 3) * 100) / 100;
+      db.config.planos[0].maxParcelas = 3;
+      db.config.planos[0].beneficios = DEFAULT_DB.config.planos[0].beneficios;
     }
   }
 
@@ -459,8 +467,13 @@ async function requestHandler(req, res) {
         numeroCamisa: body.numeroCamisa || '',
         tipoSanguineo: body.tipoSanguineo || 'Não informado',
         planoId: body.planoId || 'socio-unico',
-        planoNome: body.planoNome || 'Sócio Oficial Garra Alviverde (TGA)',
-        valorPlano: Number(body.valorPlano) || 35.0,
+        planoNome: body.planoNome || 'Sócio Garra Alviverde (TGA)',
+        formaPagamento: body.formaPagamento || 'À Vista no PIX (R$ 105,00)',
+        valorPlano: Number(body.valorPlano) || 105.0,
+        valorEntradaPix: Number(body.valorEntradaPix) || 105.0,
+        valorPago: Number(body.valorPago) || 0,
+        parcelasPagas: Number(body.parcelasPagas) || 0,
+        boletosEnviados: Boolean(body.boletosEnviados),
         statusPagamento: body.statusPagamento || 'Pendente PIX',
         fotoDataUrl: body.fotoDataUrl || '',
         observacoes: body.observacoes || '',

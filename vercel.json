@@ -23,5 +23,11 @@
       "src": "/(.*)",
       "dest": "/index.js"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/backup/cron",
+      "schedule": "0 3 * * *"
+    }
   ]
 }

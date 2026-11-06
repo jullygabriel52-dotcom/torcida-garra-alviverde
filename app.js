@@ -623,17 +623,20 @@ function renderAdminDashboard() {
   const btnTabCar = document.getElementById('btnTabGerenciarCaravanas');
   const btnTabDir = document.getElementById('btnTabDiretores');
   const btnTabAud = document.getElementById('btnTabAuditoria');
+  const btnTabBkp = document.getElementById('btnTabBackups');
   const btnTabCfg = document.getElementById('btnTabConfig');
 
   if (btnTabCar) btnTabCar.hidden = !hasPerm('gerenciarCaravanas');
   if (btnTabDir) btnTabDir.hidden = !isMaster;
   if (btnTabAud) btnTabAud.hidden = !isMaster;
+  if (btnTabBkp) btnTabBkp.hidden = !isMaster;
   if (btnTabCfg) btnTabCfg.hidden = !isMaster;
 
-  const btnExpSoc = document.getElementById('btnExportSociosCsv');
-  const btnExpCar = document.getElementById('btnExportCaravanasCsv');
-  if (btnExpSoc) btnExpSoc.hidden = !hasPerm('exportarPlanilhas');
-  if (btnExpCar) btnExpCar.hidden = !hasPerm('exportarPlanilhas');
+  const canExport = hasPerm('exportarPlanilhas');
+  ['btnExportSociosCsv', 'btnPrintSocios', 'btnExportCaravanasCsv', 'btnPrintCaravanas'].forEach((btnId) => {
+    const el = document.getElementById(btnId);
+    if (el) el.hidden = !canExport;
+  });
 
   // KPIs
   document.getElementById('kpiTotalSocios').textContent = appState.socios.length;
@@ -666,6 +669,9 @@ function renderAdminDashboard() {
   renderAdminDiretoresList();
   renderAdminAuditoriaTable();
   populateAdminConfigForm();
+  if (isMaster) {
+    loadAndRenderBackups();
+  }
 }
 
 function openEditSocioModal(socioId) {
@@ -1476,15 +1482,376 @@ function populateAdminConfigForm() {
   document.getElementById('cfgSenhaAdmin').value = (!cfg.senhaAdmin || cfg.senhaAdmin === '2015') ? 'Tga@2015' : cfg.senhaAdmin;
 }
 
-// Exportação para Excel (CSV com BOM UTF-8)
-function downloadCsv(filename, headers, rows) {
-  const escapeCell = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
-  const csvContent = [
-    headers.map(escapeCell).join(';'),
-    ...rows.map(r => r.map(escapeCell).join(';'))
-  ].join('\r\n');
+// ============================================================================
+// PLANILHAS PROFISSIONAIS FORMATADAS (.XLS COM CABEÇALHO VERDE E LOGO + PDF)
+// ============================================================================
+function escapeHtml(val) {
+  return String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
-  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+function getStatusCellStyles(val) {
+  const s = String(val ?? '');
+  if (s === 'Pago / Ativo' || s === 'PIX Confirmado' || s === 'Sim') {
+    return 'background-color:#dcfce7; color:#166534; font-weight:bold; text-align:center;';
+  }
+  if (s.includes('Parcela Paga')) {
+    return 'background-color:#dbeafe; color:#1e40af; font-weight:bold; text-align:center;';
+  }
+  if (s.includes('Pendente') || s.includes('Aguardando')) {
+    return 'background-color:#fef3c7; color:#92400e; font-weight:bold; text-align:center;';
+  }
+  return '';
+}
+
+function downloadStyledExcel({ filename, sheetName, reportTitle, subtitle, summaryItems = [], headers = [], rows = [], textCols = [] }) {
+  const origin = window.location.origin;
+  const logoTgaUrl = `${origin}/assets/logo-tga.jpg`;
+  const logoEcrvUrl = `${origin}/assets/escudo-ecrv.jpg`;
+  const emittedAt = formatDateTimeBR(new Date().toISOString());
+  const emittedBy = currentAdminUser ? `${currentAdminUser.nome} (@${currentAdminUser.usuario})` : 'Diretoria TGA';
+  const colSpan = Math.max(headers.length, 4);
+  const textColSet = new Set(textCols);
+
+  const summaryBarText = [
+    `Emitido em: ${emittedAt}`,
+    `Responsável: ${emittedBy}`,
+    ...summaryItems
+  ].join('   |   ');
+
+  const headerCellsHtml = headers.map((h) => `
+    <th style="background-color:#006437; color:#ffffff; font-weight:bold; font-family:'Segoe UI',Arial,sans-serif; font-size:10.5pt; border:1px solid #052e16; padding:10px 12px; text-align:center; vertical-align:middle; white-space:nowrap;">
+      ${escapeHtml(h)}
+    </th>
+  `).join('');
+
+  const bodyRowsHtml = rows.length === 0
+    ? `<tr><td colspan="${colSpan}" style="padding:18px; text-align:center; font-family:'Segoe UI',Arial,sans-serif; font-size:10pt; border:1px solid #cbd5e1;">Nenhum registro encontrado para esta planilha.</td></tr>`
+    : rows.map((row, rowIndex) => {
+        const rowBg = rowIndex % 2 === 0 ? '#ffffff' : '#f0fdf4';
+        const cells = row.map((cellVal, colIndex) => {
+          const isTextCol = textColSet.has(colIndex);
+          const statusStyle = getStatusCellStyles(cellVal);
+          const textFormat = isTextCol ? "mso-number-format:'\\@';" : '';
+          const alignStyle = isTextCol ? 'text-align:center;' : '';
+          return `<td style="background-color:${rowBg}; color:#0f172a; font-family:'Segoe UI',Arial,sans-serif; font-size:10pt; border:1px solid #cbd5e1; padding:8px 10px; vertical-align:middle; ${textFormat} ${alignStyle} ${statusStyle}">${escapeHtml(cellVal)}</td>`;
+        }).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+  const excelHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <!--[if gte mso 9]>
+  <xml>
+    <x:ExcelWorkbook>
+      <x:ExcelWorksheets>
+        <x:ExcelWorksheet>
+          <x:Name>${escapeHtml((sheetName || 'Planilha TGA').slice(0, 30))}</x:Name>
+          <x:WorksheetOptions>
+            <x:DisplayGridlines/>
+          </x:WorksheetOptions>
+        </x:ExcelWorksheet>
+      </x:ExcelWorksheets>
+    </x:ExcelWorkbook>
+  </xml>
+  <![endif]-->
+</head>
+<body style="margin:0; padding:0; font-family:'Segoe UI',Arial,sans-serif;">
+  <table border="1" cellspacing="0" cellpadding="0" style="border-collapse:collapse; width:100%;">
+    <tr>
+      <td colspan="${colSpan}" style="background-color:#006437; color:#ffffff; padding:14px 18px; border:2px solid #052e16; text-align:left; vertical-align:middle;">
+        <table border="0" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+          <tr>
+            <td style="background-color:#006437; border:none; padding-right:12px; vertical-align:middle;">
+              <img src="${logoTgaUrl}" width="54" height="54" alt="Logo TGA" style="border-radius:50%; display:block;" />
+            </td>
+            <td style="background-color:#006437; border:none; padding-right:14px; vertical-align:middle;">
+              <img src="${logoEcrvUrl}" width="54" height="54" alt="Escudo ECRV" style="border-radius:50%; display:block;" />
+            </td>
+            <td style="background-color:#006437; border:none; color:#ffffff; vertical-align:middle;">
+              <div style="font-size:14pt; font-weight:bold; color:#ffffff; letter-spacing:0.5px;">
+                TORCIDA ORGANIZADA GARRA ALVIVERDE (TGA) • ESPORTE CLUBE RIO VERDE (E.C.R.V.)
+              </div>
+              <div style="font-size:12pt; font-weight:bold; color:#fde047; margin-top:2px;">
+                ${escapeHtml(reportTitle)}
+              </div>
+              <div style="font-size:9.5pt; color:#d1fae5; margin-top:2px;">
+                ${escapeHtml(subtitle || 'Fundada em 19/05/2015 • Estádio Mozart Veloso do Carmo (Velosão) • Rio Verde - GO • WhatsApp: (64) 99330-2283')}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="${colSpan}" style="background-color:#052e16; color:#ffffff; font-weight:bold; font-size:9.5pt; padding:8px 14px; border:1px solid #052e16;">
+        ${escapeHtml(summaryBarText)}
+      </td>
+    </tr>
+    <tr>
+      ${headerCellsHtml}
+    </tr>
+    ${bodyRowsHtml}
+    <tr>
+      <td colspan="${colSpan}" style="background-color:#ecfdf5; color:#065f46; font-weight:bold; font-size:9.5pt; padding:9px 14px; border-top:2px solid #006437; border-bottom:2px solid #006437;">
+        Documento Oficial — ${escapeHtml(appState.config.nomeTorcida || 'TORCIDA ORGANIZADA GARRA ALVIVERDE')} (${escapeHtml(appState.config.sigla || 'TGA')}) • Total de registros listados: ${rows.length}
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const blob = new Blob(['\uFEFF' + excelHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.xls') ? filename : `${filename}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function printStyledReport({ reportTitle, subtitle, summaryItems = [], headers = [], rows = [] }) {
+  const origin = window.location.origin;
+  const logoTgaUrl = `${origin}/assets/logo-tga.jpg`;
+  const logoEcrvUrl = `${origin}/assets/escudo-ecrv.jpg`;
+  const emittedAt = formatDateTimeBR(new Date().toISOString());
+  const emittedBy = currentAdminUser ? `${currentAdminUser.nome} (@${currentAdminUser.usuario})` : 'Diretoria TGA';
+
+  const headerCellsHtml = headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('');
+  const bodyRowsHtml = rows.length === 0
+    ? `<tr><td colspan="${headers.length}" style="text-align:center; padding:20px;">Nenhum registro encontrado.</td></tr>`
+    : rows.map((row) => {
+        const cells = row.map((cellVal) => {
+          const st = getStatusCellStyles(cellVal);
+          return `<td style="${st}">${escapeHtml(cellVal)}</td>`;
+        }).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+  const printWin = window.open('', '_blank');
+  if (!printWin) {
+    showToast('⚠️ Permita pop-ups no navegador para abrir a tela de Impressão / PDF.');
+    return;
+  }
+
+  printWin.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(reportTitle)} — TGA</title>
+  <style>
+    @page { size: landscape; margin: 10mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; color: #0f172a; background: #ffffff; }
+    .banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      background: #006437; color: #ffffff; padding: 16px 20px; border-radius: 12px 12px 0 0;
+      border-bottom: 3px solid #eab308;
+    }
+    .banner-left { display: flex; align-items: center; gap: 14px; }
+    .banner-logos { display: flex; gap: 8px; }
+    .banner-logos img { width: 58px; height: 58px; border-radius: 50%; border: 2px solid #eab308; background: #fff; object-fit: cover; }
+    .banner-title h1 { margin: 0; font-size: 17px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .banner-title h2 { margin: 3px 0 0; font-size: 14px; color: #fde047; }
+    .banner-title p { margin: 3px 0 0; font-size: 11px; color: #d1fae5; }
+    .summary-bar {
+      background: #052e16; color: #ffffff; padding: 8px 20px; font-size: 11.5px; font-weight: 700;
+      display: flex; flex-wrap: wrap; gap: 18px; border-radius: 0 0 10px 10px; margin-bottom: 12px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+    th {
+      background: #006437; color: #ffffff; font-weight: 700; padding: 8px 8px;
+      border: 1px solid #052e16; text-align: left;
+    }
+    td { padding: 6px 8px; border: 1px solid #cbd5e1; vertical-align: middle; }
+    tr:nth-child(even) td { background: #f0fdf4; }
+    .no-print { margin-bottom: 12px; display: flex; gap: 10px; justify-content: flex-end; }
+    .btn-print {
+      background: #006437; color: #fff; border: none; padding: 8px 16px; border-radius: 8px;
+      font-weight: 700; cursor: pointer; font-size: 13px;
+    }
+    @media print { .no-print { display: none !important; } body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir ou Salvar como PDF</button>
+  </div>
+  <div class="banner">
+    <div class="banner-left">
+      <div class="banner-logos">
+        <img src="${logoTgaUrl}" alt="TGA" />
+        <img src="${logoEcrvUrl}" alt="ECRV" />
+      </div>
+      <div class="banner-title">
+        <h1>TORCIDA ORGANIZADA GARRA ALVIVERDE (TGA) • ESPORTE CLUBE RIO VERDE (E.C.R.V.)</h1>
+        <h2>${escapeHtml(reportTitle)}</h2>
+        <p>${escapeHtml(subtitle || 'Fundada em 19/05/2015 • Estádio Mozart Veloso do Carmo (Velosão) • Rio Verde - GO')}</p>
+      </div>
+    </div>
+  </div>
+  <div class="summary-bar">
+    <span>📅 Emitido em: ${escapeHtml(emittedAt)}</span>
+    <span>👤 Emitido por: ${escapeHtml(emittedBy)}</span>
+    ${summaryItems.map(item => `<span>• ${escapeHtml(item)}</span>`).join('')}
+  </div>
+  <table>
+    <thead><tr>${headerCellsHtml}</tr></thead>
+    <tbody>${bodyRowsHtml}</tbody>
+  </table>
+  <script>
+    window.addEventListener('load', () => { setTimeout(() => window.print(), 350); });
+  </script>
+</body>
+</html>`);
+  printWin.document.close();
+}
+
+function buildSociosReportConfig() {
+  const totalSocios = appState.socios.length;
+  const quitados = appState.socios.filter(s => s.statusPagamento === 'Pago / Ativo').length;
+  const emParcelamento = appState.socios.filter(s => String(s.statusPagamento || '').includes('Parcela')).length;
+  const recebido = appState.socios.reduce((acc, s) => acc + getSocioValorPagoEfetivo(s), 0);
+  const previsto = appState.socios.reduce((acc, s) => acc + (Number(s.valorPlano) || 105), 0);
+
+  const headers = [
+    'Nº Camiseta', 'Matrícula', 'Nome Completo do Sócio', 'Apelido', 'CPF', 'RG', 'Nascimento',
+    'WhatsApp', 'Setor / Bairro', 'Cidade / UF', 'Tam. Camisa', 'Sangue',
+    'Modalidade de Pagamento', 'Valor do Plano', 'Valor Já Pago', 'Status PIX / Parcelas', 'Boletos Enviados',
+    'PIX Confirmado Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
+  ];
+
+  const rows = appState.socios.map((s) => [
+    s.numeroCamisa ? `Nº ${s.numeroCamisa}` : '—',
+    s.matricula || '—',
+    s.nome || '—',
+    s.apelido || '—',
+    s.cpf || '—',
+    s.rg || '—',
+    formatDateBR(s.dataNascimento),
+    s.whatsapp || '—',
+    s.pelotao || '—',
+    s.cidade || 'Rio Verde - GO',
+    s.tamanhoCamisa || 'G',
+    s.tipoSanguineo || '—',
+    s.formaPagamento || 'À Vista no PIX (R$ 105,00)',
+    formatBRL(Number(s.valorPlano) || 105),
+    formatBRL(getSocioValorPagoEfetivo(s)),
+    s.statusPagamento || 'Pendente PIX',
+    s.boletosEnviados ? 'Sim' : 'Não',
+    s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : '—',
+    s.ultimaEdicao ? `${s.ultimaEdicao.nome} (${formatDateTimeBR(s.ultimaEdicao.dataHora)})` : '—',
+    s.observacoes || '—',
+    formatDateBR(s.createdAt)
+  ]);
+
+  return {
+    filename: `Relacao_Oficial_Socios_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
+    sheetName: 'Socios Garra Alviverde',
+    reportTitle: 'RELAÇÃO OFICIAL DE MEMBROS E CONTROLE FINANCEIRO — SÓCIO GARRA ALVIVERDE',
+    subtitle: 'Investimento: R$ 105,00 à vista ou em até 3x de R$ 35,00 • Torcida Organizada Garra Alviverde (TGA)',
+    summaryItems: [
+      `Total de Sócios: ${totalSocios}`,
+      `Quitados (R$ 105): ${quitados}`,
+      `Em Parcelamento (3x): ${emParcelamento}`,
+      `Arrecadado: ${formatBRL(recebido)} de ${formatBRL(previsto)}`
+    ],
+    headers,
+    rows,
+    textCols: [0, 1, 4, 5, 6, 7, 10, 11, 20]
+  };
+}
+
+function buildCaravanasReportConfig() {
+  const caravanaFiltro = document.getElementById('filterCaravanaSelect')?.value || 'todas';
+  const lista = appState.inscricoesCaravana.filter((i) => caravanaFiltro === 'todas' || i.caravanaId === caravanaFiltro);
+  const confirmados = lista.filter(i => i.statusPix === 'PIX Confirmado').length;
+  const recebido = lista.reduce((acc, i) => acc + (i.statusPix === 'PIX Confirmado' ? (Number(i.valorPago) || 0) : 0), 0);
+
+  const headers = [
+    'Nº', 'Caravana / Jogo do E.C.R.V.', 'Ônibus / Setor de Embarque', 'Nome do Passageiro',
+    'Documento (RG / CPF)', 'WhatsApp', 'Setor / Bairro', 'Modalidade', 'Nº Camisa / Sócio',
+    'Valor Passagem', 'Status PIX', 'PIX Confirmado Por', 'Data Reserva'
+  ];
+
+  const rows = lista.map((i, idx) => [
+    String(idx + 1).padStart(2, '0'),
+    i.caravanaTitulo || 'Caravana TGA',
+    i.onibusEscolhido || '—',
+    i.nome || '—',
+    i.documento || '—',
+    i.whatsapp || '—',
+    i.pelotao || '—',
+    i.tipoPassageiro || '—',
+    i.numeroMatricula || '—',
+    formatBRL(Number(i.valorPago) || 0),
+    i.statusPix || 'Aguardando PIX',
+    i.aprovadoPor ? `${i.aprovadoPor.nome} (${formatDateTimeBR(i.aprovadoPor.dataHora)})` : '—',
+    formatDateBR(i.createdAt)
+  ]);
+
+  return {
+    filename: `Lista_Passageiros_Caravanas_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
+    sheetName: 'Passageiros Caravanas TGA',
+    reportTitle: 'LISTA OFICIAL DE PASSAGEIROS E EMBARQUE — CARAVANAS GARRA ALVIVERDE (E.C.R.V.)',
+    subtitle: 'Controle de Ônibus, Documentos e Confirmação de PIX • Torcida Organizada Garra Alviverde',
+    summaryItems: [
+      `Total de Passageiros: ${lista.length}`,
+      `PIX Confirmados: ${confirmados}`,
+      `Pendentes: ${lista.length - confirmados}`,
+      `Total Confirmado: ${formatBRL(recebido)}`
+    ],
+    headers,
+    rows,
+    textCols: [0, 4, 5, 8, 12]
+  };
+}
+
+function buildAuditoriaReportConfig() {
+  const logs = Array.isArray(appState.auditoriaLogs) ? appState.auditoriaLogs : [];
+  const headers = [
+    'Data e Hora', 'Diretor Responsável', 'Login (@)', 'Categoria',
+    'Ação Realizada no Painel', 'Detalhes da Alteração (Antes ➔ Depois)'
+  ];
+
+  const rows = logs.map((l) => [
+    formatDateTimeBR(l.dataHora),
+    l.diretorNome || 'Diretoria TGA',
+    `@${l.diretorUsuario || 'diretoria'}`,
+    l.categoria || 'Sistema',
+    l.acao || '—',
+    l.detalhes || '—'
+  ]);
+
+  return {
+    filename: `Relatorio_Auditoria_Diretoria_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
+    sheetName: 'Auditoria Diretoria TGA',
+    reportTitle: 'RELATÓRIO OFICIAL DE AUDITORIA E HISTÓRICO DE ALTERAÇÕES DA DIRETORIA',
+    subtitle: 'Rastreamento de Aprovações de PIX, Edições de Cadastros e Credenciais • Controle Master TGA',
+    summaryItems: [
+      `Total de Ações Registradas: ${logs.length}`,
+      `Diretores Cadastrados: ${(appState.usuariosDiretoria || []).length}`
+    ],
+    headers,
+    rows,
+    textCols: [0, 2]
+  };
+}
+
+// ============================================================================
+// COFRE DE BACKUPS AUTOMÁTICOS (00:00) & RECUPERAÇÃO CONTRA INVASÃO/QUEDA
+// ============================================================================
+let cloudBackupsCache = [];
+
+function downloadJsonFile(filename, dataObj) {
+  const jsonStr = JSON.stringify(dataObj, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -1493,6 +1860,149 @@ function downloadCsv(filename, headers, rows) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+async function loadAndRenderBackups() {
+  const tbody = document.getElementById('adminBackupsTableBody');
+  if (!tbody) return;
+
+  try {
+    const res = await fetch('/api/backups');
+    if (res.ok) {
+      const data = await res.json();
+      cloudBackupsCache = Array.isArray(data.backups) ? data.backups : [];
+    }
+  } catch (err) {
+    console.warn('Usando cache local de backups:', err);
+  }
+
+  if (cloudBackupsCache.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align:center; padding:24px;">
+          Nenhum ponto de backup listado ainda. Clique em <strong>"💾 Criar Backup na Nuvem Agora"</strong> acima para gerar o primeiro ponto imediatamente!
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = cloudBackupsCache.map((b) => {
+    const isAuto = String(b.tipo || '').includes('Automático');
+    const isPreRestore = String(b.tipo || '').includes('Pré-Restauração');
+    const badgeStyle = isAuto
+      ? 'background:#dcfce7; color:#166534;'
+      : (isPreRestore ? 'background:#fef3c7; color:#92400e;' : 'background:#dbeafe; color:#1e40af;');
+    const r = b.resumo || {};
+
+    return `
+      <tr>
+        <td>
+          <strong>📅 ${formatDateTimeBR(b.dataHora)}</strong><br>
+          <small style="color:#047857; font-weight:700;">Data Ref: ${escapeHtml(b.dataReferencia || '—')}</small>
+        </td>
+        <td>
+          <span class="status-badge" style="${badgeStyle}">
+            ${isAuto ? '🕛 ' : (isPreRestore ? '🛡️ ' : '💾 ')}${escapeHtml(b.tipo || 'Backup TGA')}
+          </span>
+        </td>
+        <td>
+          <strong>${escapeHtml(b.autor || 'Sistema Automático TGA')}</strong>
+        </td>
+        <td>
+          <div style="font-size:0.84rem; line-height:1.4;">
+            🪪 <strong>${r.totalSocios ?? 0}</strong> Sócios •
+            🚌 <strong>${r.totalInscritosCaravana ?? 0}</strong> Passageiros •
+            🏟️ <strong>${r.totalCaravanas ?? 0}</strong> Caravanas •
+            🕵️‍♂️ <strong>${r.totalLogs ?? 0}</strong> Logs
+          </div>
+        </td>
+        <td>
+          <div class="action-btns">
+            <button type="button" class="btn-table" data-download-bkp="${b.id}" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;">
+              📥 Baixar .JSON
+            </button>
+            <button type="button" class="btn-table btn-approve" data-restore-bkp="${b.id}">
+              ⏪ Restaurar Sistema
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('[data-download-bkp]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-download-bkp');
+      const bkp = cloudBackupsCache.find(x => x.id === id);
+      if (!bkp) return;
+      downloadJsonFile(`Backup_TGA_${bkp.dataReferencia || 'data'}_${bkp.id}.json`, bkp);
+      showToast('📥 Arquivo de backup (.JSON) baixado para o seu dispositivo!');
+    });
+  });
+
+  tbody.querySelectorAll('[data-restore-bkp]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!currentAdminUser || !currentAdminUser.isMaster) {
+        showToast('🚫 Apenas o Usuário Master pode restaurar backups.');
+        return;
+      }
+      const id = btn.getAttribute('data-restore-bkp');
+      const bkp = cloudBackupsCache.find(x => x.id === id);
+      if (!bkp) return;
+
+      const r = bkp.resumo || {};
+      const ok = window.confirm(
+        `⚠️ CONFIRMAR RESTAURAÇÃO DO SISTEMA?\n\n` +
+        `Você está prestes a restaurar todo o banco de dados da Garra Alviverde para o ponto:\n` +
+        `• Data/Hora: ${formatDateTimeBR(bkp.dataHora)}\n` +
+        `• Tipo: ${bkp.tipo}\n` +
+        `• Conteúdo: ${r.totalSocios ?? 0} Sócios e ${r.totalInscritosCaravana ?? 0} Passageiros nas Caravanas\n\n` +
+        `(O sistema criará automaticamente uma cópia de segurança do estado atual antes de restaurar). Deseja continuar?`
+      );
+      if (!ok) return;
+
+      try {
+        const res = await fetch('/api/backups/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            backupId: bkp.id,
+            autor: currentAdminUser.nome,
+            _auditoria: buildAuditPayload(
+              'Configurações',
+              `Restaurou o sistema para o Backup de ${formatDateTimeBR(bkp.dataHora)} (${bkp.tipo})`,
+              `Sócios restaurados: ${r.totalSocios ?? 0} | Passageiros: ${r.totalInscritosCaravana ?? 0}`
+            )
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.state) {
+            appState = data.state;
+            ensureClientState(appState);
+            saveLocalBackup();
+          }
+          if (Array.isArray(data.backups)) {
+            cloudBackupsCache = data.backups;
+          }
+          renderAll();
+          loadAndRenderBackups();
+          showToast(`✅ Sistema restaurado com sucesso para o backup de ${formatDateTimeBR(bkp.dataHora)}!`);
+        } else {
+          showToast('❌ Erro ao restaurar backup na nuvem.');
+        }
+      } catch (err) {
+        if (bkp.snapshot) {
+          appState = { ...appState, ...bkp.snapshot };
+          ensureClientState(appState);
+          saveLocalBackup();
+          renderAll();
+          showToast('✅ Sistema restaurado localmente a partir do ponto de backup!');
+        }
+      }
+    });
+  });
 }
 
 // Inicialização de Eventos
@@ -1913,7 +2423,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Volta para a primeira aba por padrão
     document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
     document.getElementById('btnTabSocios')?.classList.add('active');
-    ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-config'].forEach((panelId) => {
+    ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
       const el = document.getElementById(panelId);
       if (el) el.hidden = panelId !== 'tab-socios';
     });
@@ -1980,16 +2490,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.admin-tab').forEach((tabBtn) => {
     tabBtn.addEventListener('click', () => {
       const targetId = tabBtn.getAttribute('data-tab');
-      if ((targetId === 'tab-diretores' || targetId === 'tab-auditoria' || targetId === 'tab-config') && !(currentAdminUser && currentAdminUser.isMaster)) {
+      if ((targetId === 'tab-diretores' || targetId === 'tab-auditoria' || targetId === 'tab-backups' || targetId === 'tab-config') && !(currentAdminUser && currentAdminUser.isMaster)) {
         showToast('🚫 Esta aba é exclusiva do Usuário Master.');
         return;
       }
       document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
       tabBtn.classList.add('active');
-      ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-config'].forEach((panelId) => {
+      ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
         const panel = document.getElementById(panelId);
         if (panel) panel.hidden = panelId !== targetId;
       });
+      if (targetId === 'tab-backups') {
+        loadAndRenderBackups();
+      }
     });
   });
 
@@ -2077,53 +2590,206 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(`👑 Credencial criada para ${nome}! Usuário: ${usuario}`);
   });
 
-  // Exportar Sócios CSV
+  // Exportar Planilha Formatada de Sócios (.XLS Oficial com Cabeçalho Verde e Logo)
   document.getElementById('btnExportSociosCsv')?.addEventListener('click', () => {
     if (!hasPerm('exportarPlanilhas')) return;
-    const headers = [
-      'Nº Camiseta', 'Matrícula', 'Nome Completo', 'Apelido', 'CPF', 'RG', 'Nascimento',
-      'WhatsApp', 'E-mail', 'Setor/Bairro', 'Cidade', 'Camisa', 'Tipo Sanguíneo',
-      'Modalidade Pagamento', 'Valor Total (R$)', 'Valor Pago (R$)', 'Status PIX / Parcelas', 'Boletos Enviados',
-      'PIX Confirmado Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
-    ];
-    const rows = appState.socios.map(s => [
-      s.numeroCamisa || '', s.matricula, s.nome, s.apelido, s.cpf, s.rg, s.dataNascimento,
-      s.whatsapp, s.email, s.pelotao, s.cidade, s.tamanhoCamisa, s.tipoSanguineo,
-      s.formaPagamento || 'À Vista no PIX (R$ 105,00)', s.valorPlano || 105, getSocioValorPagoEfetivo(s), s.statusPagamento,
-      s.boletosEnviados ? 'Sim' : 'Não',
-      s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : '',
-      s.ultimaEdicao ? `${s.ultimaEdicao.nome} (${formatDateTimeBR(s.ultimaEdicao.dataHora)})` : '',
-      s.observacoes, formatDateBR(s.createdAt)
-    ]);
-    downloadCsv(`socios_${appState.config.sigla.toLowerCase()}.csv`, headers, rows);
-    showToast('📥 Planilha de Sócios TGA baixada com sucesso!');
+    downloadStyledExcel(buildSociosReportConfig());
+    showToast('📊 Planilha Oficial de Sócios TGA (.XLS Formatada) baixada com sucesso!');
   });
 
-  // Exportar Passageiros das Caravanas CSV
+  document.getElementById('btnPrintSocios')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    printStyledReport(buildSociosReportConfig());
+  });
+
+  // Exportar Planilha Formatada de Passageiros das Caravanas (.XLS Oficial com Cabeçalho Verde e Logo)
   document.getElementById('btnExportCaravanasCsv')?.addEventListener('click', () => {
     if (!hasPerm('exportarPlanilhas')) return;
-    const headers = [
-      'Caravana', 'Ônibus', 'Nome do Passageiro', 'Documento (RG/CPF)',
-      'WhatsApp', 'Setor/Bairro', 'Modalidade', 'Matrícula Sócio', 'Valor (R$)', 'Status PIX', 'Confirmado Por', 'Data Reserva'
-    ];
-    const rows = appState.inscricoesCaravana.map(i => [
-      i.caravanaTitulo, i.onibusEscolhido, i.nome, i.documento,
-      i.whatsapp, i.pelotao, i.tipoPassageiro, i.numeroMatricula, i.valorPago, i.statusPix,
-      i.aprovadoPor ? `${i.aprovadoPor.nome} (${formatDateTimeBR(i.aprovadoPor.dataHora)})` : '',
-      formatDateBR(i.createdAt)
-    ]);
-    downloadCsv(`lista_passageiros_caravanas_${appState.config.sigla.toLowerCase()}.csv`, headers, rows);
-    showToast('📥 Lista de Passageiros das Caravanas baixada!');
+    downloadStyledExcel(buildCaravanasReportConfig());
+    showToast('📊 Planilha Oficial de Passageiros das Caravanas (.XLS Formatada) baixada!');
   });
 
-  // Exportar Relatório de Auditoria CSV
+  document.getElementById('btnPrintCaravanas')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    printStyledReport(buildCaravanasReportConfig());
+  });
+
+  // Exportar Planilha Formatada de Auditoria da Diretoria (.XLS Oficial com Cabeçalho Verde e Logo)
   document.getElementById('btnExportAuditoriaCsv')?.addEventListener('click', () => {
-    const headers = ['Data e Hora', 'Diretor Responsável', 'Usuário', 'Categoria', 'Ação Realizada', 'Detalhes (Antes -> Depois)'];
-    const rows = (appState.auditoriaLogs || []).map(l => [
-      formatDateTimeBR(l.dataHora), l.diretorNome, l.diretorUsuario, l.categoria, l.acao, l.detalhes
-    ]);
-    downloadCsv(`auditoria_diretoria_${appState.config.sigla.toLowerCase()}.csv`, headers, rows);
-    showToast('📥 Relatório de Auditoria baixado com sucesso!');
+    downloadStyledExcel(buildAuditoriaReportConfig());
+    showToast('📊 Planilha Oficial de Auditoria da Diretoria (.XLS Formatada) baixada!');
+  });
+
+  document.getElementById('btnPrintAuditoria')?.addEventListener('click', () => {
+    printStyledReport(buildAuditoriaReportConfig());
+  });
+
+  // ==========================================================================
+  // EVENTOS DO COFRE DE BACKUPS DIÁRIOS (00:00) E RECUPERAÇÃO (MASTER)
+  // ==========================================================================
+  document.getElementById('btnRefreshBackupsList')?.addEventListener('click', () => {
+    loadAndRenderBackups();
+    showToast('🔄 Lista de backups atualizada!');
+  });
+
+  document.getElementById('btnCreateManualBackup')?.addEventListener('click', async () => {
+    if (!currentAdminUser || !currentAdminUser.isMaster) {
+      showToast('🚫 Apenas o Usuário Master pode criar pontos de backup.');
+      return;
+    }
+    const audit = buildAuditPayload(
+      'Configurações',
+      `Criou ponto de backup manual no Cofre Anti-Invasão`,
+      `Sócios protegidos: ${appState.socios.length} | Passageiros: ${appState.inscricoesCaravana.length}`
+    );
+    try {
+      const res = await fetch('/api/backups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: 'Manual (Master)',
+          autor: currentAdminUser.nome,
+          _auditoria: audit
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.backups)) {
+          cloudBackupsCache = data.backups;
+        }
+        loadAndRenderBackups();
+        renderAdminAuditoriaTable();
+        showToast('💾 Ponto de backup criado e blindado na nuvem com sucesso!');
+        return;
+      }
+    } catch (err) {}
+
+    // Fallback caso offline
+    const fallbackEntry = {
+      id: 'bkp-' + Date.now(),
+      dataReferencia: new Date().toISOString().slice(0, 10),
+      dataHora: new Date().toISOString(),
+      tipo: 'Manual (Master)',
+      autor: currentAdminUser.nome,
+      resumo: {
+        totalSocios: appState.socios.length,
+        totalCaravanas: appState.caravanas.length,
+        totalInscritosCaravana: appState.inscricoesCaravana.length,
+        totalDiretores: (appState.usuariosDiretoria || []).length,
+        totalLogs: (appState.auditoriaLogs || []).length
+      },
+      snapshot: JSON.parse(JSON.stringify(appState))
+    };
+    cloudBackupsCache.unshift(fallbackEntry);
+    loadAndRenderBackups();
+    showToast('💾 Ponto de backup criado com sucesso!');
+  });
+
+  document.getElementById('btnDownloadFullBackupJson')?.addEventListener('click', () => {
+    if (!currentAdminUser || !currentAdminUser.isMaster) {
+      showToast('🚫 Apenas o Usuário Master pode baixar o backup completo.');
+      return;
+    }
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const fullBackupObj = {
+      id: 'bkp-download-' + Date.now(),
+      dataReferencia: todayStr,
+      dataHora: new Date().toISOString(),
+      tipo: 'Cópia Completa Baixada no PC (Master)',
+      autor: currentAdminUser.nome,
+      resumo: {
+        totalSocios: appState.socios.length,
+        totalCaravanas: appState.caravanas.length,
+        totalInscritosCaravana: appState.inscricoesCaravana.length,
+        totalDiretores: (appState.usuariosDiretoria || []).length,
+        totalLogs: (appState.auditoriaLogs || []).length
+      },
+      snapshot: {
+        config: appState.config,
+        caravanas: appState.caravanas,
+        socios: appState.socios,
+        inscricoesCaravana: appState.inscricoesCaravana,
+        usuariosDiretoria: appState.usuariosDiretoria,
+        auditoriaLogs: appState.auditoriaLogs
+      }
+    };
+    downloadJsonFile(`Backup_Completo_Garra_Alviverde_TGA_${todayStr}.json`, fullBackupObj);
+    showToast('📥 Backup Completo (.JSON) salvo no seu dispositivo!');
+  });
+
+  document.getElementById('btnTriggerUploadBackup')?.addEventListener('click', () => {
+    if (!currentAdminUser || !currentAdminUser.isMaster) {
+      showToast('🚫 Apenas o Usuário Master pode restaurar backups.');
+      return;
+    }
+    document.getElementById('inputRestoreBackupFile')?.click();
+  });
+
+  document.getElementById('inputRestoreBackupFile')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || '{}'));
+        const snap = parsed.snapshot ? parsed.snapshot : parsed;
+        if (!snap || (!Array.isArray(snap.socios) && !snap.config)) {
+          showToast('❌ O arquivo selecionado não é um backup válido da TGA.');
+          return;
+        }
+        const qtdSocios = Array.isArray(snap.socios) ? snap.socios.length : 0;
+        const qtdPass = Array.isArray(snap.inscricoesCaravana) ? snap.inscricoesCaravana.length : 0;
+        const ok = window.confirm(
+          `⚠️ RESTAURAR A PARTIR DO ARQUIVO "${file.name}"?\n\n` +
+          `• Sócios encontrados no arquivo: ${qtdSocios}\n` +
+          `• Passageiros nas caravanas: ${qtdPass}\n\n` +
+          `Deseja substituir os dados atuais por este backup?`
+        );
+        if (!ok) {
+          e.target.value = '';
+          return;
+        }
+
+        const audit = buildAuditPayload(
+          'Configurações',
+          `Restaurou o sistema a partir do arquivo "${file.name}"`,
+          `Sócios restaurados: ${qtdSocios} | Passageiros: ${qtdPass}`
+        );
+
+        const res = await fetch('/api/backups/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            snapshot: snap,
+            origem: `Arquivo: ${file.name}`,
+            autor: currentAdminUser?.nome || 'Jully Gabriel (Master)',
+            _auditoria: audit
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.state) {
+            appState = data.state;
+            ensureClientState(appState);
+            saveLocalBackup();
+          }
+          if (Array.isArray(data.backups)) {
+            cloudBackupsCache = data.backups;
+          }
+          renderAll();
+          loadAndRenderBackups();
+          showToast(`✅ Sistema restaurado com sucesso a partir de "${file.name}"!`);
+        } else {
+          throw new Error('Fallback local');
+        }
+      } catch (err) {
+        showToast('❌ Erro ao ler ou restaurar o arquivo de backup.');
+      } finally {
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
   });
 
   // Criar Nova Caravana pelo Admin

@@ -873,6 +873,9 @@
           <button type="button" class="admin-tab" data-tab="tab-auditoria" id="btnTabAuditoria">
             🕵️‍♂️ Auditoria / Histórico (<span id="tabCountAuditoria">0</span>)
           </button>
+          <button type="button" class="admin-tab" data-tab="tab-backups" id="btnTabBackups">
+            🛡️ Backups & Recuperação (00:00)
+          </button>
           <button type="button" class="admin-tab" data-tab="tab-config" id="btnTabConfig">
             ⚙️ Configurar Plano Único, PIX e WhatsApp
           </button>
@@ -891,9 +894,12 @@
                 <option value="Pago / Ativo">Quitado Total (R$ 105)</option>
               </select>
             </div>
-            <div class="admin-export-btns">
+            <div class="admin-export-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="btn btn-primary btn-sm" id="btnExportSociosCsv">
-                📥 Baixar Planilha de Sócios (Excel / CSV)
+                📊 Baixar Planilha Oficial (.XLS Formatada)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnPrintSocios">
+                🖨️ Imprimir / PDF c/ Logo
               </button>
             </div>
           </div>
@@ -927,9 +933,12 @@
               </select>
               <input type="search" id="searchCaravanaInscritos" placeholder="Buscar passageiro por nome, RG ou ônibus..." />
             </div>
-            <div class="admin-export-btns">
+            <div class="admin-export-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="btn btn-primary btn-sm" id="btnExportCaravanasCsv">
-                📥 Baixar Lista de Passageiros (Excel / CSV)
+                📊 Baixar Planilha Caravanas (.XLS Formatada)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnPrintCaravanas">
+                🖨️ Imprimir / PDF c/ Logo
               </button>
             </div>
           </div>
@@ -1204,9 +1213,12 @@
                 <option value="Configurações">Configurações</option>
               </select>
             </div>
-            <div class="admin-export-btns">
+            <div class="admin-export-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button type="button" class="btn btn-primary btn-sm" id="btnExportAuditoriaCsv">
-                📥 Baixar Relatório de Auditoria (Excel / CSV)
+                📊 Baixar Planilha Auditoria (.XLS Formatada)
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnPrintAuditoria">
+                🖨️ Imprimir / PDF c/ Logo
               </button>
             </div>
           </div>
@@ -1226,6 +1238,68 @@
                 <!-- Preenchido via JS -->
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- ABA 7: BACKUPS DIÁRIOS (00:00) & RECUPERAÇÃO CONTRA INVASÃO/QUEDA (EXCLUSIVO MASTER) -->
+        <div class="admin-tab-panel" id="tab-backups" hidden>
+          <div class="admin-subcard" style="background:linear-gradient(135deg, #064e3b 0%, #006437 100%); color:#ffffff; border:2px solid #eab308; margin-bottom:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">
+              <div style="max-width:680px;">
+                <span style="display:inline-block; background:#eab308; color:#052e16; font-weight:800; font-size:0.74rem; padding:3px 10px; border-radius:999px; margin-bottom:8px;">
+                  🛡️ COFRE ANTI-INVASÃO E ANTI-QUEDA • ATIVO TODOS OS DIAS ÀS 00:00
+                </span>
+                <h3 style="color:#ffffff; margin:0 0 6px; font-size:1.2rem;">Backup Automático Diário às 00:00 & Restauração Total</h3>
+                <p style="color:#d1fae5; font-size:0.9rem; margin:0; line-height:1.5;">
+                  Todos os dias à <strong>meia-noite (00:00)</strong>, o sistema salva automaticamente uma cópia blindada e isolada de todos os <strong>Sócios, Parcelas, Caravanas, Passageiros, Diretores e Auditoria</strong>. Caso o site sofra qualquer invasão, exclusão acidental ou queda, você pode restaurar tudo com <strong>1 clique</strong> ou a partir de um arquivo salvo no seu computador/celular.
+                </p>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px; min-width:250px;">
+                <button type="button" class="btn btn-gold btn-sm" id="btnCreateManualBackup" style="font-weight:800;">
+                  💾 Criar Backup na Nuvem Agora
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnDownloadFullBackupJson" style="background:#ffffff; color:#064e3b; font-weight:700;">
+                  📥 Baixar Backup no Meu PC (.JSON)
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnTriggerUploadBackup" style="background:rgba(255,255,255,0.14); color:#ffffff; border:1px solid rgba(255,255,255,0.35);">
+                  📤 Restaurar de Arquivo (.JSON)
+                </button>
+                <input type="file" id="inputRestoreBackupFile" accept=".json,application/json" hidden />
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-subcard">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <div>
+                <h3 style="margin:0;">🗂️ Histórico de Backups Salvos no Cofre (Últimos 30 Pontos)</h3>
+                <p class="admin-helper-text" style="margin:4px 0 0;">
+                  Clique em <strong>⏪ Restaurar Sistema</strong> em qualquer data abaixo para voltar todos os cadastros exatamente para aquele momento, ou em <strong>📥 Baixar</strong> para guardar uma cópia no seu computador.
+                </p>
+              </div>
+              <button type="button" class="btn btn-outline-green btn-sm" id="btnRefreshBackupsList">
+                🔄 Atualizar Lista de Backups
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Data / Horário do Backup</th>
+                    <th>Tipo de Ponto</th>
+                    <th>Autor / Origem</th>
+                    <th>Resumo de Dados Protegidos</th>
+                    <th>Ações de Recuperação</th>
+                  </tr>
+                </thead>
+                <tbody id="adminBackupsTableBody">
+                  <tr>
+                    <td colspan="5" style="text-align:center; padding:24px;">Carregando pontos de backup do cofre...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

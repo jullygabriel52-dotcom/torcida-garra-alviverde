@@ -34,6 +34,11 @@ const SEED_DB_FILE = fs.existsSync(path.join(__dirname, 'data', 'db.json'))
   : path.join(__dirname, 'db.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const KV_KEY = 'tga_portal_db_v1';
+const KV_BACKUP_KEY = 'tga_portal_backups_v1';
+const BACKUPS_FILE = IS_VERCEL
+  ? path.join('/tmp', 'backups.json')
+  : path.join(__dirname, 'data', 'backups.json');
+let lastBackupDateChecked = '';
 
 const DEFAULT_DB = {
   config: {
@@ -349,6 +354,154 @@ async function writeDb(data) {
   }
 }
 
+function getBrasiliaDateString() {
+  try {
+    return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+  } catch (e) {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+async function readBackups() {
+  const kv = getKvConfig();
+  if (kv) {
+    try {
+      const res = await fetch(kv.url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${kv.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(['GET', KV_BACKUP_KEY])
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.result) {
+          const parsed = typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+          if (Array.isArray(parsed)) return parsed;
+        }
+        return [];
+      }
+    } catch (err) {
+      console.error('Erro ao ler backups do Upstash:', err.message);
+    }
+  }
+
+  const fbUrl = getFirebaseUrl();
+  if (fbUrl) {
+    try {
+      const res = await fetch(`${fbUrl}/${KV_BACKUP_KEY}.json`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) return data;
+      }
+    } catch (err) {
+      console.error('Erro ao ler backups do Firebase:', err.message);
+    }
+  }
+
+  ensureLocalDb();
+  try {
+    if (fs.existsSync(BACKUPS_FILE)) {
+      const raw = fs.readFileSync(BACKUPS_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (err) {
+    console.error('Erro ao ler arquivo local de backups:', err.message);
+  }
+  return [];
+}
+
+async function writeBackups(backupsList) {
+  const trimmed = Array.isArray(backupsList) ? backupsList.slice(0, 30) : [];
+  const kv = getKvConfig();
+  if (kv) {
+    try {
+      await fetch(kv.url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${kv.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(['SET', KV_BACKUP_KEY, JSON.stringify(trimmed)])
+      });
+    } catch (err) {
+      console.error('Erro ao gravar backups no Upstash:', err.message);
+    }
+  }
+
+  const fbUrl = getFirebaseUrl();
+  if (fbUrl) {
+    try {
+      await fetch(`${fbUrl}/${KV_BACKUP_KEY}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trimmed)
+      });
+    } catch (err) {
+      console.error('Erro ao gravar backups no Firebase:', err.message);
+    }
+  }
+
+  ensureLocalDb();
+  try {
+    fs.writeFileSync(BACKUPS_FILE, JSON.stringify(trimmed, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Erro ao gravar arquivo local de backups:', err.message);
+  }
+  return trimmed;
+}
+
+function buildBackupEntry(db, tipo = 'Automático (00:00)', autor = 'Sistema Automático (00:00)') {
+  const dataReferencia = getBrasiliaDateString();
+  return {
+    id: 'bkp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+    dataReferencia,
+    dataHora: new Date().toISOString(),
+    tipo,
+    autor,
+    resumo: {
+      totalSocios: Array.isArray(db.socios) ? db.socios.length : 0,
+      totalCaravanas: Array.isArray(db.caravanas) ? db.caravanas.length : 0,
+      totalInscritosCaravana: Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana.length : 0,
+      totalDiretores: Array.isArray(db.usuariosDiretoria) ? db.usuariosDiretoria.length : 0,
+      totalLogs: Array.isArray(db.auditoriaLogs) ? db.auditoriaLogs.length : 0
+    },
+    snapshot: {
+      config: db.config || DEFAULT_DB.config,
+      caravanas: Array.isArray(db.caravanas) ? db.caravanas : [],
+      socios: Array.isArray(db.socios) ? db.socios : [],
+      inscricoesCaravana: Array.isArray(db.inscricoesCaravana) ? db.inscricoesCaravana : [],
+      usuariosDiretoria: Array.isArray(db.usuariosDiretoria) ? db.usuariosDiretoria : [],
+      auditoriaLogs: Array.isArray(db.auditoriaLogs) ? db.auditoriaLogs.slice(0, 250) : []
+    }
+  };
+}
+
+async function ensureDailyBackup(db, forceCheck = false) {
+  const today = getBrasiliaDateString();
+  if (!forceCheck && lastBackupDateChecked === today) {
+    return null;
+  }
+  try {
+    const backups = await readBackups();
+    const alreadyHasToday = backups.some(
+      (b) => b.dataReferencia === today && String(b.tipo || '').includes('Automático')
+    );
+    lastBackupDateChecked = today;
+    if (!alreadyHasToday) {
+      const entry = buildBackupEntry(db, 'Automático (00:00)', 'Agendador Diário 00:00');
+      backups.unshift(entry);
+      await writeBackups(backups);
+      return entry;
+    }
+  } catch (err) {
+    console.error('Aviso ao verificar backup diário:', err.message);
+  }
+  return null;
+}
+
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
@@ -441,6 +594,7 @@ async function requestHandler(req, res) {
   try {
     if (pathname === '/api/state' && req.method === 'GET') {
       const db = ensureMasterAndCollections(await readDb());
+      await ensureDailyBackup(db);
       db.storageMode = getKvConfig() ? 'upstash-redis' : (getFirebaseUrl() ? 'firebase' : 'local-file');
       return sendJson(res, 200, db);
     }
@@ -708,6 +862,104 @@ async function requestHandler(req, res) {
       await writeDb(db);
       return sendJson(res, 201, { auditoriaLogs: db.auditoriaLogs });
     }
+
+    if (pathname === '/api/backup/cron' && (req.method === 'GET' || req.method === 'POST')) {
+      const db = ensureMasterAndCollections(await readDb());
+      const created = await ensureDailyBackup(db, true);
+      const backups = await readBackups();
+      return sendJson(res, 200, {
+        ok: true,
+        executadoEm: new Date().toISOString(),
+        dataReferencia: getBrasiliaDateString(),
+        novoBackupCriado: Boolean(created),
+        totalBackupsSalvos: backups.length
+      });
+    }
+
+    if (pathname === '/api/backups' && req.method === 'GET') {
+      const db = ensureMasterAndCollections(await readDb());
+      await ensureDailyBackup(db, true);
+      const backups = await readBackups();
+      return sendJson(res, 200, { backups });
+    }
+
+    if (pathname === '/api/backups' && req.method === 'POST') {
+      const body = await parseBody(req).catch(() => ({}));
+      const db = ensureMasterAndCollections(await readDb());
+      const backups = await readBackups();
+      const entry = buildBackupEntry(
+        db,
+        body.tipo || 'Manual (Master)',
+        body.autor || 'Jully Gabriel (Master)'
+      );
+      backups.unshift(entry);
+      const savedBackups = await writeBackups(backups);
+      if (body && body._auditoria) {
+        appendAuditLog(db, body._auditoria);
+        await writeDb(db);
+      }
+      return sendJson(res, 201, {
+        backup: entry,
+        backups: savedBackups,
+        auditoriaLogs: db.auditoriaLogs
+      });
+    }
+
+    if (pathname === '/api/backups/restore' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const currentDb = ensureMasterAndCollections(await readDb());
+      const backups = await readBackups();
+
+      let targetSnapshot = null;
+      let origemDescricao = 'Arquivo de Backup (.JSON)';
+
+      if (body.backupId) {
+        const found = backups.find((b) => b.id === body.backupId);
+        if (!found || !found.snapshot) {
+          return sendJson(res, 404, { error: 'Ponto de backup não encontrado no cofre.' });
+        }
+        targetSnapshot = found.snapshot;
+        origemDescricao = `${found.tipo} de ${found.dataReferencia}`;
+      } else if (body.snapshot && typeof body.snapshot === 'object') {
+        targetSnapshot = body.snapshot.snapshot ? body.snapshot.snapshot : body.snapshot;
+        origemDescricao = body.origem || 'Arquivo .JSON enviado pelo Master';
+      } else {
+        return sendJson(res, 400, { error: 'Dados de restauração inválidos.' });
+      }
+
+      // Salva um backup automático de segurança do estado imediatamente anterior à restauração
+      const safetyBackup = buildBackupEntry(
+        currentDb,
+        'Pré-Restauração (Segurança)',
+        body.autor || 'Jully Gabriel (Master)'
+      );
+      backups.unshift(safetyBackup);
+      const savedBackups = await writeBackups(backups);
+
+      const restoredDb = ensureMasterAndCollections({
+        config: targetSnapshot.config || currentDb.config,
+        caravanas: Array.isArray(targetSnapshot.caravanas) ? targetSnapshot.caravanas : [],
+        socios: Array.isArray(targetSnapshot.socios) ? targetSnapshot.socios : [],
+        inscricoesCaravana: Array.isArray(targetSnapshot.inscricoesCaravana) ? targetSnapshot.inscricoesCaravana : [],
+        usuariosDiretoria: Array.isArray(targetSnapshot.usuariosDiretoria) ? targetSnapshot.usuariosDiretoria : currentDb.usuariosDiretoria,
+        auditoriaLogs: Array.isArray(targetSnapshot.auditoriaLogs) ? targetSnapshot.auditoriaLogs : []
+      });
+
+      appendAuditLog(restoredDb, body._auditoria || {
+        diretorNome: 'Jully Gabriel (Master)',
+        diretorUsuario: 'jully',
+        categoria: 'Configurações',
+        acao: `Restaurou o sistema a partir de um Backup (${origemDescricao})`,
+        detalhes: `Sócios restaurados: ${restoredDb.socios.length} | Passageiros: ${restoredDb.inscricoesCaravana.length}`
+      });
+
+      await writeDb(restoredDb);
+      return sendJson(res, 200, {
+        ok: true,
+        state: restoredDb,
+        backups: savedBackups
+      });
+    }
   } catch (apiErr) {
     console.error('Erro na API:', apiErr);
     return sendJson(res, 500, { error: apiErr.message || 'Erro interno do servidor' });
@@ -732,6 +984,14 @@ if (!IS_VERCEL && require.main === module) {
   const server = http.createServer(requestHandler);
   server.listen(Number(process.env.PORT || 3000), () => {
     console.log(`Portal Garra Alviverde (TGA) rodando na porta ${PORT}`);
+    // Verifica/cria o backup diário logo ao iniciar e a cada minuto (dispara exatamente às 00:00)
+    readDb().then((db) => ensureDailyBackup(ensureMasterAndCollections(db), true)).catch(() => {});
+    setInterval(async () => {
+      try {
+        const db = ensureMasterAndCollections(await readDb());
+        await ensureDailyBackup(db, false);
+      } catch (e) {}
+    }, 60 * 1000);
   });
 }
 

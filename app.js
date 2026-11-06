@@ -2593,14 +2593,14 @@ function buildAuditoriaReportConfig() {
 
 function buildPedidosLojaReportConfig() {
   const pedidos = Array.isArray(appState.pedidosMateriais) ? appState.pedidosMateriais : [];
-  const pagos = pedidos.filter(p => p.statusPix === 'PIX Confirmado').length;
-  const entregues = pedidos.filter(p => p.entregue).length;
-  const recebido = pedidos.reduce((acc, p) => acc + (p.statusPix === 'PIX Confirmado' ? (Number(p.valorTotal) || 0) : 0), 0);
+  const pagos = pedidos.filter(p => p.statusPix === 'PIX Confirmado' || p.statusPix === 'Entregue ✔').length;
+  const entregues = pedidos.filter(p => p.entregue || p.statusPix === 'Entregue ✔').length;
+  const recebido = pedidos.reduce((acc, p) => acc + ((p.statusPix === 'PIX Confirmado' || p.statusPix === 'Entregue ✔') ? (Number(p.valorTotal) || 0) : 0), 0);
 
   const headers = [
     'Nº', 'Data do Pedido', 'Material Oficial TGA', 'Tamanho', 'Qtd',
     'Nome do Comprador', 'CPF', 'WhatsApp', 'Modalidade / Desconto',
-    'Valor Total', 'Status PIX', 'Status Entrega'
+    'Valor Total', 'Status PIX / Entrega'
   ];
 
   const rows = pedidos.map((p, idx) => [
@@ -2609,13 +2609,12 @@ function buildPedidosLojaReportConfig() {
     p.materialNome || 'Material TGA',
     p.tamanho || 'Único',
     String(p.quantidade || 1),
-    p.nome || '—',
+    p.compradorNome || p.nome || '—',
     p.cpf || '—',
     p.whatsapp || '—',
     p.isSocioDesconto ? `Sócio TGA (${p.socioMatricula || 'Ativo'})` : 'Não-Sócio (Valor Normal)',
     formatBRL(Number(p.valorTotal) || 0),
-    p.statusPix || 'Aguardando PIX',
-    p.entregue ? 'Entregue ao Torcedor' : 'Aguardando Retirada'
+    p.statusPix || 'Pendente PIX'
   ]);
 
   return {
@@ -2641,21 +2640,19 @@ function buildCheckinsPortariaReportConfig() {
   const lista = todosCheckins.filter(c => filtroJogo === 'todos' || c.jogoId === filtroJogo);
 
   const headers = [
-    'Nº', 'Partida no Estádio Velosão', 'Matrícula Sócio', 'Nome Completo do Sócio',
-    'Apelido', 'CPF', 'WhatsApp', 'Nº Camisa', 'Setor / Bairro', 'Status Financeiro', 'Data/Hora do Check-in'
+    'Nº', 'Partida no Estádio Velosão', 'Nº Camisa', 'Nome Completo do Sócio',
+    'CPF', 'WhatsApp', 'Status Financeiro Sócio', 'Status Portaria', 'Data/Hora do Check-in'
   ];
 
   const rows = lista.map((c, idx) => [
     String(idx + 1).padStart(2, '0'),
     c.jogoTitulo || 'Jogo do E.C.R.V. no Velosão',
-    c.socioMatricula || '—',
+    (c.socioNumeroCamisa || c.numeroCamisa) ? `Nº ${c.socioNumeroCamisa || c.numeroCamisa}` : '—',
     c.socioNome || '—',
-    c.socioApelido || '—',
     c.socioCpf || '—',
     c.socioWhatsapp || '—',
-    c.numeroCamisa ? `Nº ${c.numeroCamisa}` : '—',
-    c.pelotao || '—',
-    c.statusSocio || 'Sócio Ativo',
+    c.socioStatusPagamento || c.statusSocio || 'Sócio Ativo',
+    c.statusPortaria || 'Ingresso Garantido ✔',
     formatDateTimeBR(c.createdAt)
   ]);
 
@@ -2670,15 +2667,15 @@ function buildCheckinsPortariaReportConfig() {
     ],
     headers,
     rows,
-    textCols: [0, 2, 5, 6, 7, 10]
+    textCols: [0, 2, 4, 5, 8]
   };
 }
 
 function printCarteirinhaSocio(socio) {
   if (!socio) return;
   const origin = window.location.origin;
-  const logoTga = `${origin}/logo-garra.png`;
-  const logoEcrv = `${origin}/ecrv.jpg`;
+  const logoTga = `${origin}/assets/logo-tga.jpg`;
+  const logoEcrv = `${origin}/assets/escudo-ecrv.jpg`;
   const valPago = getSocioValorPagoEfetivo(socio);
   const valTotal = Number(socio.valorPlano) || 105;
   const statusLabel = valPago >= valTotal
@@ -3766,36 +3763,44 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('formLoginSocioCpf')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const input = document.getElementById('inputSocioLoginCpf');
-    const erroBox = document.getElementById('portalSocioFeedbackErro');
-    const painel = document.getElementById('portalSocioPainelLogado');
+    const emptyStateEl = document.getElementById('portalSocioEmptyState');
+    const dashEl = document.getElementById('portalSocioDashboard');
     const cpfDigitado = input?.value || '';
 
     const socio = findSocioByCpf(cpfDigitado);
     if (!socio) {
-      currentLoggedSocioId = null;
-      if (painel) painel.hidden = true;
-      if (erroBox) {
-        erroBox.hidden = false;
-        erroBox.innerHTML = `❌ <strong>CPF não encontrado na base de Sócios Garra Alviverde!</strong> Verifique os números digitados ou clique em <strong>"🪪 Seja Sócio"</strong> para fazer seu cadastro agora.`;
+      currentLoggedSocio = null;
+      if (dashEl) dashEl.hidden = true;
+      if (emptyStateEl) {
+        emptyStateEl.hidden = false;
+        emptyStateEl.innerHTML = `
+          <div style="font-size:2.4rem; margin-bottom:8px;">⚠️🪪</div>
+          <h3 style="margin-bottom:6px; color:#991b1b;">CPF não encontrado na base de Sócios Garra Alviverde!</h3>
+          <p style="color:#475569; max-width:540px; margin:0 auto 16px;">
+            Verifique se digitou os 11 números corretamente. Ainda não é sócio? Faça sua inscrição agora por <strong>R$ 105,00 à vista</strong> ou em <strong>3x de R$ 35,00</strong> e já libere o benefício dos materiais na hora!
+          </p>
+          <button type="button" class="btn btn-primary" onclick="openFeatureWindow('windowSocio')">
+            🪪 Quero Fazer Minha Inscrição de Sócio Agora
+          </button>
+        `;
       }
       showToast('❌ CPF não encontrado na lista de Sócios TGA.');
       return;
     }
 
-    if (erroBox) erroBox.hidden = true;
-    currentLoggedSocioId = socio.id;
+    currentLoggedSocio = socio;
     renderPortalSocioLogado(socio);
     showToast(`🔓 Bem-vindo à sua Área Exclusiva, ${socio.nome}!`);
   });
 
   document.getElementById('btnPrintCarteirinhaSocio')?.addEventListener('click', () => {
-    if (!currentLoggedSocioId) return;
-    const socio = appState.socios.find(s => s.id === currentLoggedSocioId);
+    if (!currentLoggedSocio) return;
+    const socio = appState.socios.find(s => s.id === currentLoggedSocio.id) || currentLoggedSocio;
     if (socio) printCarteirinhaSocio(socio);
   });
 
   document.getElementById('btnPortalIrLoja')?.addEventListener('click', () => {
-    const socio = currentLoggedSocioId ? appState.socios.find(s => s.id === currentLoggedSocioId) : null;
+    const socio = currentLoggedSocio ? (appState.socios.find(s => s.id === currentLoggedSocio.id) || currentLoggedSocio) : null;
     openFeatureWindow('windowLojaMateriais');
     if (socio) {
       const cpfInput = document.getElementById('pedCpf');
@@ -3811,7 +3816,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btnPortalIrJogos')?.addEventListener('click', () => {
-    const socio = currentLoggedSocioId ? appState.socios.find(s => s.id === currentLoggedSocioId) : null;
+    const socio = currentLoggedSocio ? (appState.socios.find(s => s.id === currentLoggedSocio.id) || currentLoggedSocio) : null;
     openFeatureWindow('windowJogosEcrv');
     if (socio) {
       const chkCpf = document.getElementById('chkSocioCpf');
@@ -3846,7 +3851,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const whatsapp = document.getElementById('pedWhatsapp')?.value.trim() || '';
 
     const socioMatch = cpf ? findSocioByCpf(cpf) : null;
-    const isSocioDesconto = socioMatch && isSocioEligibleForBenefits(socioMatch);
+    const isSocioDesconto = Boolean(socioMatch && isSocioEligibleForBenefits(socioMatch));
     const valorUnitario = isSocioDesconto ? (Number(mat.valorSocio) || 0) : (Number(mat.valorNaoSocio) || 0);
     const valorTotal = valorUnitario * quantidade;
 
@@ -3855,13 +3860,16 @@ document.addEventListener('DOMContentLoaded', () => {
       materialNome: mat.nome,
       tamanho,
       quantidade,
+      compradorNome: nome,
       nome,
       cpf: cpf || 'Não informado',
       whatsapp,
-      isSocioDesconto: Boolean(isSocioDesconto),
+      isSocioDesconto,
+      statusSocioVerificado: isSocioDesconto ? `Sócio TGA (${socioMatch.matricula || 'Ativo'})` : 'Não-Sócio',
       socioMatricula: socioMatch ? socioMatch.matricula : '',
       valorUnitario,
-      valorTotal
+      valorTotal,
+      statusPix: 'Pendente PIX'
     };
 
     try {
@@ -3871,8 +3879,12 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        const criado = await res.json();
-        appState.pedidosMateriais.unshift(criado);
+        const data = await res.json();
+        if (Array.isArray(data.pedidosMateriais)) {
+          appState.pedidosMateriais = data.pedidosMateriais;
+        } else if (data.pedido) {
+          appState.pedidosMateriais.unshift(data.pedido);
+        }
       } else {
         throw new Error('Fallback local');
       }
@@ -3880,8 +3892,6 @@ document.addEventListener('DOMContentLoaded', () => {
       appState.pedidosMateriais.unshift({
         id: 'ped-' + Date.now(),
         ...payload,
-        statusPix: 'Aguardando PIX',
-        entregue: false,
         createdAt: new Date().toISOString()
       });
     }
@@ -3895,14 +3905,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const msgWa = `\uD83D\uDFE2\u26AA *PEDIDO NA LOJA OFICIAL - ${appState.config.nomeTorcida} (TGA)* \uD83D\uDFE2\u26AA\n\n` +
       `\uD83D\uDC55 *Material:* ${payload.materialNome}\n` +
       `\uD83D\uDCCF *Tamanho:* ${payload.tamanho} | *Quantidade:* ${payload.quantidade} un.\n` +
-      `\uD83D\uDC64 *Torcedor:* ${payload.nome} (CPF: ${payload.cpf})\n` +
+      `\uD83D\uDC64 *Torcedor:* ${payload.compradorNome} (CPF: ${payload.cpf})\n` +
       `\uD83C\uDFF7\uFE0F *Modalidade:* ${payload.isSocioDesconto ? `Sócio TGA c/ Desconto (${payload.socioMatricula})` : 'Não-Sócio (Valor Normal)'}\n` +
       `\uD83D\uDCB0 *Valor Total no PIX:* ${formatBRL(payload.valorTotal)}\n\n` +
       `Segue meu comprovante do PIX (${appState.config.chavePix}) para reservar meu material oficial da Garra Alviverde!`;
 
     openSuccessModal({
       titulo: '👕 Pedido de Material Oficial Registrado!',
-      descricao: `Salve, ${payload.nome}! Seu pedido de ${payload.quantidade}x ${payload.materialNome} (Tam. ${payload.tamanho}) foi registrado no painel da Diretoria.`,
+      descricao: `Salve, ${payload.compradorNome}! Seu pedido de ${payload.quantidade}x ${payload.materialNome} (Tam. ${payload.tamanho}) foi registrado no painel da Diretoria.`,
       valor: payload.valorTotal,
       subtextoValor: payload.isSocioDesconto
         ? `Desconto Exclusivo de Sócio TGA Aplicado (${payload.socioMatricula})!`
@@ -3954,16 +3964,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const payload = {
       jogoId: jogo.id,
-      jogoTitulo: `E.C.R.V. x ${jogo.adversario} (${formatDateBR(jogo.dataJogo)})`,
+      jogoTitulo: `${jogo.adversario} (${formatDateBR(jogo.dataJogo)})`,
       socioId: socio.id,
       socioMatricula: socio.matricula,
       socioNome: socio.nome,
       socioApelido: socio.apelido || '',
       socioCpf: socio.cpf,
       socioWhatsapp: socio.whatsapp,
-      numeroCamisa: socio.numeroCamisa || '',
+      socioNumeroCamisa: socio.numeroCamisa || '—',
+      numeroCamisa: socio.numeroCamisa || '—',
       pelotao: socio.pelotao || '',
-      statusSocio: socio.statusPagamento
+      socioStatusPagamento: socio.statusPagamento || 'Em Dia',
+      statusSocio: socio.statusPagamento || 'Em Dia'
     };
 
     try {
@@ -3974,20 +3986,24 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.checkin && !data.alreadyExists) {
+        if (Array.isArray(data.checkinsJogos)) {
+          appState.checkinsJogos = data.checkinsJogos;
+        } else if (data.checkin && !data.duplicate) {
           appState.checkinsJogos.unshift(data.checkin);
         }
       } else {
         throw new Error('Fallback local');
       }
     } catch (err) {
+      const cleanSocioCpf = String(socio.cpf || '').replace(/\D/g, '');
       const jaExiste = (appState.checkinsJogos || []).some(
-        c => c.jogoId === jogo.id && normalizeCpfDigits(c.socioCpf) === normalizeCpfDigits(socio.cpf)
+        c => c.jogoId === jogo.id && String(c.socioCpf || '').replace(/\D/g, '') === cleanSocioCpf
       );
       if (!jaExiste) {
         appState.checkinsJogos.unshift({
           id: 'chk-' + Date.now(),
           ...payload,
+          statusPortaria: 'Ingresso Garantido ✔',
           createdAt: new Date().toISOString()
         });
       }
@@ -4001,7 +4017,7 @@ document.addEventListener('DOMContentLoaded', () => {
       feedbackBox.style.background = '#dcfce7';
       feedbackBox.style.color = '#166534';
       feedbackBox.style.border = '2px solid #22c55e';
-      feedbackBox.innerHTML = `✅ <strong>CHECK-IN CONFIRMADO NA LISTA DA PORTARIA DO VELOSÃO!</strong><br>Salve, <strong>${escapeHtml(socio.nome)}</strong> (${escapeHtml(socio.matricula)})! Seu nome e CPF já estão na relação oficial da Diretoria para <strong>E.C.R.V. x ${escapeHtml(jogo.adversario)}</strong>.`;
+      feedbackBox.innerHTML = `✅ <strong>CHECK-IN CONFIRMADO NA LISTA DA PORTARIA DO VELOSÃO!</strong><br>Salve, <strong>${escapeHtml(socio.nome)}</strong> (Camisa Nº ${escapeHtml(socio.numeroCamisa || '—')})! Seu nome e CPF já estão na relação oficial da Diretoria para <strong>${escapeHtml(jogo.adversario)}</strong>.`;
     }
     showToast(`🎟️ Presença confirmada na Portaria do Velosão, ${socio.nome}!`);
   });
@@ -4012,7 +4028,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('newMatFoto')?.addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (!file) {
-      currentNewMaterialFotoDataUrl = '';
+      currentMaterialPhotoDataUrl = '';
       return;
     }
     const reader = new FileReader();
@@ -4031,7 +4047,7 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(tempImg, 0, 0, width, height);
-        currentNewMaterialFotoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        currentMaterialPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
       };
       tempImg.src = reader.result;
     };
@@ -4040,15 +4056,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('formNovoMaterial')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const descEl = document.getElementById('newMatDescricao') || document.getElementById('newMatDesc');
+    const statusEl = document.getElementById('newMatStatus');
+
     const payload = {
-      nome: document.getElementById('newMatNome').value.trim(),
-      categoria: document.getElementById('newMatCategoria').value.trim(),
-      valorSocio: Number(document.getElementById('newMatValorSocio').value) || 0,
-      valorNaoSocio: Number(document.getElementById('newMatValorNaoSocio').value) || 0,
-      tamanhos: document.getElementById('newMatTamanhos').value.trim() || 'Único',
-      estoqueStatus: document.getElementById('newMatStatus').value || 'Disponível',
-      descricao: document.getElementById('newMatDesc').value.trim(),
-      imagemUrl: currentNewMaterialFotoDataUrl || '/logo-garra.png'
+      nome: document.getElementById('newMatNome')?.value.trim() || 'Material Oficial TGA',
+      categoria: document.getElementById('newMatCategoria')?.value.trim() || 'Material Oficial TGA',
+      valorSocio: Number(document.getElementById('newMatValorSocio')?.value) || 0,
+      valorNaoSocio: Number(document.getElementById('newMatValorNaoSocio')?.value) || 0,
+      tamanhos: document.getElementById('newMatTamanhos')?.value.trim() || 'P, M, G, GG, XG',
+      estoqueStatus: statusEl ? statusEl.value : 'Disponível',
+      descricao: descEl ? descEl.value.trim() : '',
+      fotoDataUrl: currentMaterialPhotoDataUrl || '/assets/logo-tga.jpg'
     };
 
     const audit = buildAuditPayload(
@@ -4064,22 +4083,31 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ ...payload, _auditoria: audit })
       });
       if (res.ok) {
-        const novo = await res.json();
-        appState.materiais.unshift(novo);
+        const data = await res.json();
+        if (Array.isArray(data.materiais)) {
+          appState.materiais = data.materiais;
+        } else if (data.material) {
+          appState.materiais.unshift(data.material);
+        }
       } else {
         throw new Error('Fallback');
       }
     } catch (err) {
       appState.materiais.unshift({
         id: 'mat-' + Date.now(),
-        ...payload
+        ...payload,
+        createdAt: new Date().toISOString()
       });
     }
 
-    currentNewMaterialFotoDataUrl = '';
+    currentMaterialPhotoDataUrl = '';
     saveLocalBackup();
     renderAll();
     e.target.reset();
+    const catInput = document.getElementById('newMatCategoria');
+    const tamInput = document.getElementById('newMatTamanhos');
+    if (catInput) catInput.value = 'Material Oficial TGA';
+    if (tamInput) tamInput.value = 'P, M, G, GG, XG';
     showToast(`👕 Material "${payload.nome}" publicado na Loja Oficial TGA!`);
   });
 
@@ -4096,22 +4124,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('formNovoJogo')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const estadioEl = document.getElementById('newJogoEstadio') || document.getElementById('newJogoLocal');
+    const placarEl = document.getElementById('newJogoPlacar');
+
     const payload = {
-      campeonato: document.getElementById('newJogoCampeonato').value.trim(),
-      rodada: document.getElementById('newJogoRodada').value.trim(),
-      mando: document.getElementById('newJogoMando').value,
-      adversario: document.getElementById('newJogoAdversario').value.trim(),
-      dataJogo: document.getElementById('newJogoData').value,
-      horario: document.getElementById('newJogoHorario').value.trim(),
-      local: document.getElementById('newJogoLocal').value.trim(),
-      placarEcrv: document.getElementById('newJogoPlacarEcrv').value,
-      placarAdv: document.getElementById('newJogoPlacarAdv').value,
-      status: document.getElementById('newJogoStatus').value
+      campeonato: document.getElementById('newJogoCampeonato')?.value.trim() || 'Campeonato Goiano',
+      rodada: document.getElementById('newJogoRodada')?.value.trim() || 'Rodada Oficial',
+      mando: document.getElementById('newJogoMando')?.value || 'Em Casa (Velosão)',
+      status: document.getElementById('newJogoStatus')?.value || 'Check-in de Ingresso Aberto',
+      adversario: document.getElementById('newJogoAdversario')?.value.trim() || '',
+      dataJogo: document.getElementById('newJogoData')?.value || '',
+      horario: document.getElementById('newJogoHorario')?.value.trim() || '16:00',
+      placar: placarEl ? placarEl.value.trim() : '',
+      estadio: estadioEl ? estadioEl.value.trim() : 'Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO'
     };
 
     const audit = buildAuditPayload(
       'Jogos ECRV',
-      `Cadastrou jogo na tabela: E.C.R.V. x ${payload.adversario}`,
+      `Cadastrou jogo na tabela: ${payload.adversario}`,
       `Data: ${formatDateBR(payload.dataJogo)} | Mando: ${payload.mando} | Status: ${payload.status}`
     );
 
@@ -4122,13 +4152,17 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({ ...payload, _auditoria: audit })
       });
       if (res.ok) {
-        const novo = await res.json();
-        appState.jogosEcrv.push(novo);
+        const data = await res.json();
+        if (Array.isArray(data.jogosEcrv)) {
+          appState.jogosEcrv = data.jogosEcrv;
+        } else if (data.jogo) {
+          appState.jogosEcrv.unshift(data.jogo);
+        }
       } else {
         throw new Error('Fallback');
       }
     } catch (err) {
-      appState.jogosEcrv.push({
+      appState.jogosEcrv.unshift({
         id: 'jog-' + Date.now(),
         ...payload
       });
@@ -4137,8 +4171,12 @@ document.addEventListener('DOMContentLoaded', () => {
     saveLocalBackup();
     renderAll();
     e.target.reset();
-    document.getElementById('newJogoLocal').value = 'Estádio Mozart Veloso do Carmo (Velosão)';
-    showToast(`⚽ Jogo E.C.R.V. x ${payload.adversario} publicado na Tabela Oficial!`);
+    const campEl = document.getElementById('newJogoCampeonato');
+    const horEl = document.getElementById('newJogoHorario');
+    if (campEl) campEl.value = 'Campeonato Goiano';
+    if (horEl) horEl.value = '16:00';
+    if (estadioEl) estadioEl.value = 'Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO';
+    showToast(`⚽ Jogo "${payload.adversario}" publicado na Tabela Oficial!`);
   });
 
   document.getElementById('filterCheckinJogoSelect')?.addEventListener('change', renderAdminJogosTab);

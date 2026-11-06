@@ -674,7 +674,13 @@ function openSuccessModal({ titulo, descricao, valor, subtextoValor, mensagemWha
   modal.hidden = false;
 }
 
+function isSocioIsento(s) {
+  if (!s) return false;
+  return Boolean(s.isento) || String(s.statusPagamento || '').includes('Isento') || String(s.formaPagamento || '').includes('Isento');
+}
+
 function getSocioValorPagoEfetivo(s) {
+  if (isSocioIsento(s)) return 0;
   if (typeof s.valorPago === 'number' && !isNaN(s.valorPago)) {
     return s.valorPago;
   }
@@ -692,6 +698,7 @@ function findSocioByCpf(cpfRaw) {
 
 function isSocioEligibleForBenefits(socio) {
   if (!socio) return false;
+  if (isSocioIsento(socio)) return true;
   if (socio.statusPagamento === 'Pago / Ativo' || String(socio.statusPagamento || '').includes('Parcela Paga')) {
     return true;
   }
@@ -715,23 +722,27 @@ function renderPortalSocioLogado(socio) {
   emptyEl.hidden = true;
   dashEl.hidden = false;
 
+  const isIsento = isSocioIsento(socio);
   const isAtivo = isSocioEligibleForBenefits(socio);
-  const isQuitado = socio.statusPagamento === 'Pago / Ativo' || getSocioValorPagoEfetivo(socio) >= 105;
-  const valorTotal = Number(socio.valorPlano) || 105;
+  const isQuitado = isIsento || socio.statusPagamento === 'Pago / Ativo' || getSocioValorPagoEfetivo(socio) >= 105;
+  const valorTotal = isIsento ? 0 : (Number(socio.valorPlano) || 105);
   const valorPago = getSocioValorPagoEfetivo(socio);
-  const faltaPagar = Math.max(0, valorTotal - valorPago);
 
   const badgeEl = document.getElementById('portalSocioBadgeStatus');
   const sealEl = document.getElementById('portalSocioValidSeal');
   if (badgeEl) {
-    badgeEl.textContent = isQuitado
-      ? '🏆 SÓCIO QUITADO TOTAL'
-      : (isAtivo ? '✅ SÓCIO EM DIA (ATIVO)' : '⏳ PENDENTE PIX');
+    badgeEl.textContent = isIsento
+      ? '👑 DIRETORIA TGA • ISENTO'
+      : (isQuitado
+        ? '🏆 SÓCIO QUITADO TOTAL'
+        : (isAtivo ? '✅ SÓCIO EM DIA (ATIVO)' : '⏳ PENDENTE PIX'));
     badgeEl.style.background = isAtivo ? '#eab308' : '#fef3c7';
     badgeEl.style.color = isAtivo ? '#052e16' : '#92400e';
   }
   if (sealEl) {
-    sealEl.textContent = isAtivo ? '● BENEFÍCIOS LIBERADOS ✔' : '● AGUARDANDO 1ª PARCELA / PIX';
+    sealEl.textContent = isIsento
+      ? '● DIRETORIA TGA • BENEFÍCIOS LIBERADOS ✔'
+      : (isAtivo ? '● BENEFÍCIOS LIBERADOS ✔' : '● AGUARDANDO 1ª PARCELA / PIX');
   }
 
   document.getElementById('portalSocioNome').textContent = (socio.nome || '—').toUpperCase();
@@ -756,43 +767,64 @@ function renderPortalSocioLogado(socio) {
 
   const modPill = document.getElementById('portalSocioModalidadePill');
   if (modPill) {
-    modPill.textContent = socio.formaPagamento || 'À Vista no PIX (R$ 105,00)';
+    modPill.textContent = isIsento ? '👑 Isento — Diretoria TGA' : (socio.formaPagamento || 'À Vista no PIX (R$ 105,00)');
   }
 
   // Grade das 3 Parcelas
   const parcGrid = document.getElementById('portalSocioParcelasGrid');
   if (parcGrid) {
-    const p1Done = valorPago >= 35;
-    const p2Done = valorPago >= 70;
-    const p3Done = valorPago >= 105 || isQuitado;
+    if (isIsento) {
+      const makeExemptBox = (num) => `
+        <div style="padding:10px; border-radius:10px; text-align:center; background:#dcfce7; border:1px solid #86efac;">
+          <div style="font-size:0.75rem; font-weight:800; color:#166534;">${num}ª PARCELA</div>
+          <div style="font-size:0.95rem; font-weight:900; color:#064e3b; margin:2px 0;">ISENTO (R$ 0)</div>
+          <div style="font-size:0.72rem; font-weight:700; color:#15803d;">👑 DIRETORIA TGA</div>
+        </div>
+      `;
+      parcGrid.innerHTML = [makeExemptBox(1), makeExemptBox(2), makeExemptBox(3)].join('');
+    } else {
+      const p1Done = valorPago >= 35;
+      const p2Done = valorPago >= 70;
+      const p3Done = valorPago >= 105 || isQuitado;
 
-    const makeBox = (num, paga, sub) => `
-      <div style="padding:10px; border-radius:10px; text-align:center; background:${paga ? '#dcfce7' : '#fef3c7'}; border:1px solid ${paga ? '#86efac' : '#fde68a'};">
-        <div style="font-size:0.75rem; font-weight:800; color:${paga ? '#166534' : '#92400e'};">${num}ª PARCELA</div>
-        <div style="font-size:0.98rem; font-weight:900; color:${paga ? '#064e3b' : '#78350f'}; margin:2px 0;">R$ 35,00</div>
-        <div style="font-size:0.72rem; font-weight:700; color:${paga ? '#15803d' : '#b45309'};">${paga ? '✔ PAGA' : sub}</div>
-      </div>
-    `;
-    parcGrid.innerHTML = [
-      makeBox(1, p1Done, 'Pagar no PIX'),
-      makeBox(2, p2Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp'),
-      makeBox(3, p3Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp')
-    ].join('');
+      const makeBox = (num, paga, sub) => `
+        <div style="padding:10px; border-radius:10px; text-align:center; background:${paga ? '#dcfce7' : '#fef3c7'}; border:1px solid ${paga ? '#86efac' : '#fde68a'};">
+          <div style="font-size:0.75rem; font-weight:800; color:${paga ? '#166534' : '#92400e'};">${num}ª PARCELA</div>
+          <div style="font-size:0.98rem; font-weight:900; color:${paga ? '#064e3b' : '#78350f'}; margin:2px 0;">R$ 35,00</div>
+          <div style="font-size:0.72rem; font-weight:700; color:${paga ? '#15803d' : '#b45309'};">${paga ? '✔ PAGA' : sub}</div>
+        </div>
+      `;
+      parcGrid.innerHTML = [
+        makeBox(1, p1Done, 'Pagar no PIX'),
+        makeBox(2, p2Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp'),
+        makeBox(3, p3Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp')
+      ].join('');
+    }
   }
 
   const finResumo = document.getElementById('portalSocioFinanceiroResumo');
   if (finResumo) {
-    finResumo.innerHTML = `
-      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-        <span><strong>Status Atual:</strong> ${escapeHtml(socio.statusPagamento || 'Pendente PIX')}</span>
-        <span><strong>Total Já Pago:</strong> <strong style="color:#047857;">${formatBRL(valorPago)}</strong> de ${formatBRL(valorTotal)}</span>
-      </div>
-      <div style="margin-top:6px; color:${isAtivo ? '#047857' : '#b45309'}; font-weight:700;">
-        ${isAtivo
-          ? '🎉 Seus benefícios de Sócio TGA (Ingresso em casa no Velosão + Desconto nos Materiais + Prioridade em Caravanas) estão ATIVOS!'
-          : `⏳ Falta confirmar a 1ª parcela (R$ 35,00) ou valor à vista no PIX (${escapeHtml(appState.config.chavePix)}) para ativar seus benefícios!`}
-      </div>
-    `;
+    finResumo.innerHTML = isIsento
+      ? `
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+          <span><strong>Status Atual:</strong> 👑 Isento (Diretoria TGA)</span>
+          <span><strong>Valor Cobrado:</strong> <strong style="color:#047857;">R$ 0,00 (Isenção Master)</strong></span>
+        </div>
+        <div style="margin-top:6px; color:#047857; font-weight:700;">
+          👑 Membro Isento da Diretoria TGA! Todos os seus benefícios de Sócio (Ingresso no Velosão + Desconto nos Materiais + Caravanas) estão LIBERADOS!
+        </div>
+      `
+      : `
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+          <span><strong>Status Atual:</strong> ${escapeHtml(socio.statusPagamento || 'Pendente PIX')}</span>
+          <span><strong>Total Já Pago:</strong> <strong style="color:#047857;">${formatBRL(valorPago)}</strong> de ${formatBRL(valorTotal)}</span>
+        </div>
+        <div style="margin-top:6px; color:${isAtivo ? '#047857' : '#b45309'}; font-weight:700;">
+          ${isAtivo
+            ? '🎉 Seus benefícios de Sócio TGA (Ingresso em casa no Velosão + Desconto nos Materiais + Prioridade em Caravanas) estão ATIVOS!'
+            : `⏳ Falta confirmar a 1ª parcela (R$ 35,00) ou valor à vista no PIX (${escapeHtml(appState.config.chavePix)}) para ativar seus benefícios!`}
+        </div>
+      `;
   }
 
   const muralEl = document.getElementById('portalSocioMuralAviso');
@@ -1077,12 +1109,12 @@ function renderAdminDashboard() {
   document.getElementById('kpiTotalSocios').textContent = appState.socios.length;
   document.getElementById('kpiTotalCaravanasInscritos').textContent = appState.inscricoesCaravana.length;
 
-  const pendentesSocios = appState.socios.filter(s => s.statusPagamento !== 'Pago / Ativo').length;
+  const pendentesSocios = appState.socios.filter(s => s.statusPagamento !== 'Pago / Ativo' && !isSocioIsento(s)).length;
   const pendentesCar = appState.inscricoesCaravana.filter(i => i.statusPix !== 'PIX Confirmado').length;
   document.getElementById('kpiTotalPendentes').textContent = pendentesSocios + pendentesCar;
 
   const recebidoSocios = appState.socios.reduce((acc, s) => acc + getSocioValorPagoEfetivo(s), 0);
-  const previstoSocios = appState.socios.reduce((acc, s) => acc + (Number(s.valorPlano) || 105), 0);
+  const previstoSocios = appState.socios.reduce((acc, s) => acc + (isSocioIsento(s) ? 0 : (Number(s.valorPlano) || 105)), 0);
   const recebidoCaravanas = appState.inscricoesCaravana.reduce((acc, i) => acc + (i.statusPix === 'PIX Confirmado' ? (Number(i.valorPago) || 0) : 0), 0);
   const previstoCaravanas = appState.inscricoesCaravana.reduce((acc, i) => acc + (Number(i.valorPago) || 0), 0);
 
@@ -1122,6 +1154,9 @@ function openEditSocioModal(socioId) {
   }
   const socio = appState.socios.find(s => s.id === socioId);
   if (!socio) return;
+  const isMaster = Boolean(currentAdminUser && currentAdminUser.isMaster);
+  const isIsento = isSocioIsento(socio);
+
   document.getElementById('editSocId').value = socio.id;
   document.getElementById('editSocNome').value = socio.nome || '';
   document.getElementById('editSocApelido').value = socio.apelido || '';
@@ -1136,22 +1171,31 @@ function openEditSocioModal(socioId) {
   document.getElementById('editSocNumeroCamisa').value = socio.numeroCamisa || '';
   document.getElementById('editSocSangue').value = socio.tipoSanguineo || 'O+';
 
+  const optFormaIsento = document.getElementById('optFormaIsentoMaster');
+  const optStatusIsento = document.getElementById('optStatusIsentoMaster');
+  if (optFormaIsento) optFormaIsento.hidden = !isMaster && !isIsento;
+  if (optStatusIsento) optStatusIsento.hidden = !isMaster && !isIsento;
+
   const formaEl = document.getElementById('editSocFormaPagamento');
   if (formaEl) {
-    formaEl.value = (socio.formaPagamento && socio.formaPagamento.includes('3x'))
-      ? 'Parcelado em 3x de R$ 35,00'
-      : 'À Vista no PIX (R$ 105,00)';
+    if (isIsento) {
+      formaEl.value = 'Isento — Diretoria TGA (R$ 0,00)';
+    } else {
+      formaEl.value = (socio.formaPagamento && socio.formaPagamento.includes('3x'))
+        ? 'Parcelado em 3x de R$ 35,00'
+        : 'À Vista no PIX (R$ 105,00)';
+    }
   }
-  document.getElementById('editSocValor').value = Number(socio.valorPlano) || 105;
+  document.getElementById('editSocValor').value = isIsento ? 0 : (Number(socio.valorPlano) || 105);
   const valPagoEl = document.getElementById('editSocValorPago');
   if (valPagoEl) valPagoEl.value = getSocioValorPagoEfetivo(socio);
-  document.getElementById('editSocStatus').value = socio.statusPagamento || 'Pendente PIX';
+  document.getElementById('editSocStatus').value = isIsento ? 'Isento (Diretoria)' : (socio.statusPagamento || 'Pendente PIX');
   const bolEl = document.getElementById('editSocBoletosEnviados');
   if (bolEl) bolEl.checked = Boolean(socio.boletosEnviados);
   document.getElementById('editSocObs').value = socio.observacoes || '';
 
-  // Se o diretor não tiver permissão de aprovar PIX, trava os campos financeiros no modal
-  const canApprovePix = hasPerm('aprovarPixSocio');
+  // Se o diretor não tiver permissão de aprovar PIX (ou se o sócio for Isento e o usuário não for Master), trava os campos financeiros
+  const canApprovePix = hasPerm('aprovarPixSocio') && (!isIsento || isMaster);
   document.getElementById('editSocStatus').disabled = !canApprovePix;
   document.getElementById('editSocValor').disabled = !canApprovePix;
   if (valPagoEl) valPagoEl.disabled = !canApprovePix;
@@ -1167,8 +1211,10 @@ function renderAdminSociosTable() {
   const statusFilter = document.getElementById('filterSociosStatus')?.value || 'todos';
 
   const filtrados = appState.socios.filter((s) => {
-    const matchStatus = statusFilter === 'todos' || s.statusPagamento === statusFilter;
-    const text = `${s.numeroCamisa || ''} ${s.matricula || ''} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade} ${s.formaPagamento || ''}`.toLowerCase();
+    const matchStatus = statusFilter === 'todos'
+      || s.statusPagamento === statusFilter
+      || (statusFilter === 'Isento (Diretoria)' && isSocioIsento(s));
+    const text = `${s.numeroCamisa || ''} ${s.matricula || ''} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade} ${s.formaPagamento || ''} ${s.statusPagamento || ''}`.toLowerCase();
     return matchStatus && text.includes(query);
   });
 
@@ -1177,22 +1223,26 @@ function renderAdminSociosTable() {
     return;
   }
 
+  const isMaster = Boolean(currentAdminUser && currentAdminUser.isMaster);
   const canPix = hasPerm('aprovarPixSocio');
   const canEdit = hasPerm('editarSocio');
   const canDel = hasPerm('excluirSocio');
 
   tbody.innerHTML = filtrados.map((s) => {
-    const isPaid = s.statusPagamento === 'Pago / Ativo';
+    const isIsento = isSocioIsento(s);
+    const isPaid = s.statusPagamento === 'Pago / Ativo' || isIsento;
     const isPartial = s.statusPagamento === '1ª Parcela Paga (R$ 35)' || s.statusPagamento === '2ª Parcela Paga (R$ 70)';
-    const isParcelado = String(s.formaPagamento || '').includes('3x');
-    const valorTotal = Number(s.valorPlano) || 105;
+    const isParcelado = !isIsento && String(s.formaPagamento || '').includes('3x');
+    const valorTotal = isIsento ? 0 : (Number(s.valorPlano) || 105);
     const valorJaPago = getSocioValorPagoEfetivo(s);
-    const faltaPagar = Math.max(0, valorTotal - valorJaPago);
+    const faltaPagar = isIsento ? 0 : Math.max(0, valorTotal - valorJaPago);
 
     const cleanPhone = (s.whatsapp || '').replace(/\D/g, '');
-    const msgCobrancaOuContato = isParcelado
-      ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente ao seu Sócio Garra (${s.formaPagamento}) e envio dos boletos das parcelas.`
-      : `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de Sócio Garra Alviverde.`;
+    const msgCobrancaOuContato = isIsento
+      ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua Carteirinha Oficial de Diretor Isento.`
+      : (isParcelado
+        ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente ao seu Sócio Garra (${s.formaPagamento}) e envio dos boletos das parcelas.`
+        : `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de Sócio Garra Alviverde.`);
     const waLink = `https://api.whatsapp.com/send?phone=55${cleanPhone.replace(/^55/, '')}&text=${encodeURIComponent(msgCobrancaOuContato)}`;
     const numCamisaDisplay = s.numeroCamisa ? `Nº ${s.numeroCamisa}` : 'Nº —';
 
@@ -1203,7 +1253,7 @@ function renderAdminSociosTable() {
       else if (s.statusPagamento === '2ª Parcela Paga (R$ 70)') btnPixLabel = '✔ Quitar 3ª Parc. (R$ 105)';
       else btnPixLabel = 'Voltar p/ Pendente';
     } else {
-      btnPixLabel = isPaid ? 'Marcar Pendente' : '✔ Confirmar PIX (R$ 105)';
+      btnPixLabel = s.statusPagamento === 'Pago / Ativo' ? 'Marcar Pendente' : '✔ Confirmar PIX (R$ 105)';
     }
 
     const boletoBadgeHtml = isParcelado
@@ -1227,6 +1277,20 @@ function renderAdminSociosTable() {
          </div>`
       : '';
 
+    const planoColHtml = isIsento
+      ? `<strong style="color:#047857;">👑 Isento — Diretoria TGA (R$ 0,00)</strong><br>
+         <small style="color:#065f46; font-weight:800;">Isenção Master • Benefícios 100% Ativos</small><br>
+         <small>Camisa: <strong>${s.tamanhoCamisa} (${numCamisaDisplay})</strong> | Sangue: ${s.tipoSanguineo}</small>`
+      : `<strong>${s.formaPagamento || 'À Vista no PIX (R$ 105,00)'}</strong><br>
+         <small style="color:${faltaPagar === 0 ? '#047857' : '#b45309'}; font-weight:700;">
+           Pago: ${formatBRL(valorJaPago)} de ${formatBRL(valorTotal)} ${faltaPagar > 0 ? `(Falta ${formatBRL(faltaPagar)})` : '(Quitado)'}
+         </small><br>
+         <small>Camisa: <strong>${s.tamanhoCamisa} (${numCamisaDisplay})</strong> | Sangue: ${s.tipoSanguineo}</small>`;
+
+    const statusBadgeStyle = isIsento
+      ? 'background:linear-gradient(135deg,#fef08a,#fde047); color:#052e16; border:1px solid #ca8a04; font-weight:800;'
+      : (isPartial ? 'background:#e0f2fe;color:#0369a1;' : '');
+
     return `
       <tr>
         <td>
@@ -1234,7 +1298,7 @@ function renderAdminSociosTable() {
           <small>${formatDateBR(s.createdAt)}</small>
         </td>
         <td>
-          <strong>${s.nome}</strong><br>
+          <strong>${s.nome}</strong> ${isIsento ? '<span title="Isento pelo Master">👑</span>' : ''}<br>
           <small>Apelido: ${s.apelido || '—'} | Nasc: ${formatDateBR(s.dataNascimento)}</small>
           ${editadoInfoHtml}
         </td>
@@ -1247,24 +1311,25 @@ function renderAdminSociosTable() {
           <small>${s.pelotao || '—'} (${s.cidade || ''})</small>
         </td>
         <td>
-          <strong>${s.formaPagamento || 'À Vista no PIX (R$ 105,00)'}</strong><br>
-          <small style="color:${faltaPagar === 0 ? '#047857' : '#b45309'}; font-weight:700;">
-            Pago: ${formatBRL(valorJaPago)} de ${formatBRL(valorTotal)} ${faltaPagar > 0 ? `(Falta ${formatBRL(faltaPagar)})` : '(Quitado)'}
-          </small><br>
-          <small>Camisa: <strong>${s.tamanhoCamisa} (${numCamisaDisplay})</strong> | Sangue: ${s.tipoSanguineo}</small>
+          ${planoColHtml}
         </td>
         <td>
-          <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}" style="${isPartial ? 'background:#e0f2fe;color:#0369a1;' : ''}">
-            ${s.statusPagamento}
+          <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}" style="${statusBadgeStyle}">
+            ${isIsento ? '👑 Isento (Diretoria)' : s.statusPagamento}
           </span>
           ${boletoBadgeHtml}
           ${aprovadoInfoHtml}
         </td>
         <td>
           <div class="action-btns">
-            ${canPix ? `
+            ${canPix && !isIsento ? `
               <button type="button" class="btn-table btn-approve" data-toggle-socio="${s.id}">
                 ${btnPixLabel}
+              </button>
+            ` : ''}
+            ${isMaster ? `
+              <button type="button" class="btn-table" data-isentar-socio="${s.id}" title="Exclusivo Usuário Master: Isentar Diretor de Pagar Sócio" style="background:${isIsento ? '#fef3c7' : 'linear-gradient(135deg,#fde047,#eab308)'}; color:${isIsento ? '#92400e' : '#052e16'}; border:1px solid #ca8a04; font-weight:800;">
+                ${isIsento ? '↩️ Tirar Isenção' : '👑 Isentar (Diretoria)'}
               </button>
             ` : ''}
             ${canEdit ? `
@@ -1285,6 +1350,121 @@ function renderAdminSociosTable() {
       </tr>
     `;
   }).join('');
+
+  // Botão EXCLUSIVO DO USUÁRIO MASTER: Isentar Diretor de Pagar Sócio (ou remover isenção)
+  tbody.querySelectorAll('[data-isentar-socio]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!currentAdminUser || !currentAdminUser.isMaster) {
+        showToast('🚫 Apenas o Usuário Master pode isentar membros de pagar o sócio.');
+        return;
+      }
+      const id = btn.getAttribute('data-isentar-socio');
+      const socio = appState.socios.find(x => x.id === id);
+      if (!socio) return;
+
+      const jaIsento = isSocioIsento(socio);
+      const valorPadrao = Number(getSinglePlan()?.valor) || 105;
+
+      if (!jaIsento) {
+        const ok = window.confirm(
+          `👑 ISENÇÃO EXCLUSIVA DO USUÁRIO MASTER\n\n` +
+          `Deseja ISENTAR "${socio.nome}" de pagar o Sócio Garra Alviverde (Diretoria)?\n\n` +
+          `• Valor cobrado: R$ 0,00 (Isento)\n` +
+          `• Carteirinha Digital Ativa, Desconto na Loja e Ingresso no Velosão ficarão 100% liberados imediatamente!`
+        );
+        if (!ok) return;
+
+        const aprovadoPor = {
+          nome: currentAdminUser.nome,
+          usuario: currentAdminUser.usuario,
+          dataHora: new Date().toISOString(),
+          status: 'Isento (Diretoria)'
+        };
+
+        socio.isento = true;
+        socio.statusPagamento = 'Isento (Diretoria)';
+        socio.formaPagamento = 'Isento — Diretoria TGA (R$ 0,00)';
+        socio.valorPlano = 0;
+        socio.valorPago = 0;
+        socio.parcelasPagas = 3;
+        socio.aprovadoPor = aprovadoPor;
+
+        const audit = buildAuditPayload(
+          'PIX Sócio',
+          `Concedeu ISENÇÃO DE PAGAMENTO (Diretoria) ao sócio ${socio.nome}`,
+          `Isento pelo Usuário Master (${currentAdminUser.nome}) • Valor cobrado: R$ 0,00 • Benefícios liberados`
+        );
+
+        try {
+          await fetch(`/api/socios/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              isento: true,
+              statusPagamento: socio.statusPagamento,
+              formaPagamento: socio.formaPagamento,
+              valorPlano: 0,
+              valorPago: 0,
+              parcelasPagas: 3,
+              aprovadoPor,
+              _auditoria: audit
+            })
+          });
+        } catch (e) {}
+
+        saveLocalBackup();
+        renderAll();
+        showToast(`👑 ${socio.nome} agora está ISENTO (Diretoria TGA) com todos os benefícios ativos!`);
+      } else {
+        const ok = window.confirm(
+          `Deseja REMOVER a isenção de "${socio.nome}" e voltar o plano para o valor normal (${formatBRL(valorPadrao)} — Pendente PIX)?`
+        );
+        if (!ok) return;
+
+        const aprovadoPor = {
+          nome: currentAdminUser.nome,
+          usuario: currentAdminUser.usuario,
+          dataHora: new Date().toISOString(),
+          status: 'Pendente PIX'
+        };
+
+        socio.isento = false;
+        socio.statusPagamento = 'Pendente PIX';
+        socio.formaPagamento = 'À Vista no PIX (R$ 105,00)';
+        socio.valorPlano = valorPadrao;
+        socio.valorPago = 0;
+        socio.parcelasPagas = 0;
+        socio.aprovadoPor = aprovadoPor;
+
+        const audit = buildAuditPayload(
+          'PIX Sócio',
+          `Removeu a isenção de pagamento do sócio ${socio.nome}`,
+          `Voltou para Pendente PIX (${formatBRL(valorPadrao)})`
+        );
+
+        try {
+          await fetch(`/api/socios/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              isento: false,
+              statusPagamento: socio.statusPagamento,
+              formaPagamento: socio.formaPagamento,
+              valorPlano: valorPadrao,
+              valorPago: 0,
+              parcelasPagas: 0,
+              aprovadoPor,
+              _auditoria: audit
+            })
+          });
+        } catch (e) {}
+
+        saveLocalBackup();
+        renderAll();
+        showToast(`↩️ Isenção removida de ${socio.nome}. Status voltou para Pendente PIX.`);
+      }
+    });
+  });
 
   tbody.querySelectorAll('[data-toggle-socio]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -2242,6 +2422,9 @@ function escapeHtml(val) {
 
 function getStatusCellStyles(val) {
   const s = String(val ?? '');
+  if (s.includes('Isento')) {
+    return 'background-color:#fef9c3; color:#854d0e; font-weight:bold; text-align:center;';
+  }
   if (s === 'Pago / Ativo' || s === 'PIX Confirmado' || s === 'Sim') {
     return 'background-color:#dcfce7; color:#166534; font-weight:bold; text-align:center;';
   }
@@ -2462,41 +2645,45 @@ function printStyledReport({ reportTitle, subtitle, summaryItems = [], headers =
 
 function buildSociosReportConfig() {
   const totalSocios = appState.socios.length;
-  const quitados = appState.socios.filter(s => s.statusPagamento === 'Pago / Ativo').length;
+  const isentos = appState.socios.filter(s => isSocioIsento(s)).length;
+  const quitados = appState.socios.filter(s => s.statusPagamento === 'Pago / Ativo' && !isSocioIsento(s)).length;
   const emParcelamento = appState.socios.filter(s => String(s.statusPagamento || '').includes('Parcela')).length;
   const recebido = appState.socios.reduce((acc, s) => acc + getSocioValorPagoEfetivo(s), 0);
-  const previsto = appState.socios.reduce((acc, s) => acc + (Number(s.valorPlano) || 105), 0);
+  const previsto = appState.socios.reduce((acc, s) => acc + (isSocioIsento(s) ? 0 : (Number(s.valorPlano) || 105)), 0);
 
   const headers = [
     'Nº Camiseta', 'Matrícula', 'Nome Completo do Sócio', 'Apelido', 'CPF', 'RG', 'Nascimento',
     'WhatsApp', 'Setor / Bairro', 'Cidade / UF', 'Tam. Camisa', 'Sangue',
     'Modalidade de Pagamento', 'Valor do Plano', 'Valor Já Pago', 'Status PIX / Parcelas', 'Boletos Enviados',
-    'PIX Confirmado Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
+    'PIX / Isenção Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
   ];
 
-  const rows = appState.socios.map((s) => [
-    s.numeroCamisa ? `Nº ${s.numeroCamisa}` : '—',
-    s.matricula || '—',
-    s.nome || '—',
-    s.apelido || '—',
-    s.cpf || '—',
-    s.rg || '—',
-    formatDateBR(s.dataNascimento),
-    s.whatsapp || '—',
-    s.pelotao || '—',
-    s.cidade || 'Rio Verde - GO',
-    s.tamanhoCamisa || 'G',
-    s.tipoSanguineo || '—',
-    s.formaPagamento || 'À Vista no PIX (R$ 105,00)',
-    formatBRL(Number(s.valorPlano) || 105),
-    formatBRL(getSocioValorPagoEfetivo(s)),
-    s.statusPagamento || 'Pendente PIX',
-    s.boletosEnviados ? 'Sim' : 'Não',
-    s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : '—',
-    s.ultimaEdicao ? `${s.ultimaEdicao.nome} (${formatDateTimeBR(s.ultimaEdicao.dataHora)})` : '—',
-    s.observacoes || '—',
-    formatDateBR(s.createdAt)
-  ]);
+  const rows = appState.socios.map((s) => {
+    const isento = isSocioIsento(s);
+    return [
+      s.numeroCamisa ? `Nº ${s.numeroCamisa}` : '—',
+      s.matricula || '—',
+      s.nome || '—',
+      s.apelido || '—',
+      s.cpf || '—',
+      s.rg || '—',
+      formatDateBR(s.dataNascimento),
+      s.whatsapp || '—',
+      s.pelotao || '—',
+      s.cidade || 'Rio Verde - GO',
+      s.tamanhoCamisa || 'G',
+      s.tipoSanguineo || '—',
+      isento ? 'Isento — Diretoria TGA (R$ 0,00)' : (s.formaPagamento || 'À Vista no PIX (R$ 105,00)'),
+      formatBRL(isento ? 0 : (Number(s.valorPlano) || 105)),
+      formatBRL(getSocioValorPagoEfetivo(s)),
+      isento ? 'Isento (Diretoria)' : (s.statusPagamento || 'Pendente PIX'),
+      isento ? 'Isento' : (s.boletosEnviados ? 'Sim' : 'Não'),
+      s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : '—',
+      s.ultimaEdicao ? `${s.ultimaEdicao.nome} (${formatDateTimeBR(s.ultimaEdicao.dataHora)})` : '—',
+      s.observacoes || '—',
+      formatDateBR(s.createdAt)
+    ];
+  });
 
   return {
     filename: `Relacao_Oficial_Socios_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
@@ -2506,6 +2693,7 @@ function buildSociosReportConfig() {
     summaryItems: [
       `Total de Sócios: ${totalSocios}`,
       `Quitados (R$ 105): ${quitados}`,
+      `Isentos (Diretoria): ${isentos}`,
       `Em Parcelamento (3x): ${emParcelamento}`,
       `Arrecadado: ${formatBRL(recebido)} de ${formatBRL(previsto)}`
     ],
@@ -2678,9 +2866,11 @@ function printCarteirinhaSocio(socio) {
   const logoEcrv = `${origin}/assets/escudo-ecrv.jpg`;
   const valPago = getSocioValorPagoEfetivo(socio);
   const valTotal = Number(socio.valorPlano) || 105;
-  const statusLabel = valPago >= valTotal
-    ? 'SÓCIO QUITADO TOTAL (ATIVO)'
-    : (isSocioEligibleForBenefits(socio) ? 'SÓCIO EM DIA — BENEFÍCIOS LIBERADOS' : 'AGUARDANDO CONFIRMAÇÃO PIX');
+  const statusLabel = isSocioIsento(socio)
+    ? 'DIRETORIA TGA — ISENTO (ATIVO)'
+    : (valPago >= valTotal
+      ? 'SÓCIO QUITADO TOTAL (ATIVO)'
+      : (isSocioEligibleForBenefits(socio) ? 'SÓCIO EM DIA — BENEFÍCIOS LIBERADOS' : 'AGUARDANDO CONFIRMAÇÃO PIX'));
 
   const win = window.open('', '_blank', 'width=720,height=640');
   if (!win) {
@@ -3175,12 +3365,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // Quando o diretor muda o Status de Pagamento no modal de edição, preenche automaticamente o Valor Pago correspondente
   document.getElementById('editSocStatus')?.addEventListener('change', (e) => {
     const st = e.target.value;
+    const valEl = document.getElementById('editSocValor');
     const valPagoEl = document.getElementById('editSocValorPago');
+    const formaEl = document.getElementById('editSocFormaPagamento');
     if (!valPagoEl) return;
-    if (st === 'Pendente PIX') valPagoEl.value = 0;
-    else if (st === '1ª Parcela Paga (R$ 35)') valPagoEl.value = 35;
-    else if (st === '2ª Parcela Paga (R$ 70)') valPagoEl.value = 70;
-    else if (st === 'Pago / Ativo') valPagoEl.value = Number(document.getElementById('editSocValor')?.value) || 105;
+    if (st === 'Isento (Diretoria)') {
+      if (!currentAdminUser || !currentAdminUser.isMaster) {
+        showToast('🚫 Apenas o Usuário Master pode isentar membros de pagar o sócio.');
+        e.target.value = 'Pendente PIX';
+        return;
+      }
+      if (valEl) valEl.value = 0;
+      valPagoEl.value = 0;
+      if (formaEl) formaEl.value = 'Isento — Diretoria TGA (R$ 0,00)';
+    } else if (st === 'Pendente PIX') {
+      if (valEl && Number(valEl.value) === 0) valEl.value = 105;
+      valPagoEl.value = 0;
+    } else if (st === '1ª Parcela Paga (R$ 35)') {
+      if (valEl && Number(valEl.value) === 0) valEl.value = 105;
+      valPagoEl.value = 35;
+    } else if (st === '2ª Parcela Paga (R$ 70)') {
+      if (valEl && Number(valEl.value) === 0) valEl.value = 105;
+      valPagoEl.value = 70;
+    } else if (st === 'Pago / Ativo') {
+      if (valEl && Number(valEl.value) === 0) valEl.value = 105;
+      valPagoEl.value = Number(valEl?.value) || 105;
+    }
   });
 
   // Fechar / Salvar Modal de Edição de Sócio (Diretoria)
@@ -3201,7 +3411,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (idx === -1) return;
 
     const oldSocio = appState.socios[idx];
-    const canApprovePix = hasPerm('aprovarPixSocio');
+    const isMaster = Boolean(currentAdminUser && currentAdminUser.isMaster);
+    const canApprovePix = hasPerm('aprovarPixSocio') && (!isSocioIsento(oldSocio) || isMaster);
+
+    const statusEscolhido = canApprovePix ? document.getElementById('editSocStatus').value : oldSocio.statusPagamento;
+    const formaEscolhida = canApprovePix
+      ? (document.getElementById('editSocFormaPagamento')?.value || oldSocio.formaPagamento || 'À Vista no PIX (R$ 105,00)')
+      : oldSocio.formaPagamento;
+
+    const querIsentar = statusEscolhido === 'Isento (Diretoria)' || String(formaEscolhida).includes('Isento');
+    if (querIsentar && !isMaster && !isSocioIsento(oldSocio)) {
+      showToast('🚫 Apenas o Usuário Master pode conceder isenção de pagamento.');
+      return;
+    }
 
     const updates = {
       nome: document.getElementById('editSocNome').value.trim(),
@@ -3216,12 +3438,11 @@ document.addEventListener('DOMContentLoaded', () => {
       tamanhoCamisa: document.getElementById('editSocCamisa').value,
       numeroCamisa: document.getElementById('editSocNumeroCamisa').value.trim(),
       tipoSanguineo: document.getElementById('editSocSangue').value,
-      formaPagamento: canApprovePix
-        ? (document.getElementById('editSocFormaPagamento')?.value || oldSocio.formaPagamento || 'À Vista no PIX (R$ 105,00)')
-        : oldSocio.formaPagamento,
-      valorPlano: canApprovePix ? (Number(document.getElementById('editSocValor').value) || 105) : oldSocio.valorPlano,
-      valorPago: canApprovePix ? (Number(document.getElementById('editSocValorPago')?.value) || 0) : getSocioValorPagoEfetivo(oldSocio),
-      statusPagamento: canApprovePix ? document.getElementById('editSocStatus').value : oldSocio.statusPagamento,
+      isento: querIsentar,
+      formaPagamento: querIsentar ? 'Isento — Diretoria TGA (R$ 0,00)' : formaEscolhida,
+      valorPlano: querIsentar ? 0 : (canApprovePix ? (Number(document.getElementById('editSocValor').value) || 105) : oldSocio.valorPlano),
+      valorPago: querIsentar ? 0 : (canApprovePix ? (Number(document.getElementById('editSocValorPago')?.value) || 0) : getSocioValorPagoEfetivo(oldSocio)),
+      statusPagamento: querIsentar ? 'Isento (Diretoria)' : statusEscolhido,
       boletosEnviados: canApprovePix ? Boolean(document.getElementById('editSocBoletosEnviados')?.checked) : Boolean(oldSocio.boletosEnviados),
       observacoes: document.getElementById('editSocObs').value.trim()
     };

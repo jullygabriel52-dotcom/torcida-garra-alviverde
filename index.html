@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20261106c" />
+  <link rel="stylesheet" href="/styles.css?v=20261106d" />
 </head>
 <body>
   <!-- TOPBAR OFICIAL -->
@@ -1316,6 +1316,7 @@
                 <option value="1ª Parcela Paga (R$ 35)">1ª Parcela Paga (R$ 35)</option>
                 <option value="2ª Parcela Paga (R$ 70)">2ª Parcela Paga (R$ 70)</option>
                 <option value="Pago / Ativo">Quitado Total (R$ 105)</option>
+                <option value="Isento (Diretoria)">👑 Isento (Diretoria — R$ 0)</option>
               </select>
             </div>
             <div class="admin-export-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -2039,6 +2040,7 @@
             <select id="editSocFormaPagamento">
               <option value="À Vista no PIX (R$ 105,00)">À Vista no PIX (R$ 105,00)</option>
               <option value="Parcelado em 3x de R$ 35,00">Parcelado em 3x de R$ 35,00 (PIX + Boletos)</option>
+              <option value="Isento — Diretoria TGA (R$ 0,00)" id="optFormaIsentoMaster">👑 Isento — Diretoria TGA (R$ 0,00)</option>
             </select>
           </div>
           <div class="form-group">
@@ -2048,6 +2050,7 @@
               <option value="1ª Parcela Paga (R$ 35)">1ª Parcela Paga (R$ 35,00 pago)</option>
               <option value="2ª Parcela Paga (R$ 70)">2ª Parcela Paga (R$ 70,00 pago)</option>
               <option value="Pago / Ativo">Pago / Quitado Total (R$ 105,00)</option>
+              <option value="Isento (Diretoria)" id="optStatusIsentoMaster">👑 Isento (Diretoria — R$ 0,00 / Exclusivo Master)</option>
             </select>
           </div>
         </div>
@@ -2086,6 +2089,6 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js?v=20261106c"></script>
+  <script src="/app.js?v=20261106d"></script>
 </body>
 </html>

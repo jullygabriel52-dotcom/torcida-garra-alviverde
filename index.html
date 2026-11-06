@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/styles.css?v=20261106b" />
 </head>
 <body>
   <!-- TOPBAR OFICIAL -->
@@ -27,7 +27,9 @@
         <a href="https://www.instagram.com/torcidagarraalviverde15/" id="topInstagramLink" target="_blank" rel="noopener" class="topbar-link topbar-insta">
           📸 @torcidagarraalviverde15
         </a>
-        <button type="button" class="topbar-btn-link" data-open-window="windowCaravanas">🚌 Caravanas da TGA</button>
+        <button type="button" class="topbar-btn-link" data-open-window="windowPortalSocio" style="color:#fde047; font-weight:800;">🔓 Área do Sócio</button>
+        <button type="button" class="topbar-btn-link" data-open-window="windowLojaMateriais">👕 Loja TGA</button>
+        <button type="button" class="topbar-btn-link" data-open-window="windowJogosEcrv">⚽ Jogos E.C.R.V.</button>
         <a href="#" id="topWhatsappLink" target="_blank" rel="noopener" class="topbar-link">💬 (64) 99330-2283</a>
         <button type="button" class="btn-admin-trigger" id="btnOpenAdmin">
           🔒 Painel da Diretoria <span class="admin-counter" id="adminBadgeCount">0</span>
@@ -51,11 +53,21 @@
       </a>
 
       <nav class="nav-links" id="navMenu">
-        <button type="button" class="nav-btn-link" data-open-window="windowHistoria">ECRV e a TGA</button>
-        <button type="button" class="nav-btn-link" data-open-window="windowCaravanas">Caravanas da TGA</button>
-        <a href="https://www.instagram.com/torcidagarraalviverde15/" id="navInstagramLink" target="_blank" rel="noopener" class="nav-insta-pill">
-          📸 Instagram
-        </a>
+        <button type="button" class="nav-btn-link" data-open-window="windowPortalSocio" style="color:#fde047; font-weight:800;">
+          🔓 Área do Sócio (CPF)
+        </button>
+        <button type="button" class="nav-btn-link" data-open-window="windowLojaMateriais">
+          👕 Loja de Materiais
+        </button>
+        <button type="button" class="nav-btn-link" data-open-window="windowJogosEcrv">
+          ⚽ Jogos & Ingressos
+        </button>
+        <button type="button" class="nav-btn-link" data-open-window="windowCaravanas">
+          🚌 Caravanas
+        </button>
+        <button type="button" class="nav-btn-link" data-open-window="windowHistoria">
+          ECRV e a TGA
+        </button>
         <button type="button" class="btn-nav-cta" data-open-window="windowSocio">
           🪪 Seja Sócio TGA
         </button>
@@ -94,6 +106,15 @@
           <div class="hero-actions">
             <button type="button" class="btn btn-primary btn-lg" data-open-window="windowSocio">
               🪪 Inscrição de Sócio TGA
+            </button>
+            <button type="button" class="btn btn-gold btn-lg" data-open-window="windowPortalSocio" style="color:#052e16; font-weight:800;">
+              🔓 Área do Sócio (CPF)
+            </button>
+            <button type="button" class="btn btn-outline-white btn-lg" data-open-window="windowLojaMateriais">
+              👕 Loja de Materiais TGA
+            </button>
+            <button type="button" class="btn btn-outline-white btn-lg" data-open-window="windowJogosEcrv">
+              ⚽ Jogos E.C.R.V. & Ingressos
             </button>
             <button type="button" class="btn btn-outline-white btn-lg" data-open-window="windowCaravanas">
               🚌 Caravanas da TGA
@@ -187,13 +208,40 @@
 
       <!-- ATALHOS RÁPIDOS EM CARDS COMPACTOS -->
       <div class="container hub-shortcuts-grid">
+        <div class="hub-shortcut-card" data-open-window="windowPortalSocio" style="border-color:#eab308;">
+          <div class="hub-shortcut-icon">🔓</div>
+          <div class="hub-shortcut-body">
+            <h4>Área Exclusiva do Sócio (Por CPF)</h4>
+            <p>Acesse sua Carteirinha Digital Oficial, acompanhe suas 3 parcelas, veja avisos e garanta benefícios.</p>
+          </div>
+          <span class="hub-shortcut-arrow">Entrar c/ CPF ↗</span>
+        </div>
+
+        <div class="hub-shortcut-card" data-open-window="windowLojaMateriais">
+          <div class="hub-shortcut-icon">👕</div>
+          <div class="hub-shortcut-body">
+            <h4>Loja Oficial de Materiais TGA</h4>
+            <p>Camisas, regatas e bonés da Garra Alviverde com desconto automático para Sócios a partir da 1ª parcela.</p>
+          </div>
+          <span class="hub-shortcut-arrow">Ver Materiais ↗</span>
+        </div>
+
+        <div class="hub-shortcut-card" data-open-window="windowJogosEcrv">
+          <div class="hub-shortcut-icon">⚽</div>
+          <div class="hub-shortcut-body">
+            <h4>Jogos do E.C.R.V. & Ingresso no Velosão</h4>
+            <p>Tabela atualizada do Verdão do Sudoeste e Check-in de Ingresso Garantido para Sócios nos jogos em casa.</p>
+          </div>
+          <span class="hub-shortcut-arrow">Ver Tabela ↗</span>
+        </div>
+
         <div class="hub-shortcut-card" data-open-window="windowSocio">
           <div class="hub-shortcut-icon">🪪</div>
           <div class="hub-shortcut-body">
-            <h4>Seja Sócio TGA (Plano Único)</h4>
-            <p>Preencha sua ficha de filiação, gere sua Carteirinha Oficial na hora e envie para a diretoria.</p>
+            <h4>Seja Sócio TGA (R$ 105 ou 3x R$ 35)</h4>
+            <p>Preencha sua ficha de filiação, gere sua Carteirinha Oficial na hora e fortaleça nossa torcida.</p>
           </div>
-          <span class="hub-shortcut-arrow">Abrir Janela ↗</span>
+          <span class="hub-shortcut-arrow">Fazer Inscrição ↗</span>
         </div>
 
         <div class="hub-shortcut-card" data-open-window="windowCaravanas">
@@ -209,7 +257,7 @@
           <div class="hub-shortcut-icon">🥁</div>
           <div class="hub-shortcut-body">
             <h4>ECRV e a TGA</h4>
-            <p>Conheça nossa história desde 19/05/2015 no Velosão, materiais oficiais e Instagram da torcida.</p>
+            <p>Conheça nossa história desde 19/05/2015 no Estádio Velosão e siga o Instagram oficial da torcida.</p>
           </div>
           <span class="hub-shortcut-arrow">Abrir Janela ↗</span>
         </div>
@@ -757,6 +805,375 @@
     </div>
   </div>
 
+  <!-- =========================================================================
+       JANELA INTERATIVA 4: ÁREA EXCLUSIVA DO SÓCIO TGA (LOGIN POR CPF)
+       ========================================================================= -->
+  <div class="modal-backdrop" id="windowPortalSocio" hidden>
+    <div class="modal-box modal-feature-window">
+      <div class="window-header">
+        <div class="window-header-left">
+          <img src="/assets/logo-tga.jpg" alt="TGA" class="window-header-logo" />
+          <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." class="window-header-logo" />
+          <div>
+            <span class="pill-green">CLUBE DE VANTAGENS • SÓCIO GARRA ALVIVERDE</span>
+            <h2>🔓 Área Exclusiva do Sócio TGA (Acesso por CPF)</h2>
+          </div>
+        </div>
+        <div class="window-header-actions">
+          <a href="/?janela=painel-socio" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+            ↗ Abrir em Nova Guia
+          </a>
+          <button type="button" class="modal-close-static" data-close-window="windowPortalSocio">✕ Fechar</button>
+        </div>
+      </div>
+
+      <!-- CAIXA DE BUSCA / LOGIN DO SÓCIO PELO CPF -->
+      <div class="single-plan-banner" style="margin-bottom:20px;">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px;">
+          <div style="max-width:560px;">
+            <span class="single-plan-badge">🪪 ACESSO RÁPIDO DO SÓCIO TGA</span>
+            <h3 style="margin:4px 0;">Consulte sua Carteirinha Digital, Parcelas e Benefícios</h3>
+            <p class="single-plan-sub" style="margin:0;">
+              Digite o <strong>CPF</strong> cadastrado na sua ficha de Sócio para abrir sua Carteirinha Digital Ativa, ver suas parcelas, avisos da Diretoria e liberar seus descontos!
+            </p>
+          </div>
+          <form id="formLoginSocioCpf" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; min-width:300px; flex:1; max-width:440px;">
+            <input type="text" id="inputSocioLoginCpf" required placeholder="Digite seu CPF (Ex: 700.000.000-00)" style="flex:1; min-width:190px; padding:12px 14px; border-radius:10px; border:2px solid #eab308; font-size:0.98rem; font-weight:700; color:#0f172a;" />
+            <button type="submit" class="btn btn-gold" style="padding:12px 18px; font-weight:800; color:#052e16;">
+              🔓 Entrar na Área do Sócio
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- MENSAGEM QUANDO AINDA NÃO DIGITOU O CPF -->
+      <div id="portalSocioEmptyState" class="admin-subcard" style="text-align:center; padding:32px 20px;">
+        <div style="font-size:2.4rem; margin-bottom:8px;">🦁🪪</div>
+        <h3 style="margin-bottom:6px;">Digite seu CPF acima para acessar seu Painel de Sócio</h3>
+        <p style="color:#475569; max-width:540px; margin:0 auto 16px;">
+          Ainda não faz parte do Sócio Garra Alviverde? Faça sua inscrição agora por <strong>R$ 105,00 à vista</strong> ou em <strong>3x de R$ 35,00</strong> e já desbloqueie o desconto nos materiais na hora!
+        </p>
+        <button type="button" class="btn btn-primary" data-switch-window="windowSocio">
+          🪪 Quero Fazer Minha Inscrição de Sócio Agora
+        </button>
+      </div>
+
+      <!-- CONTEÚDO LOGADO DO SÓCIO -->
+      <div id="portalSocioDashboard" hidden>
+        <div class="cadastro-workspace" style="align-items:start;">
+          <!-- COLUNA ESQUERDA: CARTEIRINHA DIGITAL DO SÓCIO + BOTÕES -->
+          <div>
+            <div class="socio-card-digital" style="margin-bottom:14px;">
+              <div class="card-digital-top">
+                <div class="card-emblems">
+                  <img src="/assets/logo-tga.jpg" alt="TGA" class="card-logo" />
+                  <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." class="card-logo card-logo-ecrv" />
+                </div>
+                <div class="card-titles">
+                  <strong>TORCIDA ORGANIZADA GARRA ALVIVERDE</strong>
+                  <span>E.C. RIO VERDE • DESDE 19/05/2015</span>
+                </div>
+                <span class="card-badge" id="portalSocioBadgeStatus">SÓCIO TGA</span>
+              </div>
+
+              <div class="card-digital-body">
+                <div class="card-photo-box">
+                  <img id="portalSocioFotoImg" src="" alt="Foto Sócio" hidden />
+                  <div class="card-photo-placeholder" id="portalSocioFotoPlaceholder">
+                    <span>🦁</span>
+                    <small>SÓCIO TGA</small>
+                  </div>
+                </div>
+                <div class="card-info-grid">
+                  <div class="info-item full">
+                    <small>NOME DO ASSOCIADO TGA</small>
+                    <strong id="portalSocioNome">—</strong>
+                  </div>
+                  <div class="info-item">
+                    <small>APELIDO / BANCADA</small>
+                    <strong id="portalSocioApelido">—</strong>
+                  </div>
+                  <div class="info-item">
+                    <small>SETOR / BAIRRO</small>
+                    <strong id="portalSocioPelotao">—</strong>
+                  </div>
+                  <div class="info-item">
+                    <small>CPF</small>
+                    <strong id="portalSocioCpf">—</strong>
+                  </div>
+                  <div class="info-item">
+                    <small>CAMISA / SANGUE</small>
+                    <strong id="portalSocioCamisaSangue">—</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-digital-footer">
+                <div>
+                  <small>NÚMERO DA CAMISETA</small>
+                  <strong id="portalSocioNumeroCamisa">Nº —</strong>
+                </div>
+                <div class="card-valid-seal" id="portalSocioValidSeal">
+                  ● VERIFICADO TGA
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+              <button type="button" class="btn btn-primary btn-block" id="btnPortalIrLoja">
+                👕 Comprar Material c/ Desconto
+              </button>
+              <button type="button" class="btn btn-gold btn-block" id="btnPortalIrJogos" style="color:#052e16; font-weight:800;">
+                🎟️ Garantir Ingresso no Velosão
+              </button>
+            </div>
+            <button type="button" class="btn btn-secondary btn-block btn-sm" id="btnPrintCarteirinhaSocio">
+              🖨️ Imprimir / Salvar Minha Carteirinha em PDF
+            </button>
+          </div>
+
+          <!-- COLUNA DIREITA: PROGRESSO DAS 3 PARCELAS + MURAL DA DIRETORIA -->
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="form-card" style="padding:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <h3 style="margin:0; font-size:1.15rem; color:#064e3b;">💰 Minha Situação Financeira & Parcelas</h3>
+                <span class="status-badge status-paid" id="portalSocioModalidadePill">Plano Sócio TGA</span>
+              </div>
+
+              <div id="portalSocioParcelasGrid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:14px;">
+                <!-- Preenchido via JS -->
+              </div>
+
+              <div id="portalSocioFinanceiroResumo" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px; font-size:0.88rem; margin-bottom:12px;">
+                <!-- Preenchido via JS -->
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-outline-green btn-sm" id="btnCopyPortalSocioPix">
+                  📋 Copiar Chave PIX da Torcida
+                </button>
+                <a href="#" id="btnPortalFalarFinanceiroWa" target="_blank" rel="noopener" class="btn btn-whatsapp btn-sm">
+                  📲 Enviar Comprovante / Pedir Boleto no WhatsApp
+                </a>
+              </div>
+            </div>
+
+            <!-- MURAL OFICIAL DA DIRETORIA & GRUPO VIP -->
+            <div style="background:linear-gradient(135deg, #052e16 0%, #006437 100%); color:#ffffff; border-radius:16px; padding:20px; border:2px solid #eab308;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="background:#eab308; color:#052e16; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:999px;">
+                  📢 MURAL OFICIAL DA DIRETORIA TGA
+                </span>
+                <small style="color:#a7f3d0;">Comunicado aos Sócios</small>
+              </div>
+              <p id="portalSocioMuralAviso" style="font-size:0.94rem; line-height:1.5; color:#ecfdf5; margin:0 0 14px;">
+                Salve Família Alviverde! Fique ligado nos próximos jogos do Esporte Clube Rio Verde no Estádio Velosão.
+              </p>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <a href="#" id="btnPortalGrupoVipWa" target="_blank" rel="noopener" class="btn btn-gold btn-sm" style="color:#052e16; font-weight:800;">
+                  💬 Acessar Grupo / Atendimento VIP de Sócios
+                </a>
+                <button type="button" class="btn btn-outline-white btn-sm" data-switch-window="windowCaravanas">
+                  🚌 Ver Caravanas c/ Prioridade
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       JANELA INTERATIVA 5: LOJA OFICIAL DE MATERIAIS GARRA ALVIVERDE
+       ========================================================================= -->
+  <div class="modal-backdrop" id="windowLojaMateriais" hidden>
+    <div class="modal-box modal-feature-window">
+      <div class="window-header">
+        <div class="window-header-left">
+          <img src="/assets/logo-tga.jpg" alt="TGA" class="window-header-logo" />
+          <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." class="window-header-logo" />
+          <div>
+            <span class="pill-green">DESCONTO EXCLUSIVO P/ SÓCIOS A PARTIR DA 1ª PARCELA</span>
+            <h2>👕 Loja Oficial de Materiais — Garra Alviverde (TGA)</h2>
+          </div>
+        </div>
+        <div class="window-header-actions">
+          <a href="/?janela=loja" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+            ↗ Abrir em Nova Guia
+          </a>
+          <button type="button" class="modal-close-static" data-close-window="windowLojaMateriais">✕ Fechar</button>
+        </div>
+      </div>
+
+      <div class="caravanas-workspace">
+        <!-- VITRINE DE PRODUTOS -->
+        <div class="caravanas-list-col">
+          <h3 class="col-subtitle"> Vista a Armadura da Garra Alviverde no Velosão</h3>
+          <div id="lojaMateriaisCardsContainer" class="caravanas-cards">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+
+        <!-- FORMULÁRIO DE PEDIDO DE MATERIAL COM VERIFICAÇÃO DE CPF DE SÓCIO -->
+        <div class="caravanas-form-col">
+          <div class="form-card">
+            <div class="form-card-header">
+              <span class="pill-green">ENCOMENDA / COMPRA NO PIX</span>
+              <h3>🛒 Fazer Pedido de Material Oficial</h3>
+              <p>Se você já é <strong>Sócio TGA</strong> (com a 1ª parcela paga ou quitado), digite seu CPF abaixo que o sistema libera o <strong>Preço com Desconto</strong> automaticamente!</p>
+            </div>
+
+            <form id="formPedidoMaterial">
+              <div class="form-group">
+                <label for="pedSelectMaterial">Escolha o Material Oficial *</label>
+                <select id="pedSelectMaterial" required></select>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="pedTamanho">Tamanho *</label>
+                  <select id="pedTamanho" required>
+                    <option value="P">P</option>
+                    <option value="M">M</option>
+                    <option value="G" selected>G</option>
+                    <option value="GG">GG</option>
+                    <option value="XG">XG / Especial</option>
+                    <option value="Único">Tamanho Único</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="pedQuantidade">Quantidade *</label>
+                  <input type="number" id="pedQuantidade" min="1" max="20" value="1" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="pedCpf">Seu CPF (Valida Desconto de Sócio Automaticamente) *</label>
+                <input type="text" id="pedCpf" required placeholder="Digite seu CPF para checar desconto de Sócio" />
+                <small id="pedCpfDiscountFeedback" style="display:block; margin-top:5px; font-weight:700; color:#047857;">
+                  💡 Digite seu CPF acima: se você for Sócio em dia, o desconto entra na hora!
+                </small>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="pedNome">Seu Nome Completo *</label>
+                  <input type="text" id="pedNome" required placeholder="Nome e sobrenome" />
+                </div>
+                <div class="form-group">
+                  <label for="pedWhatsapp">Seu WhatsApp *</label>
+                  <input type="tel" id="pedWhatsapp" required placeholder="(64) 99999-9999" />
+                </div>
+              </div>
+
+              <div class="payment-summary-box">
+                <div class="payment-summary-top">
+                  <div>
+                    <span id="pedLabelModalidadePreco">Valor do Pedido no PIX:</span>
+                    <strong class="price-highlight" id="pedValorTotalCalculado">R$ 0,00</strong>
+                  </div>
+                  <button type="button" class="btn btn-outline-green btn-sm" id="btnCopyLojaPix">
+                    📋 Copiar PIX da Torcida
+                  </button>
+                </div>
+                <div class="payment-qr-row">
+                  <img src="/assets/qrcode-pix.jpg" alt="QR Code PIX Oficial TGA" class="form-qr-img" />
+                  <p class="payment-hint">
+                    Chave PIX: <strong id="formLojaPixText">torcidagarraalviverde@gmail.com</strong>. Conclua o pedido abaixo para registrar na Diretoria e enviar o comprovante no WhatsApp <strong class="wa-dynamic-text">(64) 99330-2283</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block btn-lg">
+                🛒 Confirmar Pedido de Material & Enviar no WhatsApp
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       JANELA INTERATIVA 6: JOGOS DO E.C.R.V., TABELA & CHECK-IN DE INGRESSO
+       ========================================================================= -->
+  <div class="modal-backdrop" id="windowJogosEcrv" hidden>
+    <div class="modal-box modal-feature-window">
+      <div class="window-header">
+        <div class="window-header-left">
+          <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." class="window-header-logo" />
+          <img src="/assets/logo-tga.jpg" alt="TGA" class="window-header-logo" />
+          <div>
+            <span class="pill-green">ESPORTE CLUBE RIO VERDE • CALENDÁRIO E INGRESSOS</span>
+            <h2>⚽ Central de Jogos do E.C.R.V. & Ingresso Garantido no Velosão</h2>
+          </div>
+        </div>
+        <div class="window-header-actions">
+          <a href="/?janela=jogos" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+            ↗ Abrir em Nova Guia
+          </a>
+          <button type="button" class="modal-close-static" data-close-window="windowJogosEcrv">✕ Fechar</button>
+        </div>
+      </div>
+
+      <!-- BANNER DE CHECK-IN DE INGRESSO GARANTIDO P/ SÓCIOS NOS JOGOS EM CASA -->
+      <div class="single-plan-banner" style="margin-bottom:22px;">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:18px;">
+          <div style="max-width:540px;">
+            <span class="single-plan-badge">🎟️ BENEFÍCIO OFICIAL DO SÓCIO GARRA ALVIVERDE</span>
+            <h3 style="margin:4px 0;">Check-in de Ingresso Garantido — Jogos em Casa no Velosão</h3>
+            <p class="single-plan-sub" style="margin:0;">
+              É <strong>Sócio TGA em dia</strong>? Selecione o jogo em casa abaixo, digite seu CPF e confirme sua presença para entrar na <strong>Lista Oficial de Ingressos da Portaria do Estádio Velosão</strong>!
+            </p>
+          </div>
+          <form id="formCheckinJogoSocio" style="display:flex; flex-direction:column; gap:8px; min-width:300px; flex:1; max-width:440px; background:rgba(0,0,0,0.22); padding:14px; border-radius:12px; border:1px solid rgba(255,255,255,0.2);">
+            <select id="chkSelectJogo" required style="padding:10px 12px; border-radius:8px; border:1px solid #cbd5e1; font-weight:700; color:#0f172a;"></select>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <input type="text" id="chkSocioCpf" required placeholder="Digite seu CPF de Sócio" style="flex:1; min-width:160px; padding:10px 12px; border-radius:8px; border:2px solid #eab308; font-weight:700; color:#0f172a;" />
+              <button type="submit" class="btn btn-gold" style="font-weight:800; color:#052e16;">
+                🎟️ Garantir Meu Ingresso
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- TABELA COMPLETA DE JOGOS E RESULTADOS DO E.C.R.V. -->
+      <div class="admin-subcard" style="background:#ffffff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div>
+            <h3 style="margin:0; color:#064e3b;">📊 Tabela de Jogos, Calendário e Resultados — Esporte Clube Rio Verde (E.C.R.V.)</h3>
+            <p style="margin:4px 0 0; font-size:0.88rem; color:#475569;">
+              Acompanhe os compromissos do Verdão do Sudoeste em casa no Velosão e fora de casa com as caravanas da Garra Alviverde.
+            </p>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" data-switch-window="windowCaravanas">
+            🚌 Ver Caravanas p/ Jogos Fora
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Campeonato / Rodada</th>
+                <th>Mando de Campo</th>
+                <th>Confronto / Placar</th>
+                <th>Data e Horário</th>
+                <th>Estádio / Local</th>
+                <th>Status / Benefício Sócio TGA</th>
+              </tr>
+            </thead>
+            <tbody id="publicJogosTableBody">
+              <!-- Preenchido via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DE SUCESSO (APÓS INSCRIÇÃO DE SÓCIO OU CARAVANA) -->
   <div class="modal-backdrop" id="modalSuccess" hidden>
     <div class="modal-box modal-success-box">
@@ -866,6 +1283,12 @@
           </button>
           <button type="button" class="admin-tab" data-tab="tab-gerenciar-caravanas" id="btnTabGerenciarCaravanas">
             ➕ Criar / Editar Caravanas E.C.R.V.
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-loja" id="btnTabLoja">
+            👕 Loja & Materiais (<span id="tabCountPedidosLoja">0</span>)
+          </button>
+          <button type="button" class="admin-tab" data-tab="tab-jogos" id="btnTabJogos">
+            ⚽ Jogos & Ingressos (<span id="tabCountCheckins">0</span>)
           </button>
           <button type="button" class="admin-tab" data-tab="tab-diretores" id="btnTabDiretores">
             👑 Diretores & Permissões (<span id="tabCountDiretores">1</span>)
@@ -1105,10 +1528,218 @@
                 </div>
               </div>
 
+              <hr class="form-divider" />
+
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label>📢 Recado do Mural na Área do Sócio (Aparece para todos os sócios) *</label>
+                  <input type="text" id="cfgMuralAviso" required placeholder="Ex: Concentração domingo às 14h no Velosão!" />
+                </div>
+                <div class="form-group">
+                  <label>💬 Link do Grupo VIP de Sócios no WhatsApp (Opcional)</label>
+                  <input type="url" id="cfgLinkGrupoVip" placeholder="https://chat.whatsapp.com/..." />
+                </div>
+              </div>
+
               <button type="submit" class="btn btn-primary btn-lg">
                 💾 Salvar Configurações da Garra Alviverde
               </button>
             </form>
+          </div>
+        </div>
+
+        <!-- ABA NOVA: GERENCIAR LOJA DE MATERIAIS E PEDIDOS -->
+        <div class="admin-tab-panel" id="tab-loja" hidden>
+          <div class="admin-split-grid" style="margin-bottom:20px;">
+            <div class="admin-subcard">
+              <h3>👕 Cadastrar Novo Material Oficial na Loja</h3>
+              <form id="formNovoMaterial">
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Nome do Produto / Material *</label>
+                    <input type="text" id="newMatNome" required placeholder="Ex: Camisa Oficial Garra Alviverde 2026" />
+                  </div>
+                  <div class="form-group">
+                    <label>Categoria / Destaque *</label>
+                    <input type="text" id="newMatCategoria" required value="Material Oficial TGA" placeholder="Ex: Lançamento 2026" />
+                  </div>
+                </div>
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label>Preço Sócio TGA (R$) *</label>
+                    <input type="number" step="0.01" id="newMatValorSocio" required placeholder="75.00" />
+                  </div>
+                  <div class="form-group">
+                    <label>Preço Não-Sócio (R$) *</label>
+                    <input type="number" step="0.01" id="newMatValorNaoSocio" required placeholder="110.00" />
+                  </div>
+                  <div class="form-group">
+                    <label>Tamanhos Disponíveis *</label>
+                    <input type="text" id="newMatTamanhos" required value="P, M, G, GG, XG" />
+                  </div>
+                </div>
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Descrição Curta do Material *</label>
+                    <input type="text" id="newMatDescricao" required placeholder="Ex: Malha Dry-Fit Premium com escudo bordado" />
+                  </div>
+                  <div class="form-group">
+                    <label>Foto do Material (Opcional)</label>
+                    <input type="file" id="newMatFoto" accept="image/*" />
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  ➕ Publicar Material na Loja Oficial TGA
+                </button>
+              </form>
+            </div>
+
+            <div class="admin-subcard">
+              <h3>🏷️ Materiais Cadastrados na Vitrine</h3>
+              <div id="adminMateriaisList" class="admin-manage-list" style="max-height:360px; overflow-y:auto;">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-subcard">
+            <div class="admin-toolbar">
+              <h3 style="margin:0;">🛒 Pedidos e Encomendas de Materiais</h3>
+              <div class="admin-export-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary btn-sm" id="btnExportPedidosLojaXls">
+                  📊 Baixar Planilha de Pedidos (.XLS Formatada)
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnPrintPedidosLoja">
+                  🖨️ Imprimir / PDF c/ Logo
+                </button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Material / Tamanho</th>
+                    <th>Comprador / CPF</th>
+                    <th>WhatsApp</th>
+                    <th>Modalidade / Valor</th>
+                    <th>Status PIX / Entrega</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="adminPedidosMateriaisBody">
+                  <!-- Preenchido via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ABA NOVA: GERENCIAR JOGOS DO E.C.R.V. & CHECK-IN DE INGRESSOS NO VELOSÃO -->
+        <div class="admin-tab-panel" id="tab-jogos" hidden>
+          <div class="admin-split-grid" style="margin-bottom:20px;">
+            <div class="admin-subcard">
+              <h3>⚽ Adicionar Jogo na Tabela do E.C.R.V.</h3>
+              <form id="formNovoJogo">
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Campeonato *</label>
+                    <input type="text" id="newJogoCampeonato" required value="Campeonato Goiano" />
+                  </div>
+                  <div class="form-group">
+                    <label>Rodada / Fase *</label>
+                    <input type="text" id="newJogoRodada" required placeholder="Ex: 1ª Rodada / Semifinal" />
+                  </div>
+                </div>
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Mando de Campo *</label>
+                    <select id="newJogoMando" required>
+                      <option value="Em Casa (Velosão)">🏟️ Em Casa (Estádio Velosão - Ingresso Sócio)</option>
+                      <option value="Fora de Casa">🚌 Fora de Casa (Viagem / Caravana TGA)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Status do Jogo *</label>
+                    <select id="newJogoStatus" required>
+                      <option value="Check-in de Ingresso Aberto">🎟️ Check-in de Ingresso Aberto (Sócios)</option>
+                      <option value="Agendado">📅 Agendado</option>
+                      <option value="Encerrado">🏁 Jogo Encerrado (Com Placar)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Confronto *</label>
+                  <input type="text" id="newJogoAdversario" required placeholder="Ex: Esporte Clube Rio Verde (E.C.R.V.) vs. Adversário" />
+                </div>
+                <div class="form-row-3">
+                  <div class="form-group">
+                    <label>Data do Jogo *</label>
+                    <input type="date" id="newJogoData" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Horário *</label>
+                    <input type="text" id="newJogoHorario" required value="16:00" />
+                  </div>
+                  <div class="form-group">
+                    <label>Placar (Opcional)</label>
+                    <input type="text" id="newJogoPlacar" placeholder="Ex: E.C.R.V. 2 x 0 Adv" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Estádio / Cidade *</label>
+                  <input type="text" id="newJogoEstadio" required value="Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  ⚽ Publicar Jogo na Tabela Oficial
+                </button>
+              </form>
+            </div>
+
+            <div class="admin-subcard">
+              <h3>📅 Jogos Cadastrados (Atualizar Placar ou Status)</h3>
+              <div id="adminJogosList" class="admin-manage-list" style="max-height:380px; overflow-y:auto;">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-subcard">
+            <div class="admin-toolbar">
+              <div class="admin-filters">
+                <h3 style="margin:0; margin-right:12px;">🎟️ Lista de Sócios com Ingresso Confirmado (Portaria Velosão)</h3>
+                <select id="filterCheckinJogoSelect">
+                  <option value="todos">Todos os Jogos em Casa</option>
+                </select>
+              </div>
+              <div class="admin-export-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary btn-sm" id="btnExportCheckinsXls">
+                  📊 Baixar Lista da Portaria (.XLS Formatada)
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnPrintCheckins">
+                  🖨️ Imprimir Lista da Portaria (PDF)
+                </button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Jogo no Velosão</th>
+                    <th>Nº Camisa</th>
+                    <th>Nome do Sócio TGA</th>
+                    <th>CPF</th>
+                    <th>WhatsApp</th>
+                    <th>Situação Sócio</th>
+                    <th>Status Portaria</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="adminCheckinsJogosBody">
+                  <!-- Preenchido via JS -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -1454,6 +2085,6 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=20261106b"></script>
 </body>
 </html>

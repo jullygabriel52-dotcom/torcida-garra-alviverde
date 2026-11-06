@@ -17,6 +17,8 @@ const FALLBACK_STATE = {
     titularPix: 'TORCIDA ORGANIZADA GARRA ALVIVERDE - TGA',
     cidadePix: 'RIO VERDE - GO',
     senhaAdmin: 'Tga@2015',
+    muralAviso: 'Salve Família Alviverde! Fique ligado nos próximos jogos do Esporte Clube Rio Verde no Estádio Velosão. Sócios em dia (a partir da 1ª parcela paga) têm ingresso garantido nos jogos em casa e desconto imediato nos materiais oficiais da Garra!',
+    linkGrupoVipWhatsapp: '',
     planos: [
       {
         id: 'socio-unico',
@@ -89,11 +91,79 @@ const FALLBACK_STATE = {
       }
     }
   ],
-  auditoriaLogs: []
+  auditoriaLogs: [],
+  materiais: [
+    {
+      id: 'mat-1',
+      nome: 'Camisa Oficial Garra Alviverde (TGA) 2026',
+      categoria: 'Lançamento Oficial',
+      descricao: 'Malha Dry-Fit Premium com escudo E.C.R.V. e logo oficial da Garra Alviverde.',
+      valorSocio: 75.0,
+      valorNaoSocio: 110.0,
+      tamanhos: 'P, M, G, GG, XG',
+      estoqueStatus: 'Disponível',
+      fotoDataUrl: '/assets/logo-tga.jpg',
+      createdAt: '2026-11-05T12:00:00.000Z'
+    },
+    {
+      id: 'mat-2',
+      nome: 'Regata Oficial Bancada Velosão (TGA)',
+      categoria: 'Bateria & Bancada',
+      descricao: 'Ideal para os jogos no Estádio Velosão e viagens de caravana com o Verdão do Sudoeste.',
+      valorSocio: 60.0,
+      valorNaoSocio: 85.0,
+      tamanhos: 'P, M, G, GG, XG',
+      estoqueStatus: 'Disponível',
+      fotoDataUrl: '/assets/logo-tga.jpg',
+      createdAt: '2026-11-05T12:00:00.000Z'
+    },
+    {
+      id: 'mat-3',
+      nome: 'Boné Oficial Garra Alviverde 19/05/2015',
+      categoria: 'Acessórios TGA',
+      descricao: 'Aba curva verde e branco com bordado frontal 3D da Torcida Organizada Garra Alviverde.',
+      valorSocio: 45.0,
+      valorNaoSocio: 70.0,
+      tamanhos: 'Tamanho Único Ajustável',
+      estoqueStatus: 'Disponível',
+      fotoDataUrl: '/assets/logo-tga.jpg',
+      createdAt: '2026-11-05T12:00:00.000Z'
+    }
+  ],
+  pedidosMateriais: [],
+  jogosEcrv: [
+    {
+      id: 'jog-1',
+      campeonato: 'Campeonato Goiano',
+      rodada: 'Próximo Jogo em Casa',
+      mando: 'Em Casa (Velosão)',
+      adversario: 'Esporte Clube Rio Verde (E.C.R.V.) vs. Adversário Estadual',
+      dataJogo: '2026-11-15',
+      horario: '16:00',
+      estadio: 'Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO',
+      placar: '',
+      status: 'Check-in de Ingresso Aberto'
+    },
+    {
+      id: 'jog-2',
+      campeonato: 'Campeonato Goiano',
+      rodada: 'Jogo Fora de Casa',
+      mando: 'Fora de Casa',
+      adversario: 'Adversário Regional vs. Esporte Clube Rio Verde (E.C.R.V.)',
+      dataJogo: '2026-11-22',
+      horario: '15:30',
+      estadio: 'Estádio Visitante — Interior / Goiânia - GO',
+      placar: '',
+      status: 'Agendado'
+    }
+  ],
+  checkinsJogos: []
 };
 
 let appState = JSON.parse(JSON.stringify(FALLBACK_STATE));
 let currentPhotoDataUrl = '';
+let currentMaterialPhotoDataUrl = '';
+let currentLoggedSocio = null;
 let isAdminAuthenticated = false;
 let currentAdminUser = null;
 
@@ -104,8 +174,18 @@ function ensureClientState(state) {
   state.inscricoesCaravana = Array.isArray(state.inscricoesCaravana) ? state.inscricoesCaravana : [];
   state.auditoriaLogs = Array.isArray(state.auditoriaLogs) ? state.auditoriaLogs : [];
   state.usuariosDiretoria = Array.isArray(state.usuariosDiretoria) ? state.usuariosDiretoria : [];
+  state.materiais = Array.isArray(state.materiais) ? state.materiais : JSON.parse(JSON.stringify(FALLBACK_STATE.materiais));
+  state.pedidosMateriais = Array.isArray(state.pedidosMateriais) ? state.pedidosMateriais : [];
+  state.jogosEcrv = Array.isArray(state.jogosEcrv) ? state.jogosEcrv : JSON.parse(JSON.stringify(FALLBACK_STATE.jogosEcrv));
+  state.checkinsJogos = Array.isArray(state.checkinsJogos) ? state.checkinsJogos : [];
 
   if (state.config) {
+    if (!state.config.muralAviso) {
+      state.config.muralAviso = FALLBACK_STATE.config.muralAviso;
+    }
+    if (typeof state.config.linkGrupoVipWhatsapp !== 'string') {
+      state.config.linkGrupoVipWhatsapp = '';
+    }
     if (!state.config.whatsappDiretoria || state.config.whatsappDiretoria === '(64) 99220-9870') {
       state.config.whatsappDiretoria = '(64) 99330-2283';
     }
@@ -289,15 +369,24 @@ async function loadInitialState() {
 }
 
 // Controle das Janelas Interativas (Para evitar página gigante)
+const ALL_FEATURE_WINDOWS = [
+  'windowSocio',
+  'windowCaravanas',
+  'windowHistoria',
+  'windowPortalSocio',
+  'windowLojaMateriais',
+  'windowJogosEcrv'
+];
+
 function openFeatureWindow(windowId) {
-  ['windowSocio', 'windowCaravanas', 'windowHistoria'].forEach((id) => {
+  ALL_FEATURE_WINDOWS.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.hidden = id !== windowId;
   });
 }
 
 function closeFeatureWindows() {
-  ['windowSocio', 'windowCaravanas', 'windowHistoria'].forEach((id) => {
+  ALL_FEATURE_WINDOWS.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.hidden = true;
   });
@@ -309,6 +398,9 @@ function checkUrlWindowParam() {
   if (janela === 'socio') openFeatureWindow('windowSocio');
   if (janela === 'caravanas') openFeatureWindow('windowCaravanas');
   if (janela === 'historia') openFeatureWindow('windowHistoria');
+  if (janela === 'painel-socio' || janela === 'area-socio') openFeatureWindow('windowPortalSocio');
+  if (janela === 'loja' || janela === 'materiais') openFeatureWindow('windowLojaMateriais');
+  if (janela === 'jogos' || janela === 'ingressos') openFeatureWindow('windowJogosEcrv');
 }
 
 // Exibe o QR Code Oficial da Chave PIX da Torcida Garra Alviverde
@@ -332,6 +424,8 @@ function renderAll() {
   document.getElementById('bannerPixCidade').textContent = `${cfg.cidadePix} • ${cfg.whatsappDiretoria}`;
   document.getElementById('formCaravanaPixText').textContent = cfg.chavePix;
   document.getElementById('formSocioPixText').textContent = cfg.chavePix;
+  const lojaPixEl = document.getElementById('formLojaPixText');
+  if (lojaPixEl) lojaPixEl.textContent = cfg.chavePix;
   document.getElementById('stepPixCode').textContent = cfg.chavePix;
 
   document.getElementById('navTorcidaNome').textContent = cfg.nomeTorcida;
@@ -375,8 +469,8 @@ function renderAll() {
     btnWaSuccess.textContent = `📲 Enviar Comprovante no WhatsApp ${cfg.whatsappDiretoria}`;
   }
 
-  // Contadores (Começa em 0 até cadastrarem)
-  const totalNotifications = appState.socios.length + appState.inscricoesCaravana.length;
+  // Contadores
+  const totalNotifications = appState.socios.length + appState.inscricoesCaravana.length + (appState.pedidosMateriais || []).length;
   document.getElementById('adminBadgeCount').textContent = totalNotifications;
   const statSociosEl = document.getElementById('statSociosCount');
   if (statSociosEl) statSociosEl.textContent = appState.socios.length;
@@ -385,6 +479,15 @@ function renderAll() {
   renderPixQrSvg(cfg.chavePix);
   renderHeroNextCaravana();
   renderCaravanasSection();
+  renderLojaMateriaisSection();
+  renderJogosEcrvSection();
+  if (currentLoggedSocio) {
+    const refreshed = appState.socios.find(s => s.id === currentLoggedSocio.id);
+    if (refreshed) {
+      currentLoggedSocio = refreshed;
+      renderPortalSocioLogado(currentLoggedSocio);
+    }
+  }
   updateSocioCardPreview();
 
   if (isAdminAuthenticated) {
@@ -581,6 +684,338 @@ function getSocioValorPagoEfetivo(s) {
   return 0;
 }
 
+function findSocioByCpf(cpfRaw) {
+  const clean = String(cpfRaw || '').replace(/\D/g, '');
+  if (clean.length < 6) return null;
+  return (appState.socios || []).find((s) => String(s.cpf || '').replace(/\D/g, '') === clean) || null;
+}
+
+function isSocioEligibleForBenefits(socio) {
+  if (!socio) return false;
+  if (socio.statusPagamento === 'Pago / Ativo' || String(socio.statusPagamento || '').includes('Parcela Paga')) {
+    return true;
+  }
+  return getSocioValorPagoEfetivo(socio) >= 35;
+}
+
+// ============================================================================
+// ÁREA EXCLUSIVA DO SÓCIO TGA (LOGIN POR CPF + CARTEIRINHA + 3 PARCELAS)
+// ============================================================================
+function renderPortalSocioLogado(socio) {
+  const emptyEl = document.getElementById('portalSocioEmptyState');
+  const dashEl = document.getElementById('portalSocioDashboard');
+  if (!emptyEl || !dashEl) return;
+
+  if (!socio) {
+    emptyEl.hidden = false;
+    dashEl.hidden = true;
+    return;
+  }
+
+  emptyEl.hidden = true;
+  dashEl.hidden = false;
+
+  const isAtivo = isSocioEligibleForBenefits(socio);
+  const isQuitado = socio.statusPagamento === 'Pago / Ativo' || getSocioValorPagoEfetivo(socio) >= 105;
+  const valorTotal = Number(socio.valorPlano) || 105;
+  const valorPago = getSocioValorPagoEfetivo(socio);
+  const faltaPagar = Math.max(0, valorTotal - valorPago);
+
+  const badgeEl = document.getElementById('portalSocioBadgeStatus');
+  const sealEl = document.getElementById('portalSocioValidSeal');
+  if (badgeEl) {
+    badgeEl.textContent = isQuitado
+      ? '🏆 SÓCIO QUITADO TOTAL'
+      : (isAtivo ? '✅ SÓCIO EM DIA (ATIVO)' : '⏳ PENDENTE PIX');
+    badgeEl.style.background = isAtivo ? '#eab308' : '#fef3c7';
+    badgeEl.style.color = isAtivo ? '#052e16' : '#92400e';
+  }
+  if (sealEl) {
+    sealEl.textContent = isAtivo ? '● BENEFÍCIOS LIBERADOS ✔' : '● AGUARDANDO 1ª PARCELA / PIX';
+  }
+
+  document.getElementById('portalSocioNome').textContent = (socio.nome || '—').toUpperCase();
+  document.getElementById('portalSocioApelido').textContent = (socio.apelido || '—').toUpperCase();
+  document.getElementById('portalSocioPelotao').textContent = `${socio.pelotao || '—'} (${socio.cidade || 'Rio Verde - GO'})`;
+  document.getElementById('portalSocioCpf').textContent = socio.cpf || '—';
+  document.getElementById('portalSocioCamisaSangue').textContent = `Tam. ${socio.tamanhoCamisa || 'G'} • ${socio.tipoSanguineo || 'O+'}`;
+  document.getElementById('portalSocioNumeroCamisa').textContent = socio.numeroCamisa ? `CAMISA Nº ${socio.numeroCamisa}` : 'Nº —';
+
+  const fotoImg = document.getElementById('portalSocioFotoImg');
+  const fotoPh = document.getElementById('portalSocioFotoPlaceholder');
+  if (fotoImg && fotoPh) {
+    if (socio.fotoDataUrl) {
+      fotoImg.src = socio.fotoDataUrl;
+      fotoImg.hidden = false;
+      fotoPh.hidden = true;
+    } else {
+      fotoImg.hidden = true;
+      fotoPh.hidden = false;
+    }
+  }
+
+  const modPill = document.getElementById('portalSocioModalidadePill');
+  if (modPill) {
+    modPill.textContent = socio.formaPagamento || 'À Vista no PIX (R$ 105,00)';
+  }
+
+  // Grade das 3 Parcelas
+  const parcGrid = document.getElementById('portalSocioParcelasGrid');
+  if (parcGrid) {
+    const p1Done = valorPago >= 35;
+    const p2Done = valorPago >= 70;
+    const p3Done = valorPago >= 105 || isQuitado;
+
+    const makeBox = (num, paga, sub) => `
+      <div style="padding:10px; border-radius:10px; text-align:center; background:${paga ? '#dcfce7' : '#fef3c7'}; border:1px solid ${paga ? '#86efac' : '#fde68a'};">
+        <div style="font-size:0.75rem; font-weight:800; color:${paga ? '#166534' : '#92400e'};">${num}ª PARCELA</div>
+        <div style="font-size:0.98rem; font-weight:900; color:${paga ? '#064e3b' : '#78350f'}; margin:2px 0;">R$ 35,00</div>
+        <div style="font-size:0.72rem; font-weight:700; color:${paga ? '#15803d' : '#b45309'};">${paga ? '✔ PAGA' : sub}</div>
+      </div>
+    `;
+    parcGrid.innerHTML = [
+      makeBox(1, p1Done, 'Pagar no PIX'),
+      makeBox(2, p2Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp'),
+      makeBox(3, p3Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp')
+    ].join('');
+  }
+
+  const finResumo = document.getElementById('portalSocioFinanceiroResumo');
+  if (finResumo) {
+    finResumo.innerHTML = `
+      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+        <span><strong>Status Atual:</strong> ${escapeHtml(socio.statusPagamento || 'Pendente PIX')}</span>
+        <span><strong>Total Já Pago:</strong> <strong style="color:#047857;">${formatBRL(valorPago)}</strong> de ${formatBRL(valorTotal)}</span>
+      </div>
+      <div style="margin-top:6px; color:${isAtivo ? '#047857' : '#b45309'}; font-weight:700;">
+        ${isAtivo
+          ? '🎉 Seus benefícios de Sócio TGA (Ingresso em casa no Velosão + Desconto nos Materiais + Prioridade em Caravanas) estão ATIVOS!'
+          : `⏳ Falta confirmar a 1ª parcela (R$ 35,00) ou valor à vista no PIX (${escapeHtml(appState.config.chavePix)}) para ativar seus benefícios!`}
+      </div>
+    `;
+  }
+
+  const muralEl = document.getElementById('portalSocioMuralAviso');
+  if (muralEl) {
+    muralEl.textContent = appState.config.muralAviso || FALLBACK_STATE.config.muralAviso;
+  }
+
+  const rawWa = (appState.config.whatsappDiretoria || '').replace(/\D/g, '');
+  const cleanWa = rawWa.startsWith('55') ? rawWa : `55${rawWa}`;
+  const msgFin = encodeURIComponent(
+    `\uD83D\uDFE2\u26AA Salve Diretoria TGA! Sou o sócio *${socio.nome}* (CPF: ${socio.cpf} | Camisa Nº ${socio.numeroCamisa || '—'}) e estou acessando minha Área do Sócio no site.`
+  );
+  const btnFinWa = document.getElementById('btnPortalFalarFinanceiroWa');
+  if (btnFinWa) {
+    btnFinWa.href = `https://api.whatsapp.com/send?phone=${cleanWa}&text=${msgFin}`;
+  }
+
+  const btnVip = document.getElementById('btnPortalGrupoVipWa');
+  if (btnVip) {
+    if (appState.config.linkGrupoVipWhatsapp && appState.config.linkGrupoVipWhatsapp.trim()) {
+      btnVip.href = appState.config.linkGrupoVipWhatsapp.trim();
+    } else {
+      btnVip.href = `https://api.whatsapp.com/send?phone=${cleanWa}&text=${encodeURIComponent(`\uD83D\uDFE2\u26AA Salve Diretoria! Sou o sócio ${socio.nome} (CPF ${socio.cpf}) e quero entrar no Grupo VIP de Sócios da Garra Alviverde!`)}`;
+    }
+  }
+}
+
+// ============================================================================
+// LOJA OFICIAL DE MATERIAIS GARRA ALVIVERDE (COM DESCONTO DE SÓCIO PELO CPF)
+// ============================================================================
+function renderLojaMateriaisSection() {
+  const container = document.getElementById('lojaMateriaisCardsContainer');
+  const select = document.getElementById('pedSelectMaterial');
+  if (!container || !select) return;
+
+  const currentSelected = select.value;
+  container.innerHTML = '';
+  select.innerHTML = '';
+
+  const lista = Array.isArray(appState.materiais) ? appState.materiais : [];
+  if (lista.length === 0) {
+    container.innerHTML = `<div class="admin-subcard" style="text-align:center;">Nenhum material cadastrado no momento.</div>`;
+    return;
+  }
+
+  lista.forEach((mat) => {
+    const isDisponivel = mat.estoqueStatus !== 'Esgotado';
+    const economia = Math.max(0, (Number(mat.valorNaoSocio) || 0) - (Number(mat.valorSocio) || 0));
+
+    const card = document.createElement('div');
+    card.className = 'caravana-card';
+    card.innerHTML = `
+      <div class="caravana-top">
+        <h4>👕 ${escapeHtml(mat.nome)}</h4>
+        <span class="caravana-status" style="background:${isDisponivel ? '#dcfce7' : '#fee2e2'}; color:${isDisponivel ? '#166534' : '#991b1b'};">
+          ${escapeHtml(mat.estoqueStatus || 'Disponível')}
+        </span>
+      </div>
+      <div style="display:flex; gap:14px; align-items:center; margin:10px 0;">
+        <img src="${mat.fotoDataUrl || '/assets/logo-tga.jpg'}" alt="${escapeHtml(mat.nome)}" style="width:78px; height:78px; border-radius:12px; object-fit:cover; border:2px solid #006437; background:#fff; flex-shrink:0;" />
+        <div>
+          <div style="font-size:0.78rem; font-weight:800; color:#047857; text-transform:uppercase;">${escapeHtml(mat.categoria || 'Material Oficial TGA')}</div>
+          <p style="font-size:0.88rem; color:#334155; margin:4px 0;">${escapeHtml(mat.descricao || '')}</p>
+          <small style="color:#475569; font-weight:700;">📏 Tamanhos: ${escapeHtml(mat.tamanhos || 'P, M, G, GG, XG')}</small>
+        </div>
+      </div>
+      <div class="caravana-prices-bar">
+        <div class="price-col">
+          <small>🟢 Preço Exclusivo Sócio TGA</small>
+          <strong style="color:#006437; font-size:1.2rem;">${formatBRL(mat.valorSocio)}</strong>
+          ${economia > 0 ? `<small style="color:#047857; font-weight:700;">Economia de ${formatBRL(economia)}!</small>` : ''}
+        </div>
+        <div class="price-col">
+          <small>⚪ Preço Não-Sócio</small>
+          <strong style="color:#64748b; text-decoration:line-through;">${formatBRL(mat.valorNaoSocio)}</strong>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-select-material="${mat.id}" ${!isDisponivel ? 'disabled' : ''}>
+          ${isDisponivel ? '🛒 Escolher este Material →' : 'Esgotado'}
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+
+    if (isDisponivel) {
+      const opt = document.createElement('option');
+      opt.value = mat.id;
+      opt.textContent = `${mat.nome} — Sócio: ${formatBRL(mat.valorSocio)} | Não-Sócio: ${formatBRL(mat.valorNaoSocio)}`;
+      select.appendChild(opt);
+    }
+  });
+
+  if (currentSelected && Array.from(select.options).some(o => o.value === currentSelected)) {
+    select.value = currentSelected;
+  }
+
+  container.querySelectorAll('[data-select-material]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-select-material');
+      select.value = id;
+      updatePedidoMaterialPriceDisplay();
+      document.getElementById('pedCpf')?.focus();
+      showToast('👕 Material selecionado! Digite seu CPF ao lado para calcular o desconto.');
+    });
+  });
+
+  updatePedidoMaterialPriceDisplay();
+}
+
+function updatePedidoMaterialPriceDisplay() {
+  const selectMat = document.getElementById('pedSelectMaterial');
+  const qtdEl = document.getElementById('pedQuantidade');
+  const cpfEl = document.getElementById('pedCpf');
+  const feedbackEl = document.getElementById('pedCpfDiscountFeedback');
+  const labelEl = document.getElementById('pedLabelModalidadePreco');
+  const priceEl = document.getElementById('pedValorTotalCalculado');
+  if (!selectMat || !priceEl) return;
+
+  const mat = (appState.materiais || []).find(m => m.id === selectMat.value) || (appState.materiais || [])[0];
+  if (!mat) {
+    priceEl.textContent = 'R$ 0,00';
+    return;
+  }
+
+  const qtd = Math.max(1, Number(qtdEl?.value) || 1);
+  const cpfTyped = cpfEl?.value || '';
+  const socioFound = findSocioByCpf(cpfTyped);
+  const temDesconto = isSocioEligibleForBenefits(socioFound);
+
+  if (socioFound) {
+    const nomeInput = document.getElementById('pedNome');
+    const waInput = document.getElementById('pedWhatsapp');
+    if (nomeInput && !nomeInput.value.trim()) nomeInput.value = socioFound.nome || '';
+    if (waInput && !waInput.value.trim()) waInput.value = socioFound.whatsapp || '';
+  }
+
+  const unitario = temDesconto ? Number(mat.valorSocio) : Number(mat.valorNaoSocio);
+  const total = unitario * qtd;
+
+  if (feedbackEl) {
+    if (temDesconto && socioFound) {
+      feedbackEl.style.color = '#047857';
+      feedbackEl.textContent = `✅ SÓCIO EM DIA VERIFICADO (${socioFound.nome})! Preço com Desconto Exclusivo liberado (${formatBRL(mat.valorSocio)} cada)!`;
+    } else if (socioFound && !temDesconto) {
+      feedbackEl.style.color = '#b45309';
+      feedbackEl.textContent = `⏳ Cadastro encontrado (${socioFound.nome}), mas ainda está como "Pendente PIX". Pague a 1ª parcela (R$ 35) para liberar o desconto!`;
+    } else if (cpfTyped.replace(/\D/g, '').length >= 11) {
+      feedbackEl.style.color = '#0369a1';
+      feedbackEl.textContent = `ℹ️ CPF Não-Sócio: Aplicado valor normal (${formatBRL(mat.valorNaoSocio)}). Seja Sócio por 3x de R$ 35 e pague apenas ${formatBRL(mat.valorSocio)}!`;
+    } else {
+      feedbackEl.style.color = '#047857';
+      feedbackEl.textContent = `💡 Digite seu CPF acima: se você for Sócio em dia, o preço cai de ${formatBRL(mat.valorNaoSocio)} para ${formatBRL(mat.valorSocio)} na hora!`;
+    }
+  }
+
+  if (labelEl) {
+    labelEl.textContent = temDesconto
+      ? `🟢 Valor c/ Desconto de Sócio TGA (${qtd}x):`
+      : `⚪ Valor Não-Sócio (${qtd}x):`;
+  }
+  priceEl.textContent = formatBRL(total);
+}
+
+// ============================================================================
+// CENTRAL DE JOGOS DO E.C.R.V., TABELA & CHECK-IN DE INGRESSO NO VELOSÃO
+// ============================================================================
+function renderJogosEcrvSection() {
+  const selectChk = document.getElementById('chkSelectJogo');
+  const tbody = document.getElementById('publicJogosTableBody');
+  if (!tbody) return;
+
+  const jogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
+
+  if (selectChk) {
+    const currentVal = selectChk.value;
+    const jogosCheckin = jogos.filter(j => String(j.mando || '').includes('Casa') && j.status !== 'Encerrado');
+    selectChk.innerHTML = jogosCheckin.length === 0
+      ? `<option value="">Nenhum jogo em casa com check-in aberto no momento</option>`
+      : jogosCheckin.map(j => `<option value="${j.id}">🏟️ ${j.adversario} (${formatDateBR(j.dataJogo)} às ${j.horario})</option>`).join('');
+    if (currentVal && Array.from(selectChk.options).some(o => o.value === currentVal)) {
+      selectChk.value = currentVal;
+    }
+  }
+
+  if (jogos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px;">Nenhum jogo cadastrado na tabela no momento.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = jogos.map((j) => {
+    const isCasa = String(j.mando || '').includes('Casa');
+    const isEncerrado = j.status === 'Encerrado';
+    return `
+      <tr>
+        <td>
+          <strong>${escapeHtml(j.campeonato || 'Campeonato Goiano')}</strong><br>
+          <small>${escapeHtml(j.rodada || '')}</small>
+        </td>
+        <td>
+          <span class="status-badge" style="background:${isCasa ? '#dcfce7' : '#dbeafe'}; color:${isCasa ? '#166534' : '#1e40af'};">
+            ${isCasa ? '🏟️ EM CASA (Velosão)' : '🚌 FORA DE CASA'}
+          </span>
+        </td>
+        <td>
+          <strong style="font-size:0.95rem; color:#064e3b;">⚽ ${escapeHtml(j.adversario)}</strong>
+          ${j.placar ? `<div style="margin-top:3px; font-weight:800; color:#047857; background:#ecfdf5; display:inline-block; padding:2px 8px; border-radius:6px;">Placar: ${escapeHtml(j.placar)}</div>` : ''}
+        </td>
+        <td>
+          <strong>📅 ${formatDateBR(j.dataJogo)}</strong><br>
+          <small>⏰ Horário: ${escapeHtml(j.horario || '16:00')}</small>
+        </td>
+        <td>
+          <small>${escapeHtml(j.estadio || 'Estádio Velosão')}</small>
+        </td>
+        <td>
+          <span class="status-badge ${isEncerrado ? 'status-pending' : 'status-paid'}">
+            ${escapeHtml(j.status || 'Agendado')}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
 // Painel Administrativo da Diretoria
 function renderAdminDashboard() {
   ensureClientState(appState);
@@ -657,6 +1092,10 @@ function renderAdminDashboard() {
 
   document.getElementById('tabCountSocios').textContent = appState.socios.length;
   document.getElementById('tabCountCaravanas').textContent = appState.inscricoesCaravana.length;
+  const countPedidosEl = document.getElementById('tabCountPedidosLoja');
+  if (countPedidosEl) countPedidosEl.textContent = (appState.pedidosMateriais || []).length;
+  const countCheckinsEl = document.getElementById('tabCountCheckins');
+  if (countCheckinsEl) countCheckinsEl.textContent = (appState.checkinsJogos || []).length;
   const countDirEl = document.getElementById('tabCountDiretores');
   if (countDirEl) countDirEl.textContent = (appState.usuariosDiretoria || []).length;
   const countAudEl = document.getElementById('tabCountAuditoria');
@@ -666,6 +1105,8 @@ function renderAdminDashboard() {
   renderAdminCaravanasFilterOptions();
   renderAdminCaravanasInscritosTable();
   renderAdminManageCaravanasList();
+  renderAdminLojaTab();
+  renderAdminJogosTab();
   renderAdminDiretoresList();
   renderAdminAuditoriaTable();
   populateAdminConfigForm();
@@ -1480,6 +1921,312 @@ function populateAdminConfigForm() {
   document.getElementById('cfgCidadePix').value = cfg.cidadePix || '';
   document.getElementById('cfgWhatsapp').value = cfg.whatsappDiretoria || '';
   document.getElementById('cfgSenhaAdmin').value = (!cfg.senhaAdmin || cfg.senhaAdmin === '2015') ? 'Tga@2015' : cfg.senhaAdmin;
+  const muralEl = document.getElementById('cfgMuralAviso');
+  if (muralEl) muralEl.value = cfg.muralAviso || FALLBACK_STATE.config.muralAviso;
+  const vipEl = document.getElementById('cfgLinkGrupoVip');
+  if (vipEl) vipEl.value = cfg.linkGrupoVipWhatsapp || '';
+}
+
+// ============================================================================
+// ADMINISTRAÇÃO DA LOJA DE MATERIAIS E DA TABELA DE JOGOS / PORTARIA VELOSÃO
+// ============================================================================
+function renderAdminLojaTab() {
+  const matListEl = document.getElementById('adminMateriaisList');
+  const pedBodyEl = document.getElementById('adminPedidosMateriaisBody');
+
+  if (matListEl) {
+    const mats = Array.isArray(appState.materiais) ? appState.materiais : [];
+    matListEl.innerHTML = mats.length === 0
+      ? `<p style="padding:12px;">Nenhum material cadastrado na vitrine.</p>`
+      : mats.map((m) => `
+          <div class="manage-item">
+            <div style="display:flex; gap:10px; align-items:center;">
+              <img src="${m.fotoDataUrl || '/assets/logo-tga.jpg'}" alt="" style="width:46px; height:46px; border-radius:8px; object-fit:cover; border:1px solid #006437;" />
+              <div>
+                <strong>${escapeHtml(m.nome)}</strong>
+                <span class="status-badge ${m.estoqueStatus === 'Esgotado' ? 'status-pending' : 'status-paid'}" style="margin-left:6px;">
+                  ${escapeHtml(m.estoqueStatus || 'Disponível')}
+                </span><br>
+                <small>Sócio: <strong>${formatBRL(m.valorSocio)}</strong> | Não-Sócio: <strong>${formatBRL(m.valorNaoSocio)}</strong> • Tam: ${escapeHtml(m.tamanhos)}</small>
+              </div>
+            </div>
+            <div class="action-btns">
+              <button type="button" class="btn-table btn-approve" data-toggle-mat-status="${m.id}">
+                ${m.estoqueStatus === 'Esgotado' ? 'Liberar Estoque' : 'Marcar Esgotado'}
+              </button>
+              <button type="button" class="btn-table btn-del" data-del-mat="${m.id}">🗑️</button>
+            </div>
+          </div>
+        `).join('');
+
+    matListEl.querySelectorAll('[data-toggle-mat-status]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-toggle-mat-status');
+        const mat = (appState.materiais || []).find(x => x.id === id);
+        if (!mat) return;
+        mat.estoqueStatus = mat.estoqueStatus === 'Esgotado' ? 'Disponível' : 'Esgotado';
+        const audit = buildAuditPayload('Configurações', `Alterou estoque do material "${mat.nome}" para ${mat.estoqueStatus}`, '');
+        try {
+          await fetch(`/api/materiais/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estoqueStatus: mat.estoqueStatus, _auditoria: audit })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast(`🏷️ Status de "${mat.nome}" atualizado para ${mat.estoqueStatus}!`);
+      });
+    });
+
+    matListEl.querySelectorAll('[data-del-mat]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del-mat');
+        const mat = (appState.materiais || []).find(x => x.id === id);
+        if (!mat) return;
+        if (!window.confirm(`Deseja remover o material "${mat.nome}" da vitrine da loja?`)) return;
+        appState.materiais = (appState.materiais || []).filter(x => x.id !== id);
+        const audit = buildAuditPayload('Configurações', `Removeu o material "${mat.nome}" da loja`, '');
+        try {
+          await fetch(`/api/materiais/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ _auditoria: audit })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast('🗑️ Material removido da vitrine.');
+      });
+    });
+  }
+
+  if (pedBodyEl) {
+    const peds = Array.isArray(appState.pedidosMateriais) ? appState.pedidosMateriais : [];
+    if (peds.length === 0) {
+      pedBodyEl.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:22px;">Nenhuma encomenda ou pedido de material registrado ainda.</td></tr>`;
+      return;
+    }
+
+    pedBodyEl.innerHTML = peds.map((p) => {
+      const isPago = p.statusPix === 'PIX Confirmado' || p.statusPix === 'Entregue ✔';
+      const cleanWa = String(p.whatsapp || '').replace(/\D/g, '');
+      const waLink = `https://api.whatsapp.com/send?phone=55${cleanWa.replace(/^55/, '')}&text=${encodeURIComponent(`\uD83D\uDFE2\u26AA Salve ${p.compradorNome}! Aqui é da Diretoria da Garra Alviverde sobre o seu pedido de ${p.quantidade}x ${p.materialNome} (Tam: ${p.tamanho}).`)}`;
+
+      return `
+        <tr>
+          <td><small>${formatDateBR(p.createdAt)}</small></td>
+          <td>
+            <strong>👕 ${escapeHtml(p.materialNome)}</strong><br>
+            <small>Tam: <strong>${escapeHtml(p.tamanho)}</strong> • Qtd: <strong>${p.quantidade || 1}</strong></small>
+          </td>
+          <td>
+            <strong>${escapeHtml(p.compradorNome)}</strong><br>
+            <small>CPF: ${escapeHtml(p.cpf)}</small>
+          </td>
+          <td>${escapeHtml(p.whatsapp)}</td>
+          <td>
+            <span class="status-badge" style="background:${p.isSocioDesconto ? '#dcfce7' : '#f1f5f9'}; color:${p.isSocioDesconto ? '#166534' : '#334155'};">
+              ${p.isSocioDesconto ? '🟢 Preço Sócio TGA' : '⚪ Não-Sócio'}
+            </span><br>
+            <strong>${formatBRL(p.valorTotal)}</strong>
+          </td>
+          <td>
+            <span class="status-badge ${isPago ? 'status-paid' : 'status-pending'}">
+              ${escapeHtml(p.statusPix || 'Pendente PIX')}
+            </span>
+          </td>
+          <td>
+            <div class="action-btns">
+              <button type="button" class="btn-table btn-approve" data-toggle-ped-pix="${p.id}">
+                ${p.statusPix === 'Pendente PIX' ? '✔ Confirmar PIX' : (p.statusPix === 'PIX Confirmado' ? '📦 Marcar Entregue' : 'Voltar Pendente')}
+              </button>
+              <a href="${waLink}" target="_blank" rel="noopener" class="btn-table btn-wa">💬 WhatsApp</a>
+              <button type="button" class="btn-table btn-del" data-del-ped="${p.id}">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    pedBodyEl.querySelectorAll('[data-toggle-ped-pix]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-toggle-ped-pix');
+        const ped = (appState.pedidosMateriais || []).find(x => x.id === id);
+        if (!ped) return;
+        if (ped.statusPix === 'Pendente PIX') ped.statusPix = 'PIX Confirmado';
+        else if (ped.statusPix === 'PIX Confirmado') ped.statusPix = 'Entregue ✔';
+        else ped.statusPix = 'Pendente PIX';
+
+        const audit = buildAuditPayload('Configurações', `Atualizou pedido de material de ${ped.compradorNome} para "${ped.statusPix}"`, `${ped.materialNome} (${formatBRL(ped.valorTotal)})`);
+        try {
+          await fetch(`/api/pedidos-materiais/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ statusPix: ped.statusPix, _auditoria: audit })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast(`✅ Pedido de ${ped.compradorNome} atualizado para: ${ped.statusPix}!`);
+      });
+    });
+
+    pedBodyEl.querySelectorAll('[data-del-ped]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del-ped');
+        const ped = (appState.pedidosMateriais || []).find(x => x.id === id);
+        if (!ped) return;
+        if (!window.confirm(`Deseja excluir o pedido de "${ped.compradorNome}"?`)) return;
+        appState.pedidosMateriais = (appState.pedidosMateriais || []).filter(x => x.id !== id);
+        try {
+          await fetch(`/api/pedidos-materiais/${id}`, { method: 'DELETE' });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast('🗑️ Pedido removido.');
+      });
+    });
+  }
+}
+
+function renderAdminJogosTab() {
+  const jogosListEl = document.getElementById('adminJogosList');
+  const filterSelect = document.getElementById('filterCheckinJogoSelect');
+  const chkBodyEl = document.getElementById('adminCheckinsJogosBody');
+
+  const jogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
+
+  if (filterSelect) {
+    const cur = filterSelect.value;
+    filterSelect.innerHTML = `<option value="todos">Todos os Jogos em Casa (${(appState.checkinsJogos || []).length})</option>` +
+      jogos.map(j => `<option value="${j.id}">${escapeHtml(j.adversario)} (${formatDateBR(j.dataJogo)})</option>`).join('');
+    if (cur && Array.from(filterSelect.options).some(o => o.value === cur)) {
+      filterSelect.value = cur;
+    }
+  }
+
+  if (jogosListEl) {
+    jogosListEl.innerHTML = jogos.length === 0
+      ? `<p style="padding:12px;">Nenhum jogo cadastrado.</p>`
+      : jogos.map((j) => `
+          <div class="manage-item" style="flex-direction:column; align-items:stretch; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+              <div>
+                <strong>⚽ ${escapeHtml(j.adversario)}</strong>
+                <span class="status-badge ${j.status === 'Encerrado' ? 'status-pending' : 'status-paid'}" style="margin-left:6px;">
+                  ${escapeHtml(j.status)}
+                </span><br>
+                <small>${escapeHtml(j.campeonato)} (${escapeHtml(j.rodada)}) • ${formatDateBR(j.dataJogo)} às ${escapeHtml(j.horario)} • ${escapeHtml(j.mando)}</small>
+                ${j.placar ? `<div style="font-size:0.82rem; font-weight:800; color:#047857; margin-top:2px;">Placar: ${escapeHtml(j.placar)}</div>` : ''}
+              </div>
+              <div class="action-btns">
+                <button type="button" class="btn-table" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;" data-set-placar-jogo="${j.id}">
+                  ⚽ Informar Placar
+                </button>
+                <button type="button" class="btn-table btn-approve" data-toggle-status-jogo="${j.id}">
+                  ${j.status === 'Encerrado' ? 'Reabrir Check-in' : 'Encerrar Jogo'}
+                </button>
+                <button type="button" class="btn-table btn-del" data-del-jogo="${j.id}">🗑️</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+
+    jogosListEl.querySelectorAll('[data-set-placar-jogo]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-set-placar-jogo');
+        const jogo = (appState.jogosEcrv || []).find(x => x.id === id);
+        if (!jogo) return;
+        const placar = window.prompt(`Digite o placar final para "${jogo.adversario}":\n(Ex: E.C.R.V. 2 x 0 Adversário)`, jogo.placar || '');
+        if (placar === null) return;
+        jogo.placar = placar.trim();
+        if (jogo.placar) jogo.status = 'Encerrado';
+        try {
+          await fetch(`/api/jogos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ placar: jogo.placar, status: jogo.status })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast('⚽ Placar atualizado na tabela!');
+      });
+    });
+
+    jogosListEl.querySelectorAll('[data-toggle-status-jogo]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-toggle-status-jogo');
+        const jogo = (appState.jogosEcrv || []).find(x => x.id === id);
+        if (!jogo) return;
+        jogo.status = jogo.status === 'Encerrado' ? 'Check-in de Ingresso Aberto' : 'Encerrado';
+        try {
+          await fetch(`/api/jogos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: jogo.status })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast(`📅 Status do jogo alterado para: ${jogo.status}`);
+      });
+    });
+
+    jogosListEl.querySelectorAll('[data-del-jogo]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del-jogo');
+        const jogo = (appState.jogosEcrv || []).find(x => x.id === id);
+        if (!jogo) return;
+        if (!window.confirm(`Deseja remover o jogo "${jogo.adversario}" da tabela?`)) return;
+        appState.jogosEcrv = (appState.jogosEcrv || []).filter(x => x.id !== id);
+        try {
+          await fetch(`/api/jogos/${id}`, { method: 'DELETE' });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast('🗑️ Jogo removido da tabela.');
+      });
+    });
+  }
+
+  if (chkBodyEl) {
+    const filtroId = filterSelect?.value || 'todos';
+    const checkins = (appState.checkinsJogos || []).filter(c => filtroId === 'todos' || c.jogoId === filtroId);
+    if (checkins.length === 0) {
+      chkBodyEl.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:22px;">Nenhum sócio realizou check-in de ingresso para este filtro até o momento.</td></tr>`;
+      return;
+    }
+
+    chkBodyEl.innerHTML = checkins.map((c) => `
+      <tr>
+        <td><strong>${escapeHtml(c.jogoTitulo)}</strong></td>
+        <td><strong>👕 Nº ${escapeHtml(c.socioNumeroCamisa || '—')}</strong></td>
+        <td><strong>${escapeHtml(c.socioNome)}</strong></td>
+        <td>${escapeHtml(c.socioCpf)}</td>
+        <td>${escapeHtml(c.socioWhatsapp || '—')}</td>
+        <td><span class="status-badge status-paid">${escapeHtml(c.socioStatusPagamento)}</span></td>
+        <td><span class="status-badge status-paid">🎟️ ${escapeHtml(c.statusPortaria || 'Ingresso Garantido ✔')}</span></td>
+        <td>
+          <button type="button" class="btn-table btn-del" data-del-checkin="${c.id}">🗑️</button>
+        </td>
+      </tr>
+    `).join('');
+
+    chkBodyEl.querySelectorAll('[data-del-checkin]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del-checkin');
+        appState.checkinsJogos = (appState.checkinsJogos || []).filter(x => x.id !== id);
+        try {
+          await fetch(`/api/checkins-jogos/${id}`, { method: 'DELETE' });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast('🗑️ Check-in removido.');
+      });
+    });
+  }
 }
 
 // ============================================================================
@@ -1844,6 +2591,167 @@ function buildAuditoriaReportConfig() {
   };
 }
 
+function buildPedidosLojaReportConfig() {
+  const pedidos = Array.isArray(appState.pedidosMateriais) ? appState.pedidosMateriais : [];
+  const pagos = pedidos.filter(p => p.statusPix === 'PIX Confirmado').length;
+  const entregues = pedidos.filter(p => p.entregue).length;
+  const recebido = pedidos.reduce((acc, p) => acc + (p.statusPix === 'PIX Confirmado' ? (Number(p.valorTotal) || 0) : 0), 0);
+
+  const headers = [
+    'Nº', 'Data do Pedido', 'Material Oficial TGA', 'Tamanho', 'Qtd',
+    'Nome do Comprador', 'CPF', 'WhatsApp', 'Modalidade / Desconto',
+    'Valor Total', 'Status PIX', 'Status Entrega'
+  ];
+
+  const rows = pedidos.map((p, idx) => [
+    String(idx + 1).padStart(2, '0'),
+    formatDateTimeBR(p.createdAt),
+    p.materialNome || 'Material TGA',
+    p.tamanho || 'Único',
+    String(p.quantidade || 1),
+    p.nome || '—',
+    p.cpf || '—',
+    p.whatsapp || '—',
+    p.isSocioDesconto ? `Sócio TGA (${p.socioMatricula || 'Ativo'})` : 'Não-Sócio (Valor Normal)',
+    formatBRL(Number(p.valorTotal) || 0),
+    p.statusPix || 'Aguardando PIX',
+    p.entregue ? 'Entregue ao Torcedor' : 'Aguardando Retirada'
+  ]);
+
+  return {
+    filename: `Relatorio_Pedidos_Loja_Materiais_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
+    sheetName: 'Pedidos Loja TGA',
+    reportTitle: 'RELAÇÃO OFICIAL DE PEDIDOS E ENTREGAS — LOJA DE MATERIAIS GARRA ALVIVERDE',
+    subtitle: 'Controle de Vendas de Camisas, Bonés, Faixas e Descontos Exclusivos de Sócio TGA',
+    summaryItems: [
+      `Total de Pedidos: ${pedidos.length}`,
+      `PIX Confirmados: ${pagos}`,
+      `Materiais Entregues: ${entregues}`,
+      `Total Confirmado: ${formatBRL(recebido)}`
+    ],
+    headers,
+    rows,
+    textCols: [0, 1, 3, 4, 6, 7]
+  };
+}
+
+function buildCheckinsPortariaReportConfig() {
+  const filtroJogo = document.getElementById('filterCheckinJogoSelect')?.value || 'todos';
+  const todosCheckins = Array.isArray(appState.checkinsJogos) ? appState.checkinsJogos : [];
+  const lista = todosCheckins.filter(c => filtroJogo === 'todos' || c.jogoId === filtroJogo);
+
+  const headers = [
+    'Nº', 'Partida no Estádio Velosão', 'Matrícula Sócio', 'Nome Completo do Sócio',
+    'Apelido', 'CPF', 'WhatsApp', 'Nº Camisa', 'Setor / Bairro', 'Status Financeiro', 'Data/Hora do Check-in'
+  ];
+
+  const rows = lista.map((c, idx) => [
+    String(idx + 1).padStart(2, '0'),
+    c.jogoTitulo || 'Jogo do E.C.R.V. no Velosão',
+    c.socioMatricula || '—',
+    c.socioNome || '—',
+    c.socioApelido || '—',
+    c.socioCpf || '—',
+    c.socioWhatsapp || '—',
+    c.numeroCamisa ? `Nº ${c.numeroCamisa}` : '—',
+    c.pelotao || '—',
+    c.statusSocio || 'Sócio Ativo',
+    formatDateTimeBR(c.createdAt)
+  ]);
+
+  return {
+    filename: `Lista_Oficial_Portaria_Velosao_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
+    sheetName: 'Portaria Velosao TGA',
+    reportTitle: 'LISTA OFICIAL DA PORTARIA DO VELOSÃO — CHECK-IN DE SÓCIOS GARRA ALVIVERDE',
+    subtitle: 'Relação de Sócios com Ingresso Garantido Confirmados para o Jogo em Casa do E.C.R.V.',
+    summaryItems: [
+      `Sócios Confirmados na Lista: ${lista.length}`,
+      `Filtro de Jogo: ${filtroJogo === 'todos' ? 'Todos os Jogos em Casa' : (lista[0]?.jogoTitulo || 'Jogo Selecionado')}`
+    ],
+    headers,
+    rows,
+    textCols: [0, 2, 5, 6, 7, 10]
+  };
+}
+
+function printCarteirinhaSocio(socio) {
+  if (!socio) return;
+  const origin = window.location.origin;
+  const logoTga = `${origin}/logo-garra.png`;
+  const logoEcrv = `${origin}/ecrv.jpg`;
+  const valPago = getSocioValorPagoEfetivo(socio);
+  const valTotal = Number(socio.valorPlano) || 105;
+  const statusLabel = valPago >= valTotal
+    ? 'SÓCIO QUITADO TOTAL (ATIVO)'
+    : (isSocioEligibleForBenefits(socio) ? 'SÓCIO EM DIA — BENEFÍCIOS LIBERADOS' : 'AGUARDANDO CONFIRMAÇÃO PIX');
+
+  const win = window.open('', '_blank', 'width=720,height=640');
+  if (!win) {
+    showToast('⚠️ Permita pop-ups no navegador para imprimir ou salvar sua Carteirinha Digital.');
+    return;
+  }
+
+  win.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Carteirinha Oficial TGA — ${escapeHtml(socio.nome)}</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; padding: 30px; display: flex; flex-direction: column; align-items: center; }
+    .toolbar { margin-bottom: 20px; display: flex; gap: 10px; }
+    .btn { background: #006437; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 800; cursor: pointer; }
+    .card { width: 520px; background: linear-gradient(135deg, #022c16 0%, #006437 60%, #044e29 100%); color: #fff; border-radius: 18px; border: 3px solid #f5c518; padding: 22px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); }
+    .card-top { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 12px; margin-bottom: 16px; }
+    .card-top img { width: 54px; height: 54px; border-radius: 10px; object-fit: contain; background: #fff; padding: 3px; }
+    .card-title { text-align: center; flex: 1; }
+    .card-title h2 { margin: 0; font-size: 16px; letter-spacing: 0.8px; color: #f5c518; }
+    .card-title p { margin: 3px 0 0; font-size: 11px; opacity: 0.9; }
+    .card-body { display: flex; gap: 16px; align-items: center; }
+    .photo { width: 96px; height: 120px; border-radius: 10px; border: 2px solid #f5c518; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo img { width: 100%; height: 100%; object-fit: cover; }
+    .info { flex: 1; font-size: 13px; line-height: 1.55; }
+    .info strong { color: #fde047; }
+    .card-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; }
+    .badge { background: #16a34a; color: #fff; padding: 4px 10px; border-radius: 999px; border: 1px solid #86efac; }
+    @media print { .toolbar { display: none; } body { background: #fff; padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn" onclick="window.print()">🖨️ Imprimir / Salvar Carteirinha em PDF</button>
+    <button class="btn" style="background:#334155;" onclick="window.close()">✖ Fechar</button>
+  </div>
+  <div class="card">
+    <div class="card-top">
+      <img src="${logoTga}" alt="Logo TGA">
+      <div class="card-title">
+        <h2>TORCIDA ORGANIZADA GARRA ALVIVERDE</h2>
+        <p>CARTEIRA OFICIAL DE SÓCIO • DESDE 2015 • E.C. RIO VERDE</p>
+      </div>
+      <img src="${logoEcrv}" alt="Logo ECRV">
+    </div>
+    <div class="card-body">
+      <div class="photo">
+        ${socio.fotoDataUrl ? `<img src="${socio.fotoDataUrl}" alt="Foto 3x4">` : `<img src="${logoTga}" alt="TGA">`}
+      </div>
+      <div class="info">
+        <div><strong>NOME:</strong> ${escapeHtml(socio.nome)}</div>
+        <div><strong>APELIDO:</strong> ${escapeHtml(socio.apelido || '—')} &nbsp;|&nbsp; <strong>SANGUE:</strong> ${escapeHtml(socio.tipoSanguineo || '—')}</div>
+        <div><strong>CPF:</strong> ${escapeHtml(socio.cpf || '—')} &nbsp;|&nbsp; <strong>RG:</strong> ${escapeHtml(socio.rg || '—')}</div>
+        <div><strong>SETOR / BAIRRO:</strong> ${escapeHtml(socio.pelotao || '—')} (${escapeHtml(socio.cidade || 'Rio Verde - GO')})</div>
+        <div><strong>CAMISA TGA:</strong> Tam. ${escapeHtml(socio.tamanhoCamisa || 'G')} • Nº ${escapeHtml(socio.numeroCamisa || '—')}</div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <span>MATRÍCULA: ${escapeHtml(socio.matricula || 'TGA-2025')}</span>
+      <span class="badge">${statusLabel}</span>
+    </div>
+  </div>
+</body>
+</html>`);
+  win.document.close();
+}
+
 // ============================================================================
 // COFRE DE BACKUPS AUTOMÁTICOS (00:00) & RECUPERAÇÃO CONTRA INVASÃO/QUEDA
 // ============================================================================
@@ -2035,7 +2943,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Fechar ao clicar fora da caixa da janela (no fundo escuro)
-  ['windowSocio', 'windowCaravanas', 'windowHistoria'].forEach((id) => {
+  ['windowSocio', 'windowCaravanas', 'windowHistoria', 'windowPortalSocio', 'windowLojaMateriais', 'windowJogosEcrv'].forEach((id) => {
     const backdrop = document.getElementById(id);
     if (backdrop) {
       backdrop.addEventListener('click', (e) => {
@@ -2045,7 +2953,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Botões de Copiar PIX
-  ['btnCopyTopPix', 'btnCopyHeroPix', 'btnCopyBannerPix', 'btnCopyCaravanaPix', 'btnCopySocioPix', 'btnCopySuccessPix', 'btnCopySinglePlanPix'].forEach((id) => {
+  ['btnCopyTopPix', 'btnCopyHeroPix', 'btnCopyBannerPix', 'btnCopyCaravanaPix', 'btnCopySocioPix', 'btnCopySuccessPix', 'btnCopySinglePlanPix', 'btnCopyPortalSocioPix', 'btnCopyLojaPix'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', copyPixKey);
   });
@@ -2423,7 +3331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Volta para a primeira aba por padrão
     document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
     document.getElementById('btnTabSocios')?.classList.add('active');
-    ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
+    ['tab-socios', 'tab-loja', 'tab-jogos', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
       const el = document.getElementById(panelId);
       if (el) el.hidden = panelId !== 'tab-socios';
     });
@@ -2496,12 +3404,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
       tabBtn.classList.add('active');
-      ['tab-socios', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
+      ['tab-socios', 'tab-loja', 'tab-jogos', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
         const panel = document.getElementById(panelId);
         if (panel) panel.hidden = panelId !== targetId;
       });
       if (targetId === 'tab-backups') {
         loadAndRenderBackups();
+      }
+      if (targetId === 'tab-loja') {
+        renderAdminLojaTab();
+      }
+      if (targetId === 'tab-jogos') {
+        renderAdminJogosTab();
       }
     });
   });
@@ -2846,7 +3760,401 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast('🚌 Nova Caravana publicada no site!');
   });
 
-  // Salvar Configurações do Plano Único, PIX, WhatsApp, Instagram e Torcida
+  // ==========================================================================
+  // 1. EVENTOS DA ÁREA EXCLUSIVA DO SÓCIO TGA (LOGIN POR CPF)
+  // ==========================================================================
+  document.getElementById('formLoginSocioCpf')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('inputSocioLoginCpf');
+    const erroBox = document.getElementById('portalSocioFeedbackErro');
+    const painel = document.getElementById('portalSocioPainelLogado');
+    const cpfDigitado = input?.value || '';
+
+    const socio = findSocioByCpf(cpfDigitado);
+    if (!socio) {
+      currentLoggedSocioId = null;
+      if (painel) painel.hidden = true;
+      if (erroBox) {
+        erroBox.hidden = false;
+        erroBox.innerHTML = `❌ <strong>CPF não encontrado na base de Sócios Garra Alviverde!</strong> Verifique os números digitados ou clique em <strong>"🪪 Seja Sócio"</strong> para fazer seu cadastro agora.`;
+      }
+      showToast('❌ CPF não encontrado na lista de Sócios TGA.');
+      return;
+    }
+
+    if (erroBox) erroBox.hidden = true;
+    currentLoggedSocioId = socio.id;
+    renderPortalSocioLogado(socio);
+    showToast(`🔓 Bem-vindo à sua Área Exclusiva, ${socio.nome}!`);
+  });
+
+  document.getElementById('btnPrintCarteirinhaSocio')?.addEventListener('click', () => {
+    if (!currentLoggedSocioId) return;
+    const socio = appState.socios.find(s => s.id === currentLoggedSocioId);
+    if (socio) printCarteirinhaSocio(socio);
+  });
+
+  document.getElementById('btnPortalIrLoja')?.addEventListener('click', () => {
+    const socio = currentLoggedSocioId ? appState.socios.find(s => s.id === currentLoggedSocioId) : null;
+    openFeatureWindow('windowLojaMateriais');
+    if (socio) {
+      const cpfInput = document.getElementById('pedCpf');
+      const nomeInput = document.getElementById('pedNome');
+      const waInput = document.getElementById('pedWhatsapp');
+      const tamSelect = document.getElementById('pedTamanho');
+      if (cpfInput) cpfInput.value = socio.cpf || '';
+      if (nomeInput) nomeInput.value = socio.nome || '';
+      if (waInput) waInput.value = socio.whatsapp || '';
+      if (tamSelect && socio.tamanhoCamisa) tamSelect.value = socio.tamanhoCamisa;
+      updatePedidoMaterialPriceDisplay();
+    }
+  });
+
+  document.getElementById('btnPortalIrJogos')?.addEventListener('click', () => {
+    const socio = currentLoggedSocioId ? appState.socios.find(s => s.id === currentLoggedSocioId) : null;
+    openFeatureWindow('windowJogosEcrv');
+    if (socio) {
+      const chkCpf = document.getElementById('chkSocioCpf');
+      if (chkCpf) chkCpf.value = socio.cpf || '';
+    }
+  });
+
+  // ==========================================================================
+  // 2. EVENTOS DA LOJA OFICIAL DE MATERIAIS GARRA ALVIVERDE
+  // ==========================================================================
+  ['pedSelectMaterial', 'pedQuantidade', 'pedCpf'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', updatePedidoMaterialPriceDisplay);
+      el.addEventListener('change', updatePedidoMaterialPriceDisplay);
+    }
+  });
+
+  document.getElementById('formPedidoMaterial')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const matId = document.getElementById('pedSelectMaterial')?.value;
+    const mat = (appState.materiais || []).find(m => m.id === matId) || (appState.materiais || [])[0];
+    if (!mat) {
+      showToast('⚠️ Nenhum material disponível selecionado.');
+      return;
+    }
+
+    const tamanho = document.getElementById('pedTamanho')?.value || 'G';
+    const quantidade = Math.max(1, Number(document.getElementById('pedQuantidade')?.value) || 1);
+    const nome = document.getElementById('pedNome')?.value.trim() || 'Torcedor';
+    const cpf = document.getElementById('pedCpf')?.value.trim() || '';
+    const whatsapp = document.getElementById('pedWhatsapp')?.value.trim() || '';
+
+    const socioMatch = cpf ? findSocioByCpf(cpf) : null;
+    const isSocioDesconto = socioMatch && isSocioEligibleForBenefits(socioMatch);
+    const valorUnitario = isSocioDesconto ? (Number(mat.valorSocio) || 0) : (Number(mat.valorNaoSocio) || 0);
+    const valorTotal = valorUnitario * quantidade;
+
+    const payload = {
+      materialId: mat.id,
+      materialNome: mat.nome,
+      tamanho,
+      quantidade,
+      nome,
+      cpf: cpf || 'Não informado',
+      whatsapp,
+      isSocioDesconto: Boolean(isSocioDesconto),
+      socioMatricula: socioMatch ? socioMatch.matricula : '',
+      valorUnitario,
+      valorTotal
+    };
+
+    try {
+      const res = await fetch('/api/pedidos-materiais', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const criado = await res.json();
+        appState.pedidosMateriais.unshift(criado);
+      } else {
+        throw new Error('Fallback local');
+      }
+    } catch (err) {
+      appState.pedidosMateriais.unshift({
+        id: 'ped-' + Date.now(),
+        ...payload,
+        statusPix: 'Aguardando PIX',
+        entregue: false,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    saveLocalBackup();
+    renderAll();
+    e.target.reset();
+    document.getElementById('pedQuantidade').value = '1';
+    updatePedidoMaterialPriceDisplay();
+
+    const msgWa = `\uD83D\uDFE2\u26AA *PEDIDO NA LOJA OFICIAL - ${appState.config.nomeTorcida} (TGA)* \uD83D\uDFE2\u26AA\n\n` +
+      `\uD83D\uDC55 *Material:* ${payload.materialNome}\n` +
+      `\uD83D\uDCCF *Tamanho:* ${payload.tamanho} | *Quantidade:* ${payload.quantidade} un.\n` +
+      `\uD83D\uDC64 *Torcedor:* ${payload.nome} (CPF: ${payload.cpf})\n` +
+      `\uD83C\uDFF7\uFE0F *Modalidade:* ${payload.isSocioDesconto ? `Sócio TGA c/ Desconto (${payload.socioMatricula})` : 'Não-Sócio (Valor Normal)'}\n` +
+      `\uD83D\uDCB0 *Valor Total no PIX:* ${formatBRL(payload.valorTotal)}\n\n` +
+      `Segue meu comprovante do PIX (${appState.config.chavePix}) para reservar meu material oficial da Garra Alviverde!`;
+
+    openSuccessModal({
+      titulo: '👕 Pedido de Material Oficial Registrado!',
+      descricao: `Salve, ${payload.nome}! Seu pedido de ${payload.quantidade}x ${payload.materialNome} (Tam. ${payload.tamanho}) foi registrado no painel da Diretoria.`,
+      valor: payload.valorTotal,
+      subtextoValor: payload.isSocioDesconto
+        ? `Desconto Exclusivo de Sócio TGA Aplicado (${payload.socioMatricula})!`
+        : `Valor no PIX: ${formatBRL(payload.valorTotal)}`,
+      mensagemWhatsapp: msgWa
+    });
+  });
+
+  // ==========================================================================
+  // 3. EVENTOS DA CENTRAL DE JOGOS DO E.C.R.V. & CHECK-IN NO VELOSÃO
+  // ==========================================================================
+  document.getElementById('formCheckinJogoSocio')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const jogoId = document.getElementById('chkSelectJogo')?.value;
+    const cpfInput = document.getElementById('chkSocioCpf');
+    const feedbackBox = document.getElementById('checkinFeedbackBox');
+    const cpf = cpfInput?.value.trim() || '';
+
+    const jogo = (appState.jogosEcrv || []).find(j => j.id === jogoId);
+    if (!jogo) {
+      showToast('⚠️ Selecione um jogo em casa aberto para check-in.');
+      return;
+    }
+
+    const socio = findSocioByCpf(cpf);
+    if (!socio) {
+      if (feedbackBox) {
+        feedbackBox.hidden = false;
+        feedbackBox.style.background = '#fee2e2';
+        feedbackBox.style.color = '#991b1b';
+        feedbackBox.style.border = '1px solid #f87171';
+        feedbackBox.innerHTML = `❌ <strong>CPF não encontrado na base de Sócios Garra Alviverde!</strong> Somente sócios cadastrados têm ingresso garantido nos jogos em casa. Clique em <strong>"🪪 Seja Sócio"</strong> para se associar!`;
+      }
+      showToast('❌ CPF não localizado na lista de Sócios TGA.');
+      return;
+    }
+
+    if (!isSocioEligibleForBenefits(socio)) {
+      if (feedbackBox) {
+        feedbackBox.hidden = false;
+        feedbackBox.style.background = '#fef3c7';
+        feedbackBox.style.color = '#92400e';
+        feedbackBox.style.border = '1px solid #fbbf24';
+        feedbackBox.innerHTML = `⏳ <strong>Olá, ${escapeHtml(socio.nome)}!</strong> Sua ficha consta como <strong>"Pendente PIX"</strong>. Pague a 1ª parcela (R$ 35,00) ou à vista e envie o comprovante no WhatsApp da Diretoria para liberar seu Ingresso Garantido na hora!`;
+      }
+      showToast('⏳ Confirme sua 1ª parcela com a Diretoria para liberar o Check-in.');
+      return;
+    }
+
+    const payload = {
+      jogoId: jogo.id,
+      jogoTitulo: `E.C.R.V. x ${jogo.adversario} (${formatDateBR(jogo.dataJogo)})`,
+      socioId: socio.id,
+      socioMatricula: socio.matricula,
+      socioNome: socio.nome,
+      socioApelido: socio.apelido || '',
+      socioCpf: socio.cpf,
+      socioWhatsapp: socio.whatsapp,
+      numeroCamisa: socio.numeroCamisa || '',
+      pelotao: socio.pelotao || '',
+      statusSocio: socio.statusPagamento
+    };
+
+    try {
+      const res = await fetch('/api/checkins-jogos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.checkin && !data.alreadyExists) {
+          appState.checkinsJogos.unshift(data.checkin);
+        }
+      } else {
+        throw new Error('Fallback local');
+      }
+    } catch (err) {
+      const jaExiste = (appState.checkinsJogos || []).some(
+        c => c.jogoId === jogo.id && normalizeCpfDigits(c.socioCpf) === normalizeCpfDigits(socio.cpf)
+      );
+      if (!jaExiste) {
+        appState.checkinsJogos.unshift({
+          id: 'chk-' + Date.now(),
+          ...payload,
+          createdAt: new Date().toISOString()
+        });
+      }
+    }
+
+    saveLocalBackup();
+    renderAll();
+
+    if (feedbackBox) {
+      feedbackBox.hidden = false;
+      feedbackBox.style.background = '#dcfce7';
+      feedbackBox.style.color = '#166534';
+      feedbackBox.style.border = '2px solid #22c55e';
+      feedbackBox.innerHTML = `✅ <strong>CHECK-IN CONFIRMADO NA LISTA DA PORTARIA DO VELOSÃO!</strong><br>Salve, <strong>${escapeHtml(socio.nome)}</strong> (${escapeHtml(socio.matricula)})! Seu nome e CPF já estão na relação oficial da Diretoria para <strong>E.C.R.V. x ${escapeHtml(jogo.adversario)}</strong>.`;
+    }
+    showToast(`🎟️ Presença confirmada na Portaria do Velosão, ${socio.nome}!`);
+  });
+
+  // ==========================================================================
+  // 4. EVENTOS DO ADMIN — ABA LOJA DE MATERIAIS E ABA JOGOS & PORTARIA
+  // ==========================================================================
+  document.getElementById('newMatFoto')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      currentNewMaterialFotoDataUrl = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 420;
+        const maxH = 420;
+        let width = tempImg.width;
+        let height = tempImg.height;
+        const scale = Math.min(maxW / width, maxH / height, 1);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(tempImg, 0, 0, width, height);
+        currentNewMaterialFotoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      };
+      tempImg.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('formNovoMaterial')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      nome: document.getElementById('newMatNome').value.trim(),
+      categoria: document.getElementById('newMatCategoria').value.trim(),
+      valorSocio: Number(document.getElementById('newMatValorSocio').value) || 0,
+      valorNaoSocio: Number(document.getElementById('newMatValorNaoSocio').value) || 0,
+      tamanhos: document.getElementById('newMatTamanhos').value.trim() || 'Único',
+      estoqueStatus: document.getElementById('newMatStatus').value || 'Disponível',
+      descricao: document.getElementById('newMatDesc').value.trim(),
+      imagemUrl: currentNewMaterialFotoDataUrl || '/logo-garra.png'
+    };
+
+    const audit = buildAuditPayload(
+      'Loja TGA',
+      `Cadastrou novo material na Loja: "${payload.nome}"`,
+      `Sócio: ${formatBRL(payload.valorSocio)} | Não-Sócio: ${formatBRL(payload.valorNaoSocio)}`
+    );
+
+    try {
+      const res = await fetch('/api/materiais', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, _auditoria: audit })
+      });
+      if (res.ok) {
+        const novo = await res.json();
+        appState.materiais.unshift(novo);
+      } else {
+        throw new Error('Fallback');
+      }
+    } catch (err) {
+      appState.materiais.unshift({
+        id: 'mat-' + Date.now(),
+        ...payload
+      });
+    }
+
+    currentNewMaterialFotoDataUrl = '';
+    saveLocalBackup();
+    renderAll();
+    e.target.reset();
+    showToast(`👕 Material "${payload.nome}" publicado na Loja Oficial TGA!`);
+  });
+
+  document.getElementById('btnExportPedidosLojaXls')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    downloadStyledExcel(buildPedidosLojaReportConfig());
+    showToast('📊 Planilha Oficial de Pedidos da Loja (.XLS Formatada) baixada!');
+  });
+
+  document.getElementById('btnPrintPedidosLoja')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    printStyledReport(buildPedidosLojaReportConfig());
+  });
+
+  document.getElementById('formNovoJogo')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      campeonato: document.getElementById('newJogoCampeonato').value.trim(),
+      rodada: document.getElementById('newJogoRodada').value.trim(),
+      mando: document.getElementById('newJogoMando').value,
+      adversario: document.getElementById('newJogoAdversario').value.trim(),
+      dataJogo: document.getElementById('newJogoData').value,
+      horario: document.getElementById('newJogoHorario').value.trim(),
+      local: document.getElementById('newJogoLocal').value.trim(),
+      placarEcrv: document.getElementById('newJogoPlacarEcrv').value,
+      placarAdv: document.getElementById('newJogoPlacarAdv').value,
+      status: document.getElementById('newJogoStatus').value
+    };
+
+    const audit = buildAuditPayload(
+      'Jogos ECRV',
+      `Cadastrou jogo na tabela: E.C.R.V. x ${payload.adversario}`,
+      `Data: ${formatDateBR(payload.dataJogo)} | Mando: ${payload.mando} | Status: ${payload.status}`
+    );
+
+    try {
+      const res = await fetch('/api/jogos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, _auditoria: audit })
+      });
+      if (res.ok) {
+        const novo = await res.json();
+        appState.jogosEcrv.push(novo);
+      } else {
+        throw new Error('Fallback');
+      }
+    } catch (err) {
+      appState.jogosEcrv.push({
+        id: 'jog-' + Date.now(),
+        ...payload
+      });
+    }
+
+    saveLocalBackup();
+    renderAll();
+    e.target.reset();
+    document.getElementById('newJogoLocal').value = 'Estádio Mozart Veloso do Carmo (Velosão)';
+    showToast(`⚽ Jogo E.C.R.V. x ${payload.adversario} publicado na Tabela Oficial!`);
+  });
+
+  document.getElementById('filterCheckinJogoSelect')?.addEventListener('change', renderAdminJogosTab);
+
+  document.getElementById('btnExportCheckinsXls')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    downloadStyledExcel(buildCheckinsPortariaReportConfig());
+    showToast('📊 Lista Oficial da Portaria do Velosão (.XLS Formatada) baixada!');
+  });
+
+  document.getElementById('btnPrintCheckins')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    printStyledReport(buildCheckinsPortariaReportConfig());
+  });
+
+  // Salvar Configurações do Plano Único, PIX, WhatsApp, Instagram, Mural do Sócio e Torcida
   document.getElementById('formAdminConfig')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentAdminUser || !currentAdminUser.isMaster) {
@@ -2869,6 +4177,8 @@ document.addEventListener('DOMContentLoaded', () => {
       anoFundacao: document.getElementById('cfgAnoFundacao').value.trim(),
       lema: document.getElementById('cfgLema').value.trim(),
       instagramUrl: document.getElementById('cfgInstagramUrl')?.value.trim() || 'https://www.instagram.com/torcidagarraalviverde15/',
+      muralAviso: document.getElementById('cfgMuralAviso')?.value.trim() || appState.config.muralAviso,
+      linkGrupoVipWhatsapp: document.getElementById('cfgLinkGrupoVip')?.value.trim() || appState.config.linkGrupoVipWhatsapp,
       chavePix: document.getElementById('cfgChavePix').value.trim(),
       titularPix: document.getElementById('cfgTitularPix').value.trim(),
       cidadePix: document.getElementById('cfgCidadePix').value.trim().toUpperCase(),
@@ -2879,7 +4189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const audit = buildAuditPayload(
       'Configurações',
-      `Atualizou configurações gerais do portal TGA`,
+      `Atualizou configurações gerais e Mural do Sócio TGA`,
       `PIX: ${novasConfigs.chavePix} | WhatsApp: ${novasConfigs.whatsappDiretoria} | Valor Sócio: ${formatBRL(novoPlanoUnico.valor)}`
     );
 
@@ -2895,6 +4205,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveLocalBackup();
     renderAll();
-    showToast('💾 Configurações do Plano Único e Chave PIX atualizadas!');
+    showToast('💾 Configurações, Mural do Sócio e Chave PIX atualizados!');
   });
 });

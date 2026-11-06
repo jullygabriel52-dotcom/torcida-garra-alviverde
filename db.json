@@ -14,6 +14,8 @@
     "titularPix": "TORCIDA ORGANIZADA GARRA ALVIVERDE - TGA",
     "cidadePix": "RIO VERDE - GO",
     "senhaAdmin": "Tga@2015",
+    "muralAviso": "📢 CONVOCAÇÃO GERAL SÓCIO TGA: Concentração no Velosão a partir das 14h00! Sócios com a 1ª parcela paga ou à vista já têm ingresso garantido (faça seu Check-in na aba Jogos do E.C.R.V.) e desconto liberado na Loja de Materiais!",
+    "linkGrupoVipWhatsapp": "https://wa.me/5564993302283?text=Salve%20Diretoria%20TGA!%20Sou%20S%C3%B3cio%20Garra%20Alviverde%20e%20quero%20entrar%20no%20Grupo%20VIP%20de%20S%C3%B3cios!",
     "planos": [
       {
         "id": "socio-unico",
@@ -31,6 +33,108 @@
       }
     ]
   },
+  "materiais": [
+    {
+      "id": "mat-1",
+      "nome": "Camisa Oficial Garra Alviverde 2025/26",
+      "categoria": "Vestuário Oficial TGA",
+      "descricao": "Manto oficial da bancada alviverde em tecido Dry-Fit premium, escudo bordado e personalização de número.",
+      "tamanhos": "P, M, G, GG, XG",
+      "valorSocio": 75,
+      "valorNaoSocio": 110,
+      "estoqueStatus": "Disponível",
+      "imagemUrl": "/logo-garra.png"
+    },
+    {
+      "id": "mat-2",
+      "nome": "Boné Aba Curva Bordado TGA 2015",
+      "categoria": "Acessórios",
+      "descricao": "Boné oficial verde e branco com bordado 3D frontal da Garra Alviverde e fecho ajustável.",
+      "tamanhos": "Único Ajustável",
+      "valorSocio": 50,
+      "valorNaoSocio": 75,
+      "estoqueStatus": "Disponível",
+      "imagemUrl": "/logo-garra.png"
+    },
+    {
+      "id": "mat-3",
+      "nome": "Corta-Vento Impermeável Garra Alviverde",
+      "categoria": "Inverno / Viagens",
+      "descricao": "Jaqueta corta-vento oficial para caravanas e jogos noturnos no Velosão, com capuz e bolsos com zíper.",
+      "tamanhos": "M, G, GG, XG",
+      "valorSocio": 140,
+      "valorNaoSocio": 195,
+      "estoqueStatus": "Últimas Unidades",
+      "imagemUrl": "/logo-garra.png"
+    },
+    {
+      "id": "mat-4",
+      "nome": "Faixa de Mão + Tirante + Caneca Oficial TGA",
+      "categoria": "Kit Arquibancada",
+      "descricao": "Kit completo de bancada com caneca de alumínio 500ml, tirante bordado largo e faixa de mão dupla face.",
+      "tamanhos": "Kit Completo",
+      "valorSocio": 45,
+      "valorNaoSocio": 70,
+      "estoqueStatus": "Disponível",
+      "imagemUrl": "/ecrv.jpg"
+    }
+  ],
+  "pedidosMateriais": [],
+  "jogosEcrv": [
+    {
+      "id": "jog-1",
+      "campeonato": "Campeonato Goiano",
+      "rodada": "1ª Rodada",
+      "mando": "Casa",
+      "adversario": "Adversário Regional",
+      "dataJogo": "2026-10-18",
+      "horario": "16:00",
+      "local": "Estádio Mozart Veloso do Carmo (Velosão)",
+      "placarEcrv": "2",
+      "placarAdv": "0",
+      "status": "Encerrado"
+    },
+    {
+      "id": "jog-2",
+      "campeonato": "Campeonato Goiano",
+      "rodada": "2ª Rodada",
+      "mando": "Casa",
+      "adversario": "Clássico no Velosão",
+      "dataJogo": "2026-11-01",
+      "horario": "16:00",
+      "local": "Estádio Mozart Veloso do Carmo (Velosão)",
+      "placarEcrv": "",
+      "placarAdv": "",
+      "status": "Check-in Aberto"
+    },
+    {
+      "id": "jog-3",
+      "campeonato": "Campeonato Goiano",
+      "rodada": "3ª Rodada",
+      "mando": "Fora",
+      "adversario": "Adversário Estadual (Fora)",
+      "dataJogo": "2026-11-08",
+      "horario": "16:00",
+      "local": "Goiânia / Interior - GO (Caravana TGA)",
+      "placarEcrv": "",
+      "placarAdv": "",
+      "status": "Caravana Aberta"
+    },
+    {
+      "id": "jog-4",
+      "campeonato": "Campeonato Goiano",
+      "rodada": "4ª Rodada",
+      "mando": "Casa",
+      "adversario": "Decisão no Velosão",
+      "dataJogo": "2026-11-15",
+      "horario": "17:00",
+      "local": "Estádio Mozart Veloso do Carmo (Velosão)",
+      "placarEcrv": "",
+      "placarAdv": "",
+      "status": "Check-in Aberto"
+    }
+  ],
+  "checkinsJogos": [],
   "caravanas": [
     {
       "id": "car-1",

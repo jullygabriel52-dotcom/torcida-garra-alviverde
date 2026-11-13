@@ -157,7 +157,70 @@ const FALLBACK_STATE = {
       status: 'Agendado'
     }
   ],
-  checkinsJogos: []
+  checkinsJogos: [],
+  eventosTga: [
+    {
+      id: 'ev-1',
+      categoria: 'Doação de Sangue',
+      titulo: 'Campanha Sangue Alviverde — Hemocentro de Rio Verde',
+      dataEvento: '2026-11-28',
+      horario: '07:30 às 11:30',
+      local: 'Saída do Estádio Velosão → Hemocentro Regional de Rio Verde',
+      descricao: 'Convocação geral da Garra Alviverde para salvar vidas! Leve documento oficial com foto. Sócios participantes ganham isenção de 1 parcela (R$ 35,00) do Sócio TGA.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-2',
+      categoria: 'Natal',
+      titulo: 'Natal Solidário da Garra Alviverde',
+      dataEvento: '2026-12-20',
+      horario: '14:00',
+      local: 'Concentração no Velosão → Bairros de Rio Verde - GO',
+      descricao: 'Arrecadação e entrega de brinquedos, cestas básicas e chegada do Papai Noel Alviverde para as famílias de Rio Verde.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-3',
+      categoria: 'Páscoa',
+      titulo: 'Páscoa Solidária TGA — Sorriso Alviverde',
+      dataEvento: '2027-04-04',
+      horario: '09:00',
+      local: 'Bairros e Comunidades de Rio Verde - GO',
+      descricao: 'Ação social de Páscoa da Garra Alviverde com distribuição de ovos de chocolate e caixas de bombom para as crianças.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-4',
+      categoria: 'Dia das Crianças',
+      titulo: 'Festa do Dia das Crianças Garra Alviverde (12/10)',
+      dataEvento: '2027-10-12',
+      horario: '13:30 às 18:00',
+      local: 'Arredores do Estádio Velosão / Praça Comunitária',
+      descricao: 'Tarde recreativa com pula-pula, pipoca, algodão-doce, cachorro-quente e entrega de brinquedos para a criançada.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-5',
+      categoria: 'Ações Sociais',
+      titulo: 'Mutirão Solidário TGA — Arrecadação de Alimentos',
+      dataEvento: '2027-02-15',
+      horario: '08:30',
+      local: 'Portaria do Estádio Mozart Veloso do Carmo (Velosão)',
+      descricao: 'Arrecadação de alimentos não perecíveis e montagem de cestas básicas para famílias assistidas pela torcida.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    }
+  ],
+  participantesEventos: []
 };
 
 let appState = JSON.parse(JSON.stringify(FALLBACK_STATE));
@@ -166,6 +229,7 @@ let currentMaterialPhotoDataUrl = '';
 let currentLoggedSocio = null;
 let isAdminAuthenticated = false;
 let currentAdminUser = null;
+let currentPublicEventoCategoryFilter = 'todos';
 
 function ensureClientState(state) {
   if (!state) return;
@@ -178,6 +242,10 @@ function ensureClientState(state) {
   state.pedidosMateriais = Array.isArray(state.pedidosMateriais) ? state.pedidosMateriais : [];
   state.jogosEcrv = Array.isArray(state.jogosEcrv) ? state.jogosEcrv : JSON.parse(JSON.stringify(FALLBACK_STATE.jogosEcrv));
   state.checkinsJogos = Array.isArray(state.checkinsJogos) ? state.checkinsJogos : [];
+  state.eventosTga = Array.isArray(state.eventosTga) && state.eventosTga.length > 0
+    ? state.eventosTga
+    : JSON.parse(JSON.stringify(FALLBACK_STATE.eventosTga));
+  state.participantesEventos = Array.isArray(state.participantesEventos) ? state.participantesEventos : [];
 
   if (state.config) {
     if (!state.config.muralAviso) {
@@ -375,7 +443,8 @@ const ALL_FEATURE_WINDOWS = [
   'windowHistoria',
   'windowPortalSocio',
   'windowLojaMateriais',
-  'windowJogosEcrv'
+  'windowJogosEcrv',
+  'windowEventosTga'
 ];
 
 function openFeatureWindow(windowId) {
@@ -401,6 +470,7 @@ function checkUrlWindowParam() {
   if (janela === 'painel-socio' || janela === 'area-socio') openFeatureWindow('windowPortalSocio');
   if (janela === 'loja' || janela === 'materiais') openFeatureWindow('windowLojaMateriais');
   if (janela === 'jogos' || janela === 'ingressos') openFeatureWindow('windowJogosEcrv');
+  if (janela === 'eventos' || janela === 'acoes') openFeatureWindow('windowEventosTga');
 }
 
 // Exibe o QR Code Oficial da Chave PIX da Torcida Garra Alviverde
@@ -481,6 +551,7 @@ function renderAll() {
   renderCaravanasSection();
   renderLojaMateriaisSection();
   renderJogosEcrvSection();
+  renderEventosTgaSection();
   if (currentLoggedSocio) {
     const refreshed = appState.socios.find(s => s.id === currentLoggedSocio.id);
     if (refreshed) {
@@ -674,20 +745,58 @@ function openSuccessModal({ titulo, descricao, valor, subtextoValor, mensagemWha
   modal.hidden = false;
 }
 
+function getSocioParcelasIsentas(s) {
+  if (!s) return 0;
+  if (typeof s.parcelasIsentas === 'number' && !isNaN(s.parcelasIsentas)) {
+    return Math.min(3, Math.max(0, Math.round(s.parcelasIsentas)));
+  }
+  if (Boolean(s.isento) || String(s.statusPagamento || '').includes('Isento (Diretoria)') || String(s.formaPagamento || '').includes('Isento — Diretoria')) {
+    return 3;
+  }
+  if (String(s.statusPagamento || '').includes('2 Parcelas Isentas')) return 2;
+  if (String(s.statusPagamento || '').includes('1 Parcela Isenta') || String(s.statusPagamento || '').includes('+ 1 Isenta') || String(s.statusPagamento || '').includes('+ 2 Isentas')) {
+    return String(s.statusPagamento || '').includes('2 Isentas') ? 2 : 1;
+  }
+  return 0;
+}
+
+function getSocioValorIsento(s) {
+  return getSocioParcelasIsentas(s) * 35;
+}
+
+function hasSocioAnyIsencao(s) {
+  return getSocioParcelasIsentas(s) > 0;
+}
+
 function isSocioIsento(s) {
   if (!s) return false;
-  return Boolean(s.isento) || String(s.statusPagamento || '').includes('Isento') || String(s.formaPagamento || '').includes('Isento');
+  return getSocioParcelasIsentas(s) >= 3;
 }
 
 function getSocioValorPagoEfetivo(s) {
-  if (isSocioIsento(s)) return 0;
+  if (!s || isSocioIsento(s)) return 0;
+  const maxPagavel = Math.max(0, 105 - getSocioValorIsento(s));
   if (typeof s.valorPago === 'number' && !isNaN(s.valorPago)) {
-    return s.valorPago;
+    return Math.max(0, Math.min(maxPagavel, s.valorPago));
   }
-  if (s.statusPagamento === 'Pago / Ativo') return Number(s.valorPlano) || 105;
-  if (s.statusPagamento === '2ª Parcela Paga (R$ 70)') return 70;
-  if (s.statusPagamento === '1ª Parcela Paga (R$ 35)') return 35;
+  if (s.statusPagamento === 'Pago / Ativo') return maxPagavel;
+  if (s.statusPagamento === '2ª Parcela Paga (R$ 70)') return Math.min(maxPagavel, 70);
+  if (s.statusPagamento === '1ª Parcela Paga (R$ 35)' || String(s.statusPagamento || '').includes('1ª Parcela Paga')) return Math.min(maxPagavel, 35);
   return 0;
+}
+
+function getSocioParcelasPagasPix(s) {
+  return Math.min(3, Math.round(getSocioValorPagoEfetivo(s) / 35));
+}
+
+function getSocioValorLiquidoPrevisto(s) {
+  if (!s) return 105;
+  return Math.max(0, 105 - getSocioValorIsento(s));
+}
+
+function getSocioFaltaPagarPix(s) {
+  if (!s) return 105;
+  return Math.max(0, getSocioValorLiquidoPrevisto(s) - getSocioValorPagoEfetivo(s));
 }
 
 function findSocioByCpf(cpfRaw) {
@@ -698,8 +807,8 @@ function findSocioByCpf(cpfRaw) {
 
 function isSocioEligibleForBenefits(socio) {
   if (!socio) return false;
-  if (isSocioIsento(socio)) return true;
-  if (socio.statusPagamento === 'Pago / Ativo' || String(socio.statusPagamento || '').includes('Parcela Paga')) {
+  if (getSocioParcelasPagasPix(socio) + getSocioParcelasIsentas(socio) >= 1) return true;
+  if (socio.statusPagamento === 'Pago / Ativo' || String(socio.statusPagamento || '').includes('Parcela')) {
     return true;
   }
   return getSocioValorPagoEfetivo(socio) >= 35;
@@ -723,10 +832,15 @@ function renderPortalSocioLogado(socio) {
   dashEl.hidden = false;
 
   const isIsento = isSocioIsento(socio);
-  const isAtivo = isSocioEligibleForBenefits(socio);
-  const isQuitado = isIsento || socio.statusPagamento === 'Pago / Ativo' || getSocioValorPagoEfetivo(socio) >= 105;
-  const valorTotal = isIsento ? 0 : (Number(socio.valorPlano) || 105);
+  const qtdIsentas = getSocioParcelasIsentas(socio);
+  const qtdPagasPix = getSocioParcelasPagasPix(socio);
+  const valorIsento = getSocioValorIsento(socio);
   const valorPago = getSocioValorPagoEfetivo(socio);
+  const valorLiquidoPrevisto = getSocioValorLiquidoPrevisto(socio);
+  const faltaPagar = getSocioFaltaPagarPix(socio);
+  const isAtivo = isSocioEligibleForBenefits(socio);
+  const isQuitado = isIsento || faltaPagar === 0 || (qtdPagasPix + qtdIsentas >= 3);
+  const motivoIsencao = socio.motivoIsencao || (isIsento ? '👑 Diretoria TGA' : '🩸 Ação Social TGA');
 
   const badgeEl = document.getElementById('portalSocioBadgeStatus');
   const sealEl = document.getElementById('portalSocioValidSeal');
@@ -767,39 +881,46 @@ function renderPortalSocioLogado(socio) {
 
   const modPill = document.getElementById('portalSocioModalidadePill');
   if (modPill) {
-    modPill.textContent = isIsento ? '👑 Isento — Diretoria TGA' : (socio.formaPagamento || 'À Vista no PIX (R$ 105,00)');
+    modPill.textContent = isIsento
+      ? '👑 Isento Total — Diretoria TGA'
+      : (qtdIsentas > 0
+        ? `🎁 ${qtdIsentas} Parcela(s) Isenta(s) (-${formatBRL(valorIsento)})`
+        : (socio.formaPagamento || 'À Vista no PIX (R$ 105,00)'));
   }
 
-  // Grade das 3 Parcelas
+  // Grade das 3 Parcelas (Mostra Paga PIX, Isenta ou Em Aberto)
   const parcGrid = document.getElementById('portalSocioParcelasGrid');
   if (parcGrid) {
-    if (isIsento) {
-      const makeExemptBox = (num) => `
-        <div style="padding:10px; border-radius:10px; text-align:center; background:#dcfce7; border:1px solid #86efac;">
-          <div style="font-size:0.75rem; font-weight:800; color:#166534;">${num}ª PARCELA</div>
-          <div style="font-size:0.95rem; font-weight:900; color:#064e3b; margin:2px 0;">ISENTO (R$ 0)</div>
-          <div style="font-size:0.72rem; font-weight:700; color:#15803d;">👑 DIRETORIA TGA</div>
-        </div>
-      `;
-      parcGrid.innerHTML = [makeExemptBox(1), makeExemptBox(2), makeExemptBox(3)].join('');
-    } else {
-      const p1Done = valorPago >= 35;
-      const p2Done = valorPago >= 70;
-      const p3Done = valorPago >= 105 || isQuitado;
-
-      const makeBox = (num, paga, sub) => `
-        <div style="padding:10px; border-radius:10px; text-align:center; background:${paga ? '#dcfce7' : '#fef3c7'}; border:1px solid ${paga ? '#86efac' : '#fde68a'};">
-          <div style="font-size:0.75rem; font-weight:800; color:${paga ? '#166534' : '#92400e'};">${num}ª PARCELA</div>
-          <div style="font-size:0.98rem; font-weight:900; color:${paga ? '#064e3b' : '#78350f'}; margin:2px 0;">R$ 35,00</div>
-          <div style="font-size:0.72rem; font-weight:700; color:${paga ? '#15803d' : '#b45309'};">${paga ? '✔ PAGA' : sub}</div>
-        </div>
-      `;
-      parcGrid.innerHTML = [
-        makeBox(1, p1Done, 'Pagar no PIX'),
-        makeBox(2, p2Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp'),
-        makeBox(3, p3Done, socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp')
-      ].join('');
+    const boxes = [];
+    for (let i = 1; i <= 3; i++) {
+      if (i <= qtdPagasPix) {
+        boxes.push(`
+          <div style="padding:10px; border-radius:10px; text-align:center; background:#dcfce7; border:1px solid #86efac;">
+            <div style="font-size:0.75rem; font-weight:800; color:#166534;">${i}ª PARCELA</div>
+            <div style="font-size:0.98rem; font-weight:900; color:#064e3b; margin:2px 0;">R$ 35,00</div>
+            <div style="font-size:0.72rem; font-weight:700; color:#15803d;">✔ PAGA NO PIX</div>
+          </div>
+        `);
+      } else if (i <= qtdPagasPix + qtdIsentas) {
+        boxes.push(`
+          <div style="padding:10px; border-radius:10px; text-align:center; background:#fef9c3; border:2px solid #eab308;">
+            <div style="font-size:0.75rem; font-weight:800; color:#854d0e;">${i}ª PARCELA</div>
+            <div style="font-size:0.95rem; font-weight:900; color:#713f12; margin:2px 0;">ISENTA (-R$ 35)</div>
+            <div style="font-size:0.69rem; font-weight:800; color:#a16207;">${escapeHtml(motivoIsencao)}</div>
+          </div>
+        `);
+      } else {
+        const subText = i === 1 ? 'Pagar no PIX' : (socio.boletosEnviados ? '📄 Boleto Enviado' : 'Boleto WhatsApp');
+        boxes.push(`
+          <div style="padding:10px; border-radius:10px; text-align:center; background:#fef3c7; border:1px solid #fde68a;">
+            <div style="font-size:0.75rem; font-weight:800; color:#92400e;">${i}ª PARCELA</div>
+            <div style="font-size:0.98rem; font-weight:900; color:#78350f; margin:2px 0;">R$ 35,00</div>
+            <div style="font-size:0.72rem; font-weight:700; color:#b45309;">⏳ ${subText}</div>
+          </div>
+        `);
+      }
     }
+    parcGrid.innerHTML = boxes.join('');
   }
 
   const finResumo = document.getElementById('portalSocioFinanceiroResumo');
@@ -807,8 +928,8 @@ function renderPortalSocioLogado(socio) {
     finResumo.innerHTML = isIsento
       ? `
         <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-          <span><strong>Status Atual:</strong> 👑 Isento (Diretoria TGA)</span>
-          <span><strong>Valor Cobrado:</strong> <strong style="color:#047857;">R$ 0,00 (Isenção Master)</strong></span>
+          <span><strong>Status Atual:</strong> 👑 Isento Total (Diretoria TGA)</span>
+          <span><strong>Saldo Isento:</strong> <strong style="color:#a16207;">R$ 105,00 (3 Parcelas)</strong></span>
         </div>
         <div style="margin-top:6px; color:#047857; font-weight:700;">
           👑 Membro Isento da Diretoria TGA! Todos os seus benefícios de Sócio (Ingresso no Velosão + Desconto nos Materiais + Caravanas) estão LIBERADOS!
@@ -816,13 +937,15 @@ function renderPortalSocioLogado(socio) {
       `
       : `
         <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-          <span><strong>Status Atual:</strong> ${escapeHtml(socio.statusPagamento || 'Pendente PIX')}</span>
-          <span><strong>Total Já Pago:</strong> <strong style="color:#047857;">${formatBRL(valorPago)}</strong> de ${formatBRL(valorTotal)}</span>
+          <span><strong>Pago em PIX:</strong> <strong style="color:#047857;">${formatBRL(valorPago)}</strong></span>
+          <span><strong>Saldo Isento:</strong> <strong style="color:#a16207;">${formatBRL(valorIsento)} (${qtdIsentas} parc.)</strong></span>
+          <span><strong>Falta Pagar:</strong> <strong style="color:${faltaPagar > 0 ? '#b45309' : '#047857'};">${formatBRL(faltaPagar)}</strong></span>
         </div>
+        ${qtdIsentas > 0 ? `<div style="margin-top:4px; font-size:0.8rem; color:#854d0e; font-weight:700;">🎁 Benefício aplicado: ${escapeHtml(motivoIsencao)} (-${formatBRL(valorIsento)} de R$ 105,00 • Líquido a pagar: ${formatBRL(valorLiquidoPrevisto)})</div>` : ''}
         <div style="margin-top:6px; color:${isAtivo ? '#047857' : '#b45309'}; font-weight:700;">
           ${isAtivo
             ? '🎉 Seus benefícios de Sócio TGA (Ingresso em casa no Velosão + Desconto nos Materiais + Prioridade em Caravanas) estão ATIVOS!'
-            : `⏳ Falta confirmar a 1ª parcela (R$ 35,00) ou valor à vista no PIX (${escapeHtml(appState.config.chavePix)}) para ativar seus benefícios!`}
+            : `⏳ Pague a 1ª parcela (R$ 35,00) no PIX (${escapeHtml(appState.config.chavePix)}) ou participe de uma Ação Social elegível para ativar seus benefícios!`}
         </div>
       `;
   }
@@ -1048,6 +1171,142 @@ function renderJogosEcrvSection() {
   }).join('');
 }
 
+// ============================================================================
+// PAINEL DE EVENTOS & AÇÕES SOCIAIS DA TGA (DOAÇÃO DE SANGUE, PÁSCOA, NATAL, DIA DAS CRIANÇAS)
+// ============================================================================
+function getEventoCategoryIcon(cat) {
+  const c = String(cat || '');
+  if (c.includes('Sangue')) return '🩸';
+  if (c.includes('Páscoa') || c.includes('Pascoa')) return '🐰';
+  if (c.includes('Criança') || c.includes('Crianca')) return '🎈';
+  if (c.includes('Natal')) return '🎄';
+  return '🤝';
+}
+
+function renderEventosTgaSection() {
+  const container = document.getElementById('eventosPublicCardsContainer');
+  const selectEv = document.getElementById('evSelectEvento');
+  const filterBar = document.getElementById('eventosCategoryFilterBar');
+  if (!container || !selectEv) return;
+
+  const eventos = Array.isArray(appState.eventosTga) ? appState.eventosTga : [];
+  const participantes = Array.isArray(appState.participantesEventos) ? appState.participantesEventos : [];
+
+  if (filterBar) {
+    filterBar.querySelectorAll('[data-filter-evento-cat]').forEach((btn) => {
+      const cat = btn.getAttribute('data-filter-evento-cat');
+      const isActive = cat === currentPublicEventoCategoryFilter;
+      btn.className = isActive ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+    });
+  }
+
+  const filtrados = currentPublicEventoCategoryFilter === 'todos'
+    ? eventos
+    : eventos.filter((ev) => String(ev.categoria || '') === currentPublicEventoCategoryFilter);
+
+  const prevSelected = selectEv.value;
+  const abertos = eventos.filter((ev) => ev.status !== 'Concluído');
+  selectEv.innerHTML = abertos.length === 0
+    ? `<option value="">Nenhum evento com inscrição aberta no momento</option>`
+    : abertos.map((ev) => {
+        const icone = getEventoCategoryIcon(ev.categoria);
+        const tagIsenta = ev.isentaParcela !== false ? ' — [🎁 Isenta 1 Parcela de R$ 35]' : '';
+        return `<option value="${ev.id}">${icone} ${ev.titulo} (${formatDateBR(ev.dataEvento)})${tagIsenta}</option>`;
+      }).join('');
+  if (prevSelected && Array.from(selectEv.options).some((o) => o.value === prevSelected)) {
+    selectEv.value = prevSelected;
+  }
+
+  if (filtrados.length === 0) {
+    container.innerHTML = `<div class="admin-subcard" style="text-align:center;">Nenhum evento encontrado nesta categoria no momento.</div>`;
+    return;
+  }
+
+  container.innerHTML = filtrados.map((ev) => {
+    const icone = getEventoCategoryIcon(ev.categoria);
+    const isAberto = ev.status !== 'Concluído';
+    const qtdInscritos = participantes.filter((p) => p.eventoId === ev.id).length;
+
+    return `
+      <div class="caravana-card" style="border: 2px solid ${ev.isentaParcela !== false ? '#006437' : '#cbd5e1'};">
+        <div class="caravana-top">
+          <h4>${icone} ${escapeHtml(ev.titulo)}</h4>
+          <span class="caravana-status" style="background:${isAberto ? '#dcfce7' : '#e2e8f0'}; color:${isAberto ? '#166534' : '#475569'};">
+            ${escapeHtml(ev.status || 'Aberto')}
+          </span>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 10px;">
+          <span class="status-badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:800;">
+            ${icone} ${escapeHtml(ev.categoria || 'Ações Sociais')}
+          </span>
+          ${ev.isentaParcela !== false ? `
+            <span class="status-badge" style="background:#fef08a; color:#052e16; border:1px solid #ca8a04; font-weight:800;">
+              🎁 Vale Isenção de 1 Parcela (R$ 35,00) p/ Sócio TGA!
+            </span>
+          ` : ''}
+        </div>
+
+        <p style="font-size:0.9rem; color:#334155; margin:0 0 10px; line-height:1.45;">
+          ${escapeHtml(ev.descricao || '')}
+        </p>
+
+        <div class="caravana-details-list">
+          <div>📅 <strong>Data:</strong> ${formatDateBR(ev.dataEvento)} • <strong>Horário:</strong> ${escapeHtml(ev.horario || '08:00')}</div>
+          <div>📍 <strong>Local / Concentração:</strong> ${escapeHtml(ev.local || 'Rio Verde - GO')}</div>
+          <div>👥 <strong>Participantes Inscritos:</strong> <strong style="color:#006437;">${qtdInscritos} voluntário(s) / sócio(s)</strong></div>
+        </div>
+
+        <button type="button" class="btn btn-primary btn-block" data-select-evento="${ev.id}" ${!isAberto ? 'disabled' : ''}>
+          ${isAberto ? '🙋‍♂️ Participar deste Evento & Garantir Benefício →' : 'Evento Concluído'}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('[data-select-evento]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-select-evento');
+      if (selectEv) selectEv.value = id;
+      document.getElementById('evParticipanteCpf')?.focus();
+      showToast('🤝 Evento selecionado! Preencha seu CPF ao lado para confirmar presença.');
+    });
+  });
+
+  updateEventoParticipanteCpfFeedback();
+}
+
+function updateEventoParticipanteCpfFeedback() {
+  const cpfEl = document.getElementById('evParticipanteCpf');
+  const feedbackEl = document.getElementById('evCpfSocioFeedback');
+  if (!cpfEl || !feedbackEl) return;
+
+  const cpfTyped = cpfEl.value || '';
+  const socioFound = findSocioByCpf(cpfTyped);
+
+  if (socioFound) {
+    const nomeInput = document.getElementById('evParticipanteNome');
+    const waInput = document.getElementById('evParticipanteWhatsapp');
+    const sangueSelect = document.getElementById('evParticipanteSangue');
+    if (nomeInput && !nomeInput.value.trim()) nomeInput.value = socioFound.nome || '';
+    if (waInput && !waInput.value.trim()) waInput.value = socioFound.whatsapp || '';
+    if (sangueSelect && socioFound.tipoSanguineo) sangueSelect.value = socioFound.tipoSanguineo;
+
+    const qtdIsentas = getSocioParcelasIsentas(socioFound);
+    const falta = getSocioFaltaPagarPix(socioFound);
+    feedbackEl.style.color = '#047857';
+    feedbackEl.textContent = falta > 0
+      ? `✅ SÓCIO IDENTIFICADO: ${socioFound.nome}! Ao participar e ter presença confirmada, você ganha ISENÇÃO de +1 Parcela (-R$ 35,00)!`
+      : `✅ SÓCIO IDENTIFICADO: ${socioFound.nome} (${qtdIsentas === 3 ? 'Diretoria Isento' : 'Plano Quitado'})! Obrigado por fortalecer nossas ações sociais!`;
+  } else if (cpfTyped.replace(/\D/g, '').length >= 11) {
+    feedbackEl.style.color = '#0369a1';
+    feedbackEl.textContent = `ℹ️ CPF ainda não consta como Sócio TGA. Você pode participar normalmente da ação social, ou fazer sua inscrição de Sócio para ganhar 1 parcela isenta!`;
+  } else {
+    feedbackEl.style.color = '#047857';
+    feedbackEl.textContent = `💡 Digite seu CPF acima para vincular ao seu cadastro de Sócio TGA e receber a isenção de 1 parcela (R$ 35,00)!`;
+  }
+}
+
 // Painel Administrativo da Diretoria
 function renderAdminDashboard() {
   ensureClientState(appState);
@@ -1069,7 +1328,7 @@ function renderAdminDashboard() {
     }
     if (summaryEl) {
       if (currentAdminUser.isMaster) {
-        summaryEl.textContent = 'Você está no comando Master: pode criar diretores, liberar/bloquear permissões e auditar todas as alterações.';
+        summaryEl.textContent = 'Você está no comando Master: pode isentar sócios por parcela ou total, gerenciar eventos sociais, diretores e auditar todas as alterações.';
       } else {
         const p = currentAdminUser.permissoes || {};
         const liberadas = [
@@ -1100,30 +1359,53 @@ function renderAdminDashboard() {
   if (btnTabCfg) btnTabCfg.hidden = !isMaster;
 
   const canExport = hasPerm('exportarPlanilhas');
-  ['btnExportSociosCsv', 'btnPrintSocios', 'btnExportCaravanasCsv', 'btnPrintCaravanas'].forEach((btnId) => {
+  ['btnExportSociosCsv', 'btnPrintSocios', 'btnExportCaravanasCsv', 'btnPrintCaravanas', 'btnExportIsentosXls', 'btnPrintIsentosPdf', 'btnExportEventosXls', 'btnPrintEventosPdf'].forEach((btnId) => {
     const el = document.getElementById(btnId);
     if (el) el.hidden = !canExport;
   });
 
-  // KPIs
+  // KPIs Financeiros (Arrecadado, Previsto Líquido e Valores/Saldos Isentos)
   document.getElementById('kpiTotalSocios').textContent = appState.socios.length;
   document.getElementById('kpiTotalCaravanasInscritos').textContent = appState.inscricoesCaravana.length;
 
-  const pendentesSocios = appState.socios.filter(s => s.statusPagamento !== 'Pago / Ativo' && !isSocioIsento(s)).length;
+  const pendentesSocios = appState.socios.filter(s => getSocioFaltaPagarPix(s) > 0).length;
   const pendentesCar = appState.inscricoesCaravana.filter(i => i.statusPix !== 'PIX Confirmado').length;
   document.getElementById('kpiTotalPendentes').textContent = pendentesSocios + pendentesCar;
 
+  const brutoSocios = appState.socios.length * 105;
   const recebidoSocios = appState.socios.reduce((acc, s) => acc + getSocioValorPagoEfetivo(s), 0);
-  const previstoSocios = appState.socios.reduce((acc, s) => acc + (isSocioIsento(s) ? 0 : (Number(s.valorPlano) || 105)), 0);
+  const previstoSocios = appState.socios.reduce((acc, s) => acc + getSocioValorLiquidoPrevisto(s), 0);
+  const totalIsentoReais = appState.socios.reduce((acc, s) => acc + getSocioValorIsento(s), 0);
+  const totalParcelasIsentas = appState.socios.reduce((acc, s) => acc + getSocioParcelasIsentas(s), 0);
+  const totalSociosComIsencao = appState.socios.filter(s => hasSocioAnyIsencao(s)).length;
+
   const recebidoCaravanas = appState.inscricoesCaravana.reduce((acc, i) => acc + (i.statusPix === 'PIX Confirmado' ? (Number(i.valorPago) || 0) : 0), 0);
   const previstoCaravanas = appState.inscricoesCaravana.reduce((acc, i) => acc + (Number(i.valorPago) || 0), 0);
 
   const totalRecebido = recebidoSocios + recebidoCaravanas;
   const totalPrevisto = previstoSocios + previstoCaravanas;
+  const totalBrutoGeral = brutoSocios + previstoCaravanas;
+  const faltaReceberGeral = Math.max(0, totalPrevisto - totalRecebido);
+
   document.getElementById('kpiReceitaTotal').textContent = `${formatBRL(totalRecebido)} / ${formatBRL(totalPrevisto)}`;
+  const kpiReceitaSubEl = document.getElementById('kpiReceitaSub');
+  if (kpiReceitaSubEl) {
+    kpiReceitaSubEl.textContent = `Bruto Tabelado: ${formatBRL(totalBrutoGeral)} • Falta Receber: ${formatBRL(faltaReceberGeral)}`;
+  }
+
+  const kpiIsentoValEl = document.getElementById('kpiTotalIsentoValor');
+  const kpiIsentoSubEl = document.getElementById('kpiTotalIsentoSub');
+  if (kpiIsentoValEl) kpiIsentoValEl.textContent = formatBRL(totalIsentoReais);
+  if (kpiIsentoSubEl) {
+    kpiIsentoSubEl.textContent = `${totalParcelasIsentas} parcela(s) isenta(s) (${totalSociosComIsencao} sócio(s))`;
+  }
+
+  renderExtratoIsentosPanel();
 
   document.getElementById('tabCountSocios').textContent = appState.socios.length;
   document.getElementById('tabCountCaravanas').textContent = appState.inscricoesCaravana.length;
+  const countEventosEl = document.getElementById('tabCountEventos');
+  if (countEventosEl) countEventosEl.textContent = (appState.participantesEventos || []).length;
   const countPedidosEl = document.getElementById('tabCountPedidosLoja');
   if (countPedidosEl) countPedidosEl.textContent = (appState.pedidosMateriais || []).length;
   const countCheckinsEl = document.getElementById('tabCountCheckins');
@@ -1134,6 +1416,7 @@ function renderAdminDashboard() {
   if (countAudEl) countAudEl.textContent = (appState.auditoriaLogs || []).length;
 
   renderAdminSociosTable();
+  renderAdminEventosTab();
   renderAdminCaravanasFilterOptions();
   renderAdminCaravanasInscritosTable();
   renderAdminManageCaravanasList();
@@ -1145,6 +1428,150 @@ function renderAdminDashboard() {
   if (isMaster) {
     loadAndRenderBackups();
   }
+}
+
+function renderExtratoIsentosPanel() {
+  const tbody = document.getElementById('tbodyExtratoIsentos');
+  if (!tbody) return;
+
+  const totalSocios = appState.socios.length;
+  const brutoSocios = totalSocios * 105;
+  const isentosDiretoriaList = appState.socios.filter(s => getSocioParcelasIsentas(s) === 3);
+  const isentosParciaisList = appState.socios.filter(s => getSocioParcelasIsentas(s) > 0 && getSocioParcelasIsentas(s) < 3);
+
+  const valorIsentoDiretoria = isentosDiretoriaList.reduce((acc, s) => acc + getSocioValorIsento(s), 0);
+  const valorIsentoParciais = isentosParciaisList.reduce((acc, s) => acc + getSocioValorIsento(s), 0);
+  const qtdParcelasParciais = isentosParciaisList.reduce((acc, s) => acc + getSocioParcelasIsentas(s), 0);
+
+  const previstoLiquidoSocios = appState.socios.reduce((acc, s) => acc + getSocioValorLiquidoPrevisto(s), 0);
+  const recebidoSocios = appState.socios.reduce((acc, s) => acc + getSocioValorPagoEfetivo(s), 0);
+  const faltaSocios = Math.max(0, previstoLiquidoSocios - recebidoSocios);
+
+  const elBruto = document.getElementById('extBrutoSocios');
+  const elBrutoSub = document.getElementById('extBrutoSociosSub');
+  const elDir = document.getElementById('extIsentoDiretoria');
+  const elDirSub = document.getElementById('extIsentoDiretoriaSub');
+  const elParc = document.getElementById('extIsentoParcelas');
+  const elParcSub = document.getElementById('extIsentoParcelasSub');
+  const elLiq = document.getElementById('extLiquidoPrevisto');
+  const elLiqSub = document.getElementById('extLiquidoPrevistoSub');
+
+  if (elBruto) elBruto.textContent = formatBRL(brutoSocios);
+  if (elBrutoSub) elBrutoSub.textContent = `${totalSocios} sócio(s) × R$ 105,00`;
+  if (elDir) elDir.textContent = `- ${formatBRL(valorIsentoDiretoria)}`;
+  if (elDirSub) elDirSub.textContent = `${isentosDiretoriaList.length} diretor(es) isento(s) (3 parcelas)`;
+  if (elParc) elParc.textContent = `- ${formatBRL(valorIsentoParciais)}`;
+  if (elParcSub) elParcSub.textContent = `${qtdParcelasParciais} parcela(s) de R$ 35,00 (${isentosParciaisList.length} sócio(s) em ações)`;
+  if (elLiq) elLiq.textContent = formatBRL(previstoLiquidoSocios);
+  if (elLiqSub) elLiqSub.textContent = `Arrecadado: ${formatBRL(recebidoSocios)} | Falta: ${formatBRL(faltaSocios)}`;
+
+  const todosComIsencao = appState.socios.filter(s => hasSocioAnyIsencao(s));
+  const isMaster = Boolean(currentAdminUser && currentAdminUser.isMaster);
+
+  if (todosComIsencao.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px;">Nenhum sócio com parcela ou saldo isento até o momento. Use o botão <strong>"👑 Isentar Parcela / Sócio"</strong> na tabela abaixo para conceder isenção!</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = todosComIsencao.map((s) => {
+    const qtdIsentas = getSocioParcelasIsentas(s);
+    const valIsento = getSocioValorIsento(s);
+    const valPago = getSocioValorPagoEfetivo(s);
+    const valFalta = getSocioFaltaPagarPix(s);
+    const motivo = s.motivoIsencao || (qtdIsentas === 3 ? '👑 Membro da Diretoria TGA' : '🩸 Ação Social / Doação de Sangue TGA');
+    const numCamisa = s.numeroCamisa ? `Nº ${s.numeroCamisa}` : 'Nº —';
+
+    return `
+      <tr>
+        <td>
+          <strong>👕 ${escapeHtml(numCamisa)} — ${escapeHtml(s.nome)}</strong><br>
+          <small>CPF: ${escapeHtml(s.cpf || '—')} | Apelido: ${escapeHtml(s.apelido || '—')}</small>
+        </td>
+        <td>
+          <span class="status-badge" style="background:#fef08a; color:#713f12; border:1px solid #eab308; font-weight:800;">
+            ${escapeHtml(motivo)}
+          </span>
+        </td>
+        <td>
+          <strong>${qtdIsentas} de 3 parcela(s)</strong>
+        </td>
+        <td>
+          <strong style="color:#a16207; font-size:0.95rem;">${formatBRL(valIsento)}</strong>
+        </td>
+        <td>
+          <strong style="color:#047857;">${formatBRL(valPago)}</strong>
+        </td>
+        <td>
+          <strong style="color:${valFalta > 0 ? '#b45309' : '#047857'};">${valFalta > 0 ? formatBRL(valFalta) : 'Quitado (R$ 0,00)'}</strong>
+        </td>
+        <td>
+          ${isMaster ? `
+            <button type="button" class="btn-table" data-open-isentar-extrato="${s.id}" style="background:#fef08a; color:#052e16; border:1px solid #ca8a04; font-weight:800;">
+              👑 Ajustar Isenção
+            </button>
+          ` : '<small>Restrito ao Master</small>'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('[data-open-isentar-extrato]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-open-isentar-extrato');
+      openModalIsentarSocioParcelas(id);
+    });
+  });
+}
+
+function openModalIsentarSocioParcelas(socioId) {
+  if (!currentAdminUser || !currentAdminUser.isMaster) {
+    showToast('🚫 Apenas o Usuário Master pode isentar parcelas ou sócios.');
+    return;
+  }
+  const socio = appState.socios.find(s => s.id === socioId);
+  if (!socio) return;
+
+  document.getElementById('isencaoSocioId').value = socio.id;
+  const qtdIsentasAtual = getSocioParcelasIsentas(socio);
+  const qtdPagasPix = getSocioParcelasPagasPix(socio);
+  const valPago = getSocioValorPagoEfetivo(socio);
+  const valIsento = getSocioValorIsento(socio);
+  const valFalta = getSocioFaltaPagarPix(socio);
+
+  const infoBox = document.getElementById('isencaoSocioInfoBox');
+  if (infoBox) {
+    infoBox.innerHTML = `
+      <div style="font-size:0.95rem; font-weight:800; color:#064e3b; margin-bottom:4px;">
+        👤 Sócio: ${escapeHtml(socio.nome)} (${escapeHtml(socio.apelido || 'Sem apelido')}) • Camisa Nº ${escapeHtml(socio.numeroCamisa || '—')}
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:0.82rem; color:#1e293b;">
+        <span>💵 <strong>Pago em PIX:</strong> ${formatBRL(valPago)} (${qtdPagasPix} parc.)</span>
+        <span>👑 <strong>Isento Atual:</strong> ${formatBRL(valIsento)} (${qtdIsentasAtual} parc.)</span>
+        <span>⏳ <strong>Falta Pagar:</strong> ${formatBRL(valFalta)}</span>
+      </div>
+    `;
+  }
+
+  const defaultChoice = qtdIsentasAtual > 0 ? String(qtdIsentasAtual) : '1';
+  const radios = document.querySelectorAll('input[name="qtdParcelasIsentas"]');
+  radios.forEach((r) => {
+    r.checked = r.value === defaultChoice;
+  });
+
+  const motivoSelect = document.getElementById('isencaoMotivoSelect');
+  if (motivoSelect && socio.motivoIsencao) {
+    const exists = Array.from(motivoSelect.options).some(o => o.value === socio.motivoIsencao);
+    if (exists) motivoSelect.value = socio.motivoIsencao;
+  } else if (motivoSelect) {
+    motivoSelect.value = defaultChoice === '3'
+      ? '👑 Membro da Diretoria TGA'
+      : '🩸 Campanha de Doação de Sangue TGA';
+  }
+
+  const motivoGroup = document.getElementById('isencaoMotivoGroup');
+  if (motivoGroup) motivoGroup.hidden = defaultChoice === '0';
+
+  document.getElementById('modalIsentarSocioParcelas').hidden = false;
 }
 
 function openEditSocioModal(socioId) {
@@ -1186,7 +1613,7 @@ function openEditSocioModal(socioId) {
         : 'À Vista no PIX (R$ 105,00)';
     }
   }
-  document.getElementById('editSocValor').value = isIsento ? 0 : (Number(socio.valorPlano) || 105);
+  document.getElementById('editSocValor').value = getSocioValorLiquidoPrevisto(socio);
   const valPagoEl = document.getElementById('editSocValorPago');
   if (valPagoEl) valPagoEl.value = getSocioValorPagoEfetivo(socio);
   document.getElementById('editSocStatus').value = isIsento ? 'Isento (Diretoria)' : (socio.statusPagamento || 'Pendente PIX');
@@ -1194,8 +1621,7 @@ function openEditSocioModal(socioId) {
   if (bolEl) bolEl.checked = Boolean(socio.boletosEnviados);
   document.getElementById('editSocObs').value = socio.observacoes || '';
 
-  // Se o diretor não tiver permissão de aprovar PIX (ou se o sócio for Isento e o usuário não for Master), trava os campos financeiros
-  const canApprovePix = hasPerm('aprovarPixSocio') && (!isIsento || isMaster);
+  const canApprovePix = hasPerm('aprovarPixSocio') && (!hasSocioAnyIsencao(socio) || isMaster);
   document.getElementById('editSocStatus').disabled = !canApprovePix;
   document.getElementById('editSocValor').disabled = !canApprovePix;
   if (valPagoEl) valPagoEl.disabled = !canApprovePix;
@@ -1213,13 +1639,14 @@ function renderAdminSociosTable() {
   const filtrados = appState.socios.filter((s) => {
     const matchStatus = statusFilter === 'todos'
       || s.statusPagamento === statusFilter
+      || (statusFilter === 'com_isencao' && hasSocioAnyIsencao(s))
       || (statusFilter === 'Isento (Diretoria)' && isSocioIsento(s));
-    const text = `${s.numeroCamisa || ''} ${s.matricula || ''} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade} ${s.formaPagamento || ''} ${s.statusPagamento || ''}`.toLowerCase();
+    const text = `${s.numeroCamisa || ''} ${s.matricula || ''} ${s.nome} ${s.apelido} ${s.cpf} ${s.pelotao} ${s.cidade} ${s.formaPagamento || ''} ${s.statusPagamento || ''} ${s.motivoIsencao || ''}`.toLowerCase();
     return matchStatus && text.includes(query);
   });
 
   if (filtrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;">Nenhum sócio cadastrado até o momento. Assim que alguém se inscrever no site, aparecerá aqui!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;">Nenhum sócio encontrado para este filtro.</td></tr>`;
     return;
   }
 
@@ -1230,33 +1657,43 @@ function renderAdminSociosTable() {
 
   tbody.innerHTML = filtrados.map((s) => {
     const isIsento = isSocioIsento(s);
-    const isPaid = s.statusPagamento === 'Pago / Ativo' || isIsento;
-    const isPartial = s.statusPagamento === '1ª Parcela Paga (R$ 35)' || s.statusPagamento === '2ª Parcela Paga (R$ 70)';
-    const isParcelado = !isIsento && String(s.formaPagamento || '').includes('3x');
-    const valorTotal = isIsento ? 0 : (Number(s.valorPlano) || 105);
+    const qtdIsentas = getSocioParcelasIsentas(s);
+    const qtdPagasPix = getSocioParcelasPagasPix(s);
+    const valorIsento = getSocioValorIsento(s);
+    const valorLiquido = getSocioValorLiquidoPrevisto(s);
     const valorJaPago = getSocioValorPagoEfetivo(s);
-    const faltaPagar = isIsento ? 0 : Math.max(0, valorTotal - valorJaPago);
+    const faltaPagar = getSocioFaltaPagarPix(s);
+    const isPaid = faltaPagar === 0 || isIsento || s.statusPagamento === 'Pago / Ativo';
+    const isPartial = !isPaid && (qtdPagasPix > 0 || qtdIsentas > 0);
+    const isParcelado = !isIsento && (String(s.formaPagamento || '').includes('3x') || qtdIsentas > 0);
 
     const cleanPhone = (s.whatsapp || '').replace(/\D/g, '');
     const msgCobrancaOuContato = isIsento
       ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua Carteirinha Oficial de Diretor Isento.`
-      : (isParcelado
-        ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente ao seu Sócio Garra (${s.formaPagamento}) e envio dos boletos das parcelas.`
-        : `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de Sócio Garra Alviverde.`);
+      : (qtdIsentas > 0
+        ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida}. Você possui ${qtdIsentas} parcela(s) isenta(s) (-${formatBRL(valorIsento)}) no seu Sócio Garra!`
+        : (isParcelado
+          ? `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente ao seu Sócio Garra (${s.formaPagamento}) e envio dos boletos das parcelas.`
+          : `\uD83D\uDFE2\u26AA Salve ${s.nome}! Aqui é da Diretoria da ${appState.config.nomeTorcida} referente à sua inscrição de Sócio Garra Alviverde.`));
     const waLink = `https://api.whatsapp.com/send?phone=55${cleanPhone.replace(/^55/, '')}&text=${encodeURIComponent(msgCobrancaOuContato)}`;
     const numCamisaDisplay = s.numeroCamisa ? `Nº ${s.numeroCamisa}` : 'Nº —';
 
-    let btnPixLabel = '✔ Confirmar PIX (R$ 105)';
+    let btnPixLabel = '✔ Confirmar PIX';
     if (isParcelado) {
-      if (s.statusPagamento === 'Pendente PIX') btnPixLabel = '✔ Confirmar 1ª Parc. (R$ 35)';
-      else if (s.statusPagamento === '1ª Parcela Paga (R$ 35)') btnPixLabel = '✔ Confirmar 2ª Parc. (R$ 70)';
-      else if (s.statusPagamento === '2ª Parcela Paga (R$ 70)') btnPixLabel = '✔ Quitar 3ª Parc. (R$ 105)';
-      else btnPixLabel = 'Voltar p/ Pendente';
+      if (faltaPagar > 0) {
+        const proxParcelaNum = qtdPagasPix + 1;
+        const novoTotalPago = Math.min(valorLiquido, (qtdPagasPix + 1) * 35);
+        btnPixLabel = novoTotalPago >= valorLiquido
+          ? `✔ Quitar PIX (${formatBRL(novoTotalPago)})`
+          : `✔ Confirmar ${proxParcelaNum}ª PIX (${formatBRL(novoTotalPago)})`;
+      } else {
+        btnPixLabel = 'Voltar PIX p/ R$ 0';
+      }
     } else {
-      btnPixLabel = s.statusPagamento === 'Pago / Ativo' ? 'Marcar Pendente' : '✔ Confirmar PIX (R$ 105)';
+      btnPixLabel = isPaid ? 'Marcar Pendente' : `✔ Confirmar PIX (${formatBRL(valorLiquido)})`;
     }
 
-    const boletoBadgeHtml = isParcelado
+    const boletoBadgeHtml = isParcelado && faltaPagar > 0
       ? `<div style="margin-top:5px;">
            <button type="button" class="btn-table" data-toggle-boleto="${s.id}" style="font-size:0.72rem; padding:3px 8px; background:${s.boletosEnviados ? '#dcfce7' : '#fef3c7'}; color:${s.boletosEnviados ? '#166534' : '#92400e'}; border:1px solid ${s.boletosEnviados ? '#86efac' : '#fde68a'};">
              ${s.boletosEnviados ? '📄 Boletos Enviados ✔' : '📄 Marcar Boleto Enviado'}
@@ -1277,19 +1714,35 @@ function renderAdminSociosTable() {
          </div>`
       : '';
 
+    const motivoBadgeHtml = qtdIsentas > 0
+      ? `<div style="margin-top:3px; display:inline-block; background:#fef08a; color:#713f12; border:1px solid #eab308; padding:1px 7px; border-radius:999px; font-size:0.71rem; font-weight:800;">
+           ${escapeHtml(s.motivoIsencao || (isIsento ? '👑 Diretoria TGA' : '🩸 Ação Social TGA'))} (-${formatBRL(valorIsento)})
+         </div><br>`
+      : '';
+
     const planoColHtml = isIsento
-      ? `<strong style="color:#047857;">👑 Isento — Diretoria TGA (R$ 0,00)</strong><br>
-         <small style="color:#065f46; font-weight:800;">Isenção Master • Benefícios 100% Ativos</small><br>
+      ? `<strong style="color:#047857;">👑 Isento Total — Diretoria TGA</strong><br>
+         ${motivoBadgeHtml}
+         <small style="color:#065f46; font-weight:800;">3/3 Parcelas Isentas • Benefícios 100% Ativos</small><br>
          <small>Camisa: <strong>${s.tamanhoCamisa} (${numCamisaDisplay})</strong> | Sangue: ${s.tipoSanguineo}</small>`
       : `<strong>${s.formaPagamento || 'À Vista no PIX (R$ 105,00)'}</strong><br>
+         ${motivoBadgeHtml}
          <small style="color:${faltaPagar === 0 ? '#047857' : '#b45309'}; font-weight:700;">
-           Pago: ${formatBRL(valorJaPago)} de ${formatBRL(valorTotal)} ${faltaPagar > 0 ? `(Falta ${formatBRL(faltaPagar)})` : '(Quitado)'}
+           PIX: ${formatBRL(valorJaPago)} ${qtdIsentas > 0 ? `| Isento: ${formatBRL(valorIsento)} (${qtdIsentas}p)` : ''} | ${faltaPagar > 0 ? `Falta: ${formatBRL(faltaPagar)}` : 'Quitado ✔'}
          </small><br>
          <small>Camisa: <strong>${s.tamanhoCamisa} (${numCamisaDisplay})</strong> | Sangue: ${s.tipoSanguineo}</small>`;
 
     const statusBadgeStyle = isIsento
       ? 'background:linear-gradient(135deg,#fef08a,#fde047); color:#052e16; border:1px solid #ca8a04; font-weight:800;'
-      : (isPartial ? 'background:#e0f2fe;color:#0369a1;' : '');
+      : (qtdIsentas > 0 && !isPaid
+        ? 'background:#fef9c3; color:#854d0e; border:1px solid #eab308; font-weight:800;'
+        : (isPartial ? 'background:#e0f2fe;color:#0369a1;' : ''));
+
+    const statusTextDisplay = isIsento
+      ? '👑 Isento Total (Diretoria)'
+      : (isPaid && qtdIsentas > 0
+        ? `✅ Quitado (${qtdIsentas} Parc. Isenta)`
+        : (s.statusPagamento || 'Pendente PIX'));
 
     return `
       <tr>
@@ -1298,7 +1751,7 @@ function renderAdminSociosTable() {
           <small>${formatDateBR(s.createdAt)}</small>
         </td>
         <td>
-          <strong>${s.nome}</strong> ${isIsento ? '<span title="Isento pelo Master">👑</span>' : ''}<br>
+          <strong>${s.nome}</strong> ${qtdIsentas > 0 ? '<span title="Possui Isenção Master">👑</span>' : ''}<br>
           <small>Apelido: ${s.apelido || '—'} | Nasc: ${formatDateBR(s.dataNascimento)}</small>
           ${editadoInfoHtml}
         </td>
@@ -1315,7 +1768,7 @@ function renderAdminSociosTable() {
         </td>
         <td>
           <span class="status-badge ${isPaid ? 'status-paid' : 'status-pending'}" style="${statusBadgeStyle}">
-            ${isIsento ? '👑 Isento (Diretoria)' : s.statusPagamento}
+            ${statusTextDisplay}
           </span>
           ${boletoBadgeHtml}
           ${aprovadoInfoHtml}
@@ -1328,8 +1781,8 @@ function renderAdminSociosTable() {
               </button>
             ` : ''}
             ${isMaster ? `
-              <button type="button" class="btn-table" data-isentar-socio="${s.id}" title="Exclusivo Usuário Master: Isentar Diretor de Pagar Sócio" style="background:${isIsento ? '#fef3c7' : 'linear-gradient(135deg,#fde047,#eab308)'}; color:${isIsento ? '#92400e' : '#052e16'}; border:1px solid #ca8a04; font-weight:800;">
-                ${isIsento ? '↩️ Tirar Isenção' : '👑 Isentar (Diretoria)'}
+              <button type="button" class="btn-table" data-isentar-socio="${s.id}" title="Exclusivo Usuário Master: Isentar por Parcela (Doação de Sangue/Eventos) ou Total (Diretoria)" style="background:linear-gradient(135deg,#fde047,#eab308); color:#052e16; border:1px solid #ca8a04; font-weight:800;">
+                👑 Isentar Parcela / Sócio
               </button>
             ` : ''}
             ${canEdit ? `
@@ -1351,118 +1804,11 @@ function renderAdminSociosTable() {
     `;
   }).join('');
 
-  // Botão EXCLUSIVO DO USUÁRIO MASTER: Isentar Diretor de Pagar Sócio (ou remover isenção)
+  // Botão EXCLUSIVO DO USUÁRIO MASTER: Abre modal para Isentar 1, 2 ou 3 Parcelas (ou remover isenção)
   tbody.querySelectorAll('[data-isentar-socio]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      if (!currentAdminUser || !currentAdminUser.isMaster) {
-        showToast('🚫 Apenas o Usuário Master pode isentar membros de pagar o sócio.');
-        return;
-      }
+    btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-isentar-socio');
-      const socio = appState.socios.find(x => x.id === id);
-      if (!socio) return;
-
-      const jaIsento = isSocioIsento(socio);
-      const valorPadrao = Number(getSinglePlan()?.valor) || 105;
-
-      if (!jaIsento) {
-        const ok = window.confirm(
-          `👑 ISENÇÃO EXCLUSIVA DO USUÁRIO MASTER\n\n` +
-          `Deseja ISENTAR "${socio.nome}" de pagar o Sócio Garra Alviverde (Diretoria)?\n\n` +
-          `• Valor cobrado: R$ 0,00 (Isento)\n` +
-          `• Carteirinha Digital Ativa, Desconto na Loja e Ingresso no Velosão ficarão 100% liberados imediatamente!`
-        );
-        if (!ok) return;
-
-        const aprovadoPor = {
-          nome: currentAdminUser.nome,
-          usuario: currentAdminUser.usuario,
-          dataHora: new Date().toISOString(),
-          status: 'Isento (Diretoria)'
-        };
-
-        socio.isento = true;
-        socio.statusPagamento = 'Isento (Diretoria)';
-        socio.formaPagamento = 'Isento — Diretoria TGA (R$ 0,00)';
-        socio.valorPlano = 0;
-        socio.valorPago = 0;
-        socio.parcelasPagas = 3;
-        socio.aprovadoPor = aprovadoPor;
-
-        const audit = buildAuditPayload(
-          'PIX Sócio',
-          `Concedeu ISENÇÃO DE PAGAMENTO (Diretoria) ao sócio ${socio.nome}`,
-          `Isento pelo Usuário Master (${currentAdminUser.nome}) • Valor cobrado: R$ 0,00 • Benefícios liberados`
-        );
-
-        try {
-          await fetch(`/api/socios/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              isento: true,
-              statusPagamento: socio.statusPagamento,
-              formaPagamento: socio.formaPagamento,
-              valorPlano: 0,
-              valorPago: 0,
-              parcelasPagas: 3,
-              aprovadoPor,
-              _auditoria: audit
-            })
-          });
-        } catch (e) {}
-
-        saveLocalBackup();
-        renderAll();
-        showToast(`👑 ${socio.nome} agora está ISENTO (Diretoria TGA) com todos os benefícios ativos!`);
-      } else {
-        const ok = window.confirm(
-          `Deseja REMOVER a isenção de "${socio.nome}" e voltar o plano para o valor normal (${formatBRL(valorPadrao)} — Pendente PIX)?`
-        );
-        if (!ok) return;
-
-        const aprovadoPor = {
-          nome: currentAdminUser.nome,
-          usuario: currentAdminUser.usuario,
-          dataHora: new Date().toISOString(),
-          status: 'Pendente PIX'
-        };
-
-        socio.isento = false;
-        socio.statusPagamento = 'Pendente PIX';
-        socio.formaPagamento = 'À Vista no PIX (R$ 105,00)';
-        socio.valorPlano = valorPadrao;
-        socio.valorPago = 0;
-        socio.parcelasPagas = 0;
-        socio.aprovadoPor = aprovadoPor;
-
-        const audit = buildAuditPayload(
-          'PIX Sócio',
-          `Removeu a isenção de pagamento do sócio ${socio.nome}`,
-          `Voltou para Pendente PIX (${formatBRL(valorPadrao)})`
-        );
-
-        try {
-          await fetch(`/api/socios/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              isento: false,
-              statusPagamento: socio.statusPagamento,
-              formaPagamento: socio.formaPagamento,
-              valorPlano: valorPadrao,
-              valorPago: 0,
-              parcelasPagas: 0,
-              aprovadoPor,
-              _auditoria: audit
-            })
-          });
-        } catch (e) {}
-
-        saveLocalBackup();
-        renderAll();
-        showToast(`↩️ Isenção removida de ${socio.nome}. Status voltou para Pendente PIX.`);
-      }
+      openModalIsentarSocioParcelas(id);
     });
   });
 
@@ -1476,45 +1822,51 @@ function renderAdminSociosTable() {
       const socio = appState.socios.find(x => x.id === id);
       if (!socio) return;
 
-      const isParcelado = String(socio.formaPagamento || '').includes('3x');
+      const qtdIsentas = getSocioParcelasIsentas(socio);
+      const valorLiquido = getSocioValorLiquidoPrevisto(socio);
+      const qtdPagasAtual = getSocioParcelasPagasPix(socio);
+      const isParcelado = String(socio.formaPagamento || '').includes('3x') || qtdIsentas > 0;
       const statusAntigo = socio.statusPagamento;
-      let novoStatus = 'Pago / Ativo';
-      let novoValorPago = 105;
-      let novasParcelas = 1;
+
+      let novoValorPago = 0;
+      let novasParcelasPagas = 0;
+      let novoStatus = 'Pendente PIX';
 
       if (isParcelado) {
-        if (statusAntigo === 'Pendente PIX') {
-          novoStatus = '1ª Parcela Paga (R$ 35)';
-          novoValorPago = 35;
-          novasParcelas = 1;
-        } else if (statusAntigo === '1ª Parcela Paga (R$ 35)') {
-          novoStatus = '2ª Parcela Paga (R$ 70)';
-          novoValorPago = 70;
-          novasParcelas = 2;
-        } else if (statusAntigo === '2ª Parcela Paga (R$ 70)') {
-          novoStatus = 'Pago / Ativo';
-          novoValorPago = 105;
-          novasParcelas = 3;
+        if (getSocioFaltaPagarPix(socio) > 0) {
+          novasParcelasPagas = qtdPagasAtual + 1;
+          novoValorPago = Math.min(valorLiquido, novasParcelasPagas * 35);
+          if (novoValorPago >= valorLiquido) {
+            novoStatus = 'Pago / Ativo';
+          } else if (novasParcelasPagas === 1 && qtdIsentas === 0) {
+            novoStatus = '1ª Parcela Paga (R$ 35)';
+          } else if (novasParcelasPagas === 2 && qtdIsentas === 0) {
+            novoStatus = '2ª Parcela Paga (R$ 70)';
+          } else {
+            novoStatus = `1ª Parcela Paga + ${qtdIsentas} Isenta`;
+          }
         } else {
-          novoStatus = 'Pendente PIX';
+          novasParcelasPagas = 0;
           novoValorPago = 0;
-          novasParcelas = 0;
+          novoStatus = qtdIsentas > 0
+            ? (qtdIsentas === 1 ? '1 Parcela Isenta (R$ 35)' : '2 Parcelas Isentas (R$ 70)')
+            : 'Pendente PIX';
         }
       } else {
         if (statusAntigo === 'Pago / Ativo') {
           novoStatus = 'Pendente PIX';
           novoValorPago = 0;
-          novasParcelas = 0;
+          novasParcelasPagas = 0;
         } else {
           novoStatus = 'Pago / Ativo';
-          novoValorPago = Number(socio.valorPlano) || 105;
-          novasParcelas = 1;
+          novoValorPago = valorLiquido;
+          novasParcelasPagas = Math.round(valorLiquido / 35);
         }
       }
 
       const dirNome = currentAdminUser ? currentAdminUser.nome : 'Diretoria';
       const ok = window.confirm(
-        `Confirmar atualização financeira de "${socio.nome}" para:\n• Status: ${novoStatus}\n• Total Pago: ${formatBRL(novoValorPago)}\n\nEsta ação ficará registrada em seu usuário: ${dirNome}.`
+        `Confirmar atualização financeira de "${socio.nome}" para:\n• Status: ${novoStatus}\n• Valor Pago em PIX: ${formatBRL(novoValorPago)} (Líquido previsto: ${formatBRL(valorLiquido)})\n\nEsta ação ficará registrada em seu usuário: ${dirNome}.`
       );
       if (!ok) return;
 
@@ -1526,13 +1878,13 @@ function renderAdminSociosTable() {
       };
       socio.statusPagamento = novoStatus;
       socio.valorPago = novoValorPago;
-      socio.parcelasPagas = novasParcelas;
+      socio.parcelasPagas = novasParcelasPagas;
       socio.aprovadoPor = aprovadoPor;
 
       const audit = buildAuditPayload(
         'PIX Sócio',
-        `Atualizou pagamento do sócio ${socio.nome} para "${novoStatus}"`,
-        `Status: "${statusAntigo}" ➔ "${novoStatus}" | Valor Pago: ${formatBRL(novoValorPago)} de ${formatBRL(socio.valorPlano || 105)}`
+        `Atualizou pagamento PIX do sócio ${socio.nome} para "${novoStatus}"`,
+        `Status: "${statusAntigo}" ➔ "${novoStatus}" | Pago PIX: ${formatBRL(novoValorPago)} | Saldo Isento: ${formatBRL(getSocioValorIsento(socio))}`
       );
 
       try {
@@ -1542,7 +1894,7 @@ function renderAdminSociosTable() {
           body: JSON.stringify({
             statusPagamento: novoStatus,
             valorPago: novoValorPago,
-            parcelasPagas: novasParcelas,
+            parcelasPagas: novasParcelasPagas,
             aprovadoPor,
             _auditoria: audit
           })
@@ -2108,6 +2460,292 @@ function populateAdminConfigForm() {
 }
 
 // ============================================================================
+// ADMINISTRAÇÃO DE EVENTOS & AÇÕES SOCIAIS DA TGA E ISENÇÃO DE PARCELA
+// ============================================================================
+function renderAdminEventosTab() {
+  const evListEl = document.getElementById('adminEventosList');
+  const filterSelect = document.getElementById('filterEventoParticipantesSelect');
+  const partBodyEl = document.getElementById('adminParticipantesEventosBody');
+
+  const eventos = Array.isArray(appState.eventosTga) ? appState.eventosTga : [];
+  const todosPart = Array.isArray(appState.participantesEventos) ? appState.participantesEventos : [];
+  const isMaster = Boolean(currentAdminUser && currentAdminUser.isMaster);
+
+  if (filterSelect) {
+    const cur = filterSelect.value;
+    filterSelect.innerHTML = `<option value="todos">Todos os Eventos e Ações Sociais (${todosPart.length})</option>` +
+      eventos.map(ev => `<option value="${ev.id}">${escapeHtml(ev.titulo)} (${formatDateBR(ev.dataEvento)})</option>`).join('');
+    if (cur && Array.from(filterSelect.options).some(o => o.value === cur)) {
+      filterSelect.value = cur;
+    }
+  }
+
+  if (evListEl) {
+    evListEl.innerHTML = eventos.length === 0
+      ? `<p style="padding:12px;">Nenhum evento ou ação social cadastrado.</p>`
+      : eventos.map((ev) => {
+          const icon = getEventoCategoryIcon(ev.categoria);
+          const isAberto = ev.status !== 'Encerrado';
+          const qtdInscritos = todosPart.filter(p => p.eventoId === ev.id).length;
+          return `
+            <div class="manage-item" style="flex-direction:column; align-items:stretch; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+                <div>
+                  <strong>${icon} ${escapeHtml(ev.titulo)}</strong>
+                  <span class="status-badge ${isAberto ? 'status-paid' : 'status-pending'}" style="margin-left:6px;">
+                    ${escapeHtml(ev.status || 'Inscrições Abertas')}
+                  </span>
+                  ${ev.isentaParcela !== false ? `<span class="status-badge" style="background:#fef9c3;color:#854d0e;border:1px solid #eab308;margin-left:4px;">🎁 Isenta 1 Parcela (R$ 35)</span>` : ''}
+                  <br>
+                  <small><strong>${escapeHtml(ev.categoria)}</strong> • 📅 ${formatDateBR(ev.dataEvento)} às ${escapeHtml(ev.horario || '08:00')} • 📍 ${escapeHtml(ev.local)}</small><br>
+                  <small style="color:#047857; font-weight:700;">👥 Participantes inscritos na lista: ${qtdInscritos} (Total c/ base: ${(Number(ev.inscritosCount) || 0)})</small>
+                </div>
+                <div class="action-btns">
+                  <button type="button" class="btn-table btn-approve" data-toggle-evento-status="${ev.id}">
+                    ${isAberto ? 'Encerrar Inscrições' : 'Reabrir Inscrições'}
+                  </button>
+                  <button type="button" class="btn-table btn-del" data-del-evento="${ev.id}">🗑️</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+    evListEl.querySelectorAll('[data-toggle-evento-status]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-toggle-evento-status');
+        const ev = (appState.eventosTga || []).find(x => x.id === id);
+        if (!ev) return;
+        ev.status = ev.status === 'Encerrado' ? 'Inscrições Abertas' : 'Encerrado';
+        const audit = buildAuditPayload('Eventos TGA', `Alterou status do evento "${ev.titulo}" para ${ev.status}`, '');
+        try {
+          await fetch(`/api/eventos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: ev.status, _auditoria: audit })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast(`🤝 Status de "${ev.titulo}" alterado para: ${ev.status}`);
+      });
+    });
+
+    evListEl.querySelectorAll('[data-del-evento]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del-evento');
+        const ev = (appState.eventosTga || []).find(x => x.id === id);
+        if (!ev) return;
+        if (!window.confirm(`Deseja remover o evento "${ev.titulo}" do painel?`)) return;
+        appState.eventosTga = (appState.eventosTga || []).filter(x => x.id !== id);
+        const audit = buildAuditPayload('Eventos TGA', `Removeu o evento "${ev.titulo}"`, '');
+        try {
+          await fetch(`/api/eventos/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ _auditoria: audit })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast('🗑️ Evento removido do painel.');
+      });
+    });
+  }
+
+  if (partBodyEl) {
+    const filtroId = filterSelect?.value || 'todos';
+    const lista = todosPart.filter(p => filtroId === 'todos' || p.eventoId === filtroId);
+
+    if (lista.length === 0) {
+      partBodyEl.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:22px;">Nenhum participante ou voluntário inscrito para este filtro até o momento.</td></tr>`;
+      return;
+    }
+
+    partBodyEl.innerHTML = lista.map((p) => {
+      const socioMatch = (p.socioId && appState.socios.find(s => s.id === p.socioId)) || findSocioByCpf(p.cpf);
+      const isConfirmado = p.statusPresenca === 'Presença Confirmada ✔';
+      const cleanWa = String(p.whatsapp || '').replace(/\D/g, '');
+      const waLink = `https://api.whatsapp.com/send?phone=55${cleanWa.replace(/^55/, '')}&text=${encodeURIComponent(`\uD83D\uDFE2\u26AA Salve ${p.nome}! Aqui é da Diretoria da Garra Alviverde sobre sua participação na ação social "${p.eventoTitulo}".`)}`;
+
+      let beneficioBadge = `<small style="color:#64748b;">Voluntário (Não-Sócio)</small>`;
+      if (p.parcelaIsentaConcedida) {
+        beneficioBadge = `<span class="status-badge" style="background:#fef9c3; color:#854d0e; border:1px solid #eab308; font-weight:800;">👑 1 Parcela Isenta (-R$ 35) ✔</span>`;
+      } else if (socioMatch) {
+        const qtdIsentasAtual = getSocioParcelasIsentas(socioMatch);
+        beneficioBadge = `<span class="status-badge status-pending">Sócio Elegível (Atual: ${qtdIsentasAtual}/3 isentas)</span>`;
+      }
+
+      return `
+        <tr>
+          <td>
+            <strong>${escapeHtml(p.eventoTitulo)}</strong><br>
+            <small>${escapeHtml(p.eventoCategoria || 'Ações Sociais')} • ${formatDateBR(p.createdAt)}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(p.nome)}</strong><br>
+            <small>${socioMatch ? `<span style="color:#047857;font-weight:800;">🪪 Sócio (${escapeHtml(socioMatch.matricula || 'TGA')})</span>` : 'Voluntário (Não-Sócio)'}</small>
+          </td>
+          <td>
+            <strong>${escapeHtml(p.cpf || '—')}</strong><br>
+            <small>🩸 Sangue: <strong>${escapeHtml(p.tipoSanguineo || (socioMatch && socioMatch.tipoSanguineo) || '—')}</strong></small>
+          </td>
+          <td>${escapeHtml(p.whatsapp)}</td>
+          <td><small style="font-weight:700; color:#1e293b;">${escapeHtml(p.modalidade || p.observacoes || 'Participante TGA')}</small></td>
+          <td>
+            <span class="status-badge ${isConfirmado ? 'status-paid' : 'status-pending'}">
+              ${escapeHtml(p.statusPresenca || 'Inscrito — Aguardando Confirmação')}
+            </span>
+            <div style="margin-top:4px;">${beneficioBadge}</div>
+          </td>
+          <td>
+            <div class="action-btns">
+              ${(isMaster && socioMatch && !p.parcelaIsentaConcedida) ? `
+                <button type="button" class="btn-table" style="background:#fef9c3;color:#854d0e;border-color:#eab308;font-weight:800;" data-isentar-evento-part="${p.id}" title="Exclusivo Master: Confirmar presença no evento e abater 1 parcela (R$ 35,00) do Sócio">
+                  👑 Confirmar + Isentar 1 Parcela (R$ 35)
+                </button>
+              ` : ''}
+              <button type="button" class="btn-table btn-approve" data-toggle-evento-part="${p.id}">
+                ${isConfirmado ? 'Voltar Inscrito' : '✔ Confirmar Presença'}
+              </button>
+              <a href="${waLink}" target="_blank" rel="noopener" class="btn-table btn-wa">💬 WhatsApp</a>
+              <button type="button" class="btn-table btn-del" data-del-evento-part="${p.id}">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Botão Master: Confirmar presença + Isentar 1 Parcela (R$ 35,00) automaticamente na ficha do sócio
+    partBodyEl.querySelectorAll('[data-isentar-evento-part]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!currentAdminUser || !currentAdminUser.isMaster) {
+          showToast('🚫 Apenas o Usuário Master pode conceder isenção de parcela.');
+          return;
+        }
+        const partId = btn.getAttribute('data-isentar-evento-part');
+        const part = (appState.participantesEventos || []).find(x => x.id === partId);
+        if (!part) return;
+
+        const socio = (part.socioId && appState.socios.find(s => s.id === part.socioId)) || findSocioByCpf(part.cpf);
+        if (!socio) {
+          showToast('⚠️ CPF deste participante não foi localizado na lista de Sócios TGA.');
+          return;
+        }
+
+        const qtdAtual = getSocioParcelasIsentas(socio);
+        const novaQtd = Math.min(3, qtdAtual + 1);
+        const novoValorIsento = novaQtd * 35;
+        const motivo = `${part.eventoCategoria || 'Ação Social'}: ${part.eventoTitulo || 'Evento TGA'}`;
+        const pagasPix = getSocioParcelasPagasPix(socio);
+        const totalCoberto = Math.min(3, pagasPix + novaQtd);
+
+        let novoStatus = socio.statusPagamento;
+        let novaForma = socio.formaPagamento;
+        const isTotalIsento = novaQtd >= 3;
+
+        if (isTotalIsento) {
+          novoStatus = 'Isento (Diretoria)';
+          novaForma = 'Isento — Diretoria TGA (R$ 0,00)';
+        } else if (totalCoberto >= 3) {
+          novoStatus = 'Pago / Ativo';
+          novaForma = `Parcelado 3x (${pagasPix} Paga(s) PIX + ${novaQtd} Isenta(s) Ação Social)`;
+        } else if (totalCoberto === 2) {
+          novoStatus = `2ª Parcela Paga (R$ 70)`;
+          novaForma = `Parcelado 3x (${pagasPix} PIX + ${novaQtd} Isenta = R$ ${novoValorIsento} abatido)`;
+        } else if (totalCoberto === 1) {
+          novoStatus = `1ª Parcela Paga (R$ 35)`;
+          novaForma = `Parcelado 3x (1 Parcela Isenta - ${part.eventoCategoria || 'Ação Social'})`;
+        }
+
+        const dirNome = currentAdminUser.nome || 'Jully Gabriel (Master)';
+        const dirUsuario = currentAdminUser.usuario || 'jully';
+
+        const updatesSocio = {
+          isento: isTotalIsento,
+          parcelasIsentas: novaQtd,
+          valorIsento: novoValorIsento,
+          motivoIsencao: motivo,
+          valorPlano: isTotalIsento ? 0 : 105,
+          statusPagamento: novoStatus,
+          formaPagamento: novaForma,
+          aprovadoPor: {
+            nome: dirNome,
+            usuario: dirUsuario,
+            dataHora: new Date().toISOString(),
+            status: `Isenção ${novaQtd}/3 (${formatBRL(novoValorIsento)}) — ${motivo}`
+          }
+        };
+
+        Object.assign(socio, updatesSocio);
+        part.statusPresenca = 'Presença Confirmada ✔';
+        part.parcelaIsentaConcedida = true;
+
+        const audit = buildAuditPayload(
+          'Isenção Sócio',
+          `Confirmou presença no evento "${part.eventoTitulo}" e isentou +1 parcela (${formatBRL(35)}) do sócio ${socio.nome}`,
+          `Total Isento do Sócio: ${novaQtd}/3 parcelas (${formatBRL(novoValorIsento)}) | Motivo: ${motivo}`
+        );
+
+        try {
+          await fetch(`/api/socios/${socio.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...updatesSocio, _auditoria: audit })
+          });
+          await fetch(`/api/participantes-eventos/${part.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ statusPresenca: part.statusPresenca, parcelaIsentaConcedida: true })
+          });
+        } catch (e) {}
+
+        saveLocalBackup();
+        renderAll();
+        showToast(`👑 Presença confirmada e +1 parcela (R$ 35,00) isentada para ${socio.nome}!`);
+      });
+    });
+
+    partBodyEl.querySelectorAll('[data-toggle-evento-part]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-toggle-evento-part');
+        const part = (appState.participantesEventos || []).find(x => x.id === id);
+        if (!part) return;
+        part.statusPresenca = part.statusPresenca === 'Presença Confirmada ✔'
+          ? 'Inscrito — Aguardando Confirmação'
+          : 'Presença Confirmada ✔';
+        try {
+          await fetch(`/api/participantes-eventos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ statusPresenca: part.statusPresenca })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast(`✅ Status de ${part.nome}: ${part.statusPresenca}`);
+      });
+    });
+
+    partBodyEl.querySelectorAll('[data-del-evento-part]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-del-evento-part');
+        const part = (appState.participantesEventos || []).find(x => x.id === id);
+        if (!part) return;
+        if (!window.confirm(`Deseja remover a inscrição de "${part.nome}" deste evento?`)) return;
+        appState.participantesEventos = (appState.participantesEventos || []).filter(x => x.id !== id);
+        try {
+          await fetch(`/api/participantes-eventos/${id}`, { method: 'DELETE' });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast('🗑️ Participante removido da lista.');
+      });
+    });
+  }
+}
+
+// ============================================================================
 // ADMINISTRAÇÃO DA LOJA DE MATERIAIS E DA TABELA DE JOGOS / PORTARIA VELOSÃO
 // ============================================================================
 function renderAdminLojaTab() {
@@ -2645,21 +3283,26 @@ function printStyledReport({ reportTitle, subtitle, summaryItems = [], headers =
 
 function buildSociosReportConfig() {
   const totalSocios = appState.socios.length;
-  const isentos = appState.socios.filter(s => isSocioIsento(s)).length;
+  const isentosTotal = appState.socios.filter(s => isSocioIsento(s)).length;
+  const isentosParcial = appState.socios.filter(s => getSocioParcelasIsentas(s) > 0 && !isSocioIsento(s)).length;
   const quitados = appState.socios.filter(s => s.statusPagamento === 'Pago / Ativo' && !isSocioIsento(s)).length;
   const emParcelamento = appState.socios.filter(s => String(s.statusPagamento || '').includes('Parcela')).length;
   const recebido = appState.socios.reduce((acc, s) => acc + getSocioValorPagoEfetivo(s), 0);
-  const previsto = appState.socios.reduce((acc, s) => acc + (isSocioIsento(s) ? 0 : (Number(s.valorPlano) || 105)), 0);
+  const totalIsentoValor = appState.socios.reduce((acc, s) => acc + getSocioValorIsento(s), 0);
+  const previstoLiquido = appState.socios.reduce((acc, s) => acc + getSocioValorLiquidoPrevisto(s), 0);
 
   const headers = [
     'Nº Camiseta', 'Matrícula', 'Nome Completo do Sócio', 'Apelido', 'CPF', 'RG', 'Nascimento',
     'WhatsApp', 'Setor / Bairro', 'Cidade / UF', 'Tam. Camisa', 'Sangue',
-    'Modalidade de Pagamento', 'Valor do Plano', 'Valor Já Pago', 'Status PIX / Parcelas', 'Boletos Enviados',
+    'Modalidade de Pagamento', 'Parcelas Isentas', 'Valor Isento (R$)', 'Motivo da Isenção',
+    'Valor Líquido Previsto', 'Valor Pago no PIX', 'Falta Pagar PIX', 'Status PIX / Parcelas', 'Boletos Enviados',
     'PIX / Isenção Por', 'Última Edição Por', 'Observações', 'Data Inscrição'
   ];
 
   const rows = appState.socios.map((s) => {
     const isento = isSocioIsento(s);
+    const qtdIsentas = getSocioParcelasIsentas(s);
+    const valIsento = getSocioValorIsento(s);
     return [
       s.numeroCamisa ? `Nº ${s.numeroCamisa}` : '—',
       s.matricula || '—',
@@ -2674,8 +3317,12 @@ function buildSociosReportConfig() {
       s.tamanhoCamisa || 'G',
       s.tipoSanguineo || '—',
       isento ? 'Isento — Diretoria TGA (R$ 0,00)' : (s.formaPagamento || 'À Vista no PIX (R$ 105,00)'),
-      formatBRL(isento ? 0 : (Number(s.valorPlano) || 105)),
+      qtdIsentas > 0 ? `${qtdIsentas}/3 Parcela(s)` : '0/3',
+      formatBRL(valIsento),
+      s.motivoIsencao || (isento ? 'Diretoria TGA (3/3)' : '—'),
+      formatBRL(getSocioValorLiquidoPrevisto(s)),
       formatBRL(getSocioValorPagoEfetivo(s)),
+      formatBRL(getSocioFaltaPagarPix(s)),
       isento ? 'Isento (Diretoria)' : (s.statusPagamento || 'Pendente PIX'),
       isento ? 'Isento' : (s.boletosEnviados ? 'Sim' : 'Não'),
       s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : '—',
@@ -2688,18 +3335,119 @@ function buildSociosReportConfig() {
   return {
     filename: `Relacao_Oficial_Socios_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
     sheetName: 'Socios Garra Alviverde',
-    reportTitle: 'RELAÇÃO OFICIAL DE MEMBROS E CONTROLE FINANCEIRO — SÓCIO GARRA ALVIVERDE',
+    reportTitle: 'RELAÇÃO OFICIAL DE MEMBROS, ISENÇÕES E CONTROLE FINANCEIRO — SÓCIO GARRA ALVIVERDE',
     subtitle: 'Investimento: R$ 105,00 à vista ou em até 3x de R$ 35,00 • Torcida Organizada Garra Alviverde (TGA)',
     summaryItems: [
       `Total de Sócios: ${totalSocios}`,
-      `Quitados (R$ 105): ${quitados}`,
-      `Isentos (Diretoria): ${isentos}`,
-      `Em Parcelamento (3x): ${emParcelamento}`,
-      `Arrecadado: ${formatBRL(recebido)} de ${formatBRL(previsto)}`
+      `Quitados PIX: ${quitados}`,
+      `Isentos Diretoria (3/3): ${isentosTotal}`,
+      `Isentos Parciais (Ações Sociais): ${isentosParcial}`,
+      `Em Parcelamento: ${emParcelamento}`,
+      `Saldo Isento: ${formatBRL(totalIsentoValor)}`,
+      `Arrecadado PIX: ${formatBRL(recebido)} de ${formatBRL(previstoLiquido)} (Líquido)`
     ],
     headers,
     rows,
-    textCols: [0, 1, 4, 5, 6, 7, 10, 11, 20]
+    textCols: [0, 1, 4, 5, 6, 7, 10, 11, 13, 24]
+  };
+}
+
+function buildIsentosReportConfig() {
+  const listaIsentos = appState.socios.filter(s => hasSocioAnyIsencao(s));
+  const totalBruto = appState.socios.length * 105;
+  const totalValorIsento = listaIsentos.reduce((acc, s) => acc + getSocioValorIsento(s), 0);
+  const totalParcelasIsentas = listaIsentos.reduce((acc, s) => acc + getSocioParcelasIsentas(s), 0);
+  const previstoLiquido = Math.max(0, totalBruto - totalValorIsento);
+
+  const headers = [
+    'Nº Camiseta', 'Matrícula', 'Nome Completo do Sócio', 'CPF', 'WhatsApp',
+    'Tipo de Isenção', 'Motivo / Ação Social TGA', 'Parcelas Isentas',
+    'Valor Abatido / Isento', 'Valor Pago no PIX', 'Saldo a Pagar no PIX', 'Autorizado pelo Master'
+  ];
+
+  const rows = listaIsentos.map((s) => {
+    const qtd = getSocioParcelasIsentas(s);
+    const valIsento = getSocioValorIsento(s);
+    const valPago = getSocioValorPagoEfetivo(s);
+    const falta = getSocioFaltaPagarPix(s);
+    const isTotal = qtd >= 3 || isSocioIsento(s);
+    return [
+      s.numeroCamisa ? `Nº ${s.numeroCamisa}` : '—',
+      s.matricula || '—',
+      s.nome || '—',
+      s.cpf || '—',
+      s.whatsapp || '—',
+      isTotal ? 'Isenção Total (Diretoria 3/3)' : `Isenção Parcial (${qtd}/3 Parcela${qtd > 1 ? 's' : ''})`,
+      s.motivoIsencao || (isTotal ? 'Diretoria TGA — Isenção Total' : 'Doação de Sangue / Ação Social TGA'),
+      `${qtd}/3 Parcela(s)`,
+      `- ${formatBRL(valIsento)}`,
+      formatBRL(valPago),
+      falta === 0 ? 'R$ 0,00 (Quitado)' : formatBRL(falta),
+      s.aprovadoPor ? `${s.aprovadoPor.nome} (${formatDateTimeBR(s.aprovadoPor.dataHora)})` : 'Jully Gabriel (Master)'
+    ];
+  });
+
+  return {
+    filename: `Extrato_Valores_e_Saldos_Isentos_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
+    sheetName: 'Saldos Isentos TGA',
+    reportTitle: 'EXTRATO OFICIAL DE VALORES E SALDOS ISENTOS — DIRETORIA & AÇÕES SOCIAIS TGA',
+    subtitle: 'Detalhamento de Isenções Totais (Diretoria 3/3) e Isenções por Parcela (Doação de Sangue e Ações Sociais)',
+    summaryItems: [
+      `Membros com Isenção: ${listaIsentos.length}`,
+      `Total de Parcelas Isentas: ${totalParcelasIsentas}`,
+      `Receita Bruta (s/ Isenção): ${formatBRL(totalBruto)}`,
+      `Saldo Total Isento: - ${formatBRL(totalValorIsento)}`,
+      `Previsto Líquido Real (PIX): ${formatBRL(previstoLiquido)}`
+    ],
+    headers,
+    rows,
+    textCols: [0, 1, 3, 4, 7]
+  };
+}
+
+function buildEventosReportConfig() {
+  const filtroId = document.getElementById('filterEventoParticipantesSelect')?.value || 'todos';
+  const todos = Array.isArray(appState.participantesEventos) ? appState.participantesEventos : [];
+  const lista = todos.filter(p => filtroId === 'todos' || p.eventoId === filtroId);
+  const confirmados = lista.filter(p => p.statusPresenca === 'Presença Confirmada ✔').length;
+  const isencoesConcedidas = lista.filter(p => p.parcelaIsentaConcedida).length;
+
+  const headers = [
+    'Nº', 'Evento / Ação Social TGA', 'Categoria', 'Nome do Participante',
+    'CPF', 'Sangue', 'WhatsApp', 'Vínculo Sócio TGA',
+    'Status de Presença', 'Isenção de Parcela (R$ 35)', 'Data Inscrição'
+  ];
+
+  const rows = lista.map((p, idx) => {
+    const socioMatch = (p.socioId && appState.socios.find(s => s.id === p.socioId)) || findSocioByCpf(p.cpf);
+    return [
+      String(idx + 1).padStart(2, '0'),
+      p.eventoTitulo || 'Ação Social TGA',
+      p.eventoCategoria || 'Ações Sociais',
+      p.nome || '—',
+      p.cpf || '—',
+      p.tipoSanguineo || (socioMatch && socioMatch.tipoSanguineo) || '—',
+      p.whatsapp || '—',
+      socioMatch ? `Sócio TGA (${socioMatch.matricula || 'Ativo'})` : 'Voluntário (Não-Sócio)',
+      p.statusPresenca || 'Inscrito — Aguardando Confirmação',
+      p.parcelaIsentaConcedida ? 'Sim — 1 Parcela Isenta (-R$ 35,00)' : (socioMatch ? 'Elegível após confirmação' : 'Não aplicável'),
+      formatDateTimeBR(p.createdAt)
+    ];
+  });
+
+  return {
+    filename: `Lista_Participantes_Eventos_Sociais_TGA_${new Date().toISOString().slice(0, 10)}.xls`,
+    sheetName: 'Eventos Sociais TGA',
+    reportTitle: 'RELAÇÃO OFICIAL DE PARTICIPANTES E VOLUNTÁRIOS — EVENTOS E AÇÕES SOCIAIS TGA',
+    subtitle: 'Doação de Sangue, Eventos da Páscoa, Dia das Crianças, Natal Solidário e Ações Sociais • Garra Alviverde',
+    summaryItems: [
+      `Total de Inscritos: ${lista.length}`,
+      `Presenças Confirmadas: ${confirmados}`,
+      `Isenções de Parcela Concedidas: ${isencoesConcedidas} (${formatBRL(isencoesConcedidas * 35)})`
+    ],
+    headers,
+    rows,
+    textCols: [0, 4, 5, 6, 10]
   };
 }
 
@@ -3130,7 +3878,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Fechar ao clicar fora da caixa da janela (no fundo escuro)
-  ['windowSocio', 'windowCaravanas', 'windowHistoria', 'windowPortalSocio', 'windowLojaMateriais', 'windowJogosEcrv'].forEach((id) => {
+  ['windowSocio', 'windowCaravanas', 'windowHistoria', 'windowPortalSocio', 'windowLojaMateriais', 'windowJogosEcrv', 'windowEventosTga'].forEach((id) => {
     const backdrop = document.getElementById(id);
     if (backdrop) {
       backdrop.addEventListener('click', (e) => {
@@ -3549,7 +4297,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Volta para a primeira aba por padrão
     document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
     document.getElementById('btnTabSocios')?.classList.add('active');
-    ['tab-socios', 'tab-loja', 'tab-jogos', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
+    ['tab-socios', 'tab-eventos', 'tab-loja', 'tab-jogos', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
       const el = document.getElementById(panelId);
       if (el) el.hidden = panelId !== 'tab-socios';
     });
@@ -3622,12 +4370,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
       tabBtn.classList.add('active');
-      ['tab-socios', 'tab-loja', 'tab-jogos', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
+      ['tab-socios', 'tab-eventos', 'tab-loja', 'tab-jogos', 'tab-caravanas-inscritos', 'tab-gerenciar-caravanas', 'tab-diretores', 'tab-auditoria', 'tab-backups', 'tab-config'].forEach((panelId) => {
         const panel = document.getElementById(panelId);
         if (panel) panel.hidden = panelId !== targetId;
       });
       if (targetId === 'tab-backups') {
         loadAndRenderBackups();
+      }
+      if (targetId === 'tab-eventos') {
+        renderAdminEventosTab();
       }
       if (targetId === 'tab-loja') {
         renderAdminLojaTab();
@@ -4465,5 +5216,361 @@ document.addEventListener('DOMContentLoaded', () => {
     saveLocalBackup();
     renderAll();
     showToast('💾 Configurações, Mural do Sócio e Chave PIX atualizados!');
+  });
+
+  // ==========================================================================
+  // 5. EVENTOS DO EXTRATO DE VALORES ISENTOS & MODAL DE ISENÇÃO POR PARCELA (MASTER)
+  // ==========================================================================
+  document.getElementById('btnToggleExtratoIsentos')?.addEventListener('click', () => {
+    const panel = document.getElementById('panelExtratoIsentos');
+    if (!panel) return;
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) {
+      renderExtratoIsentosPanel();
+    }
+  });
+
+  document.getElementById('btnCloseExtratoIsentos')?.addEventListener('click', () => {
+    const panel = document.getElementById('panelExtratoIsentos');
+    if (panel) panel.hidden = true;
+  });
+
+  document.getElementById('btnExportIsentosXls')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    downloadStyledExcel(buildIsentosReportConfig());
+    showToast('📊 Planilha Oficial de Valores e Saldos Isentos (.XLS) baixada!');
+  });
+
+  document.getElementById('btnPrintIsentosPdf')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    printStyledReport(buildIsentosReportConfig());
+  });
+
+  ['btnCloseModalIsentarParcelas', 'btnCancelModalIsentarParcelas'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      const m = document.getElementById('modalIsentarSocioParcelas');
+      if (m) m.hidden = true;
+    });
+  });
+
+  document.querySelectorAll('input[name="qtdParcelasIsentas"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      const val = radio.value;
+      const motivoGroup = document.getElementById('isencaoMotivoGroup');
+      const motivoSelect = document.getElementById('isencaoMotivoSelect');
+      if (motivoGroup) motivoGroup.hidden = val === '0';
+      if (motivoSelect) {
+        if (val === '3') {
+          motivoSelect.value = '👑 Membro da Diretoria TGA';
+        } else if ((val === '1' || val === '2') && motivoSelect.value === '👑 Membro da Diretoria TGA') {
+          motivoSelect.value = '🩸 Campanha de Doação de Sangue TGA';
+        }
+      }
+    });
+  });
+
+  document.getElementById('formIsentarSocioParcelas')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentAdminUser || !currentAdminUser.isMaster) {
+      showToast('🚫 Apenas o Usuário Master pode conceder ou alterar isenções.');
+      return;
+    }
+
+    const socioId = document.getElementById('isencaoSocioId')?.value;
+    const idx = appState.socios.findIndex(s => s.id === socioId);
+    if (idx === -1) return;
+
+    const socio = appState.socios[idx];
+    const selectedRadio = document.querySelector('input[name="qtdParcelasIsentas"]:checked');
+    const novaQtdIsentas = Math.min(3, Math.max(0, Number(selectedRadio?.value || 0)));
+    const novoValorIsento = novaQtdIsentas * 35;
+    const motivoEscolhido = novaQtdIsentas === 0
+      ? ''
+      : (document.getElementById('isencaoMotivoSelect')?.value || '🩸 Campanha de Doação de Sangue TGA');
+
+    const pagasPix = getSocioParcelasPagasPix(socio);
+    const totalCoberto = Math.min(3, pagasPix + novaQtdIsentas);
+    const isTotalIsento = novaQtdIsentas >= 3;
+
+    let novoStatus = 'Pendente PIX';
+    let novaForma = 'Parcelado em 3x de R$ 35,00';
+
+    if (isTotalIsento) {
+      novoStatus = 'Isento (Diretoria)';
+      novaForma = 'Isento — Diretoria TGA (R$ 0,00)';
+    } else if (novaQtdIsentas === 0) {
+      if (pagasPix >= 3) {
+        novoStatus = 'Pago / Ativo';
+        novaForma = 'À Vista no PIX (R$ 105,00)';
+      } else if (pagasPix === 2) {
+        novoStatus = '2ª Parcela Paga (R$ 70)';
+      } else if (pagasPix === 1) {
+        novoStatus = '1ª Parcela Paga (R$ 35)';
+      } else {
+        novoStatus = 'Pendente PIX';
+      }
+    } else {
+      if (totalCoberto >= 3) {
+        novoStatus = 'Pago / Ativo';
+        novaForma = `Parcelado 3x (${pagasPix} PIX + ${novaQtdIsentas} Isenta(s) = Quitado)`;
+      } else if (totalCoberto === 2) {
+        novoStatus = pagasPix === 0
+          ? '2 Parcelas Isentas (R$ 70)'
+          : `1ª Parcela Paga + 1 Isenta`;
+        novaForma = `Parcelado 3x (${novaQtdIsentas} Parcela(s) Isenta(s) = -${formatBRL(novoValorIsento)})`;
+      } else if (totalCoberto === 1) {
+        novoStatus = '1 Parcela Isenta (R$ 35)';
+        novaForma = `Parcelado 3x (1 Parcela Isenta = -R$ 35,00)`;
+      }
+    }
+
+    const dirNome = currentAdminUser.nome || 'Jully Gabriel (Master)';
+    const dirUsuario = currentAdminUser.usuario || 'jully';
+
+    const updates = {
+      isento: isTotalIsento,
+      parcelasIsentas: novaQtdIsentas,
+      valorIsento: novoValorIsento,
+      motivoIsencao: motivoEscolhido,
+      valorPlano: isTotalIsento ? 0 : 105,
+      valorPago: isTotalIsento ? 0 : (pagasPix * 35),
+      parcelasPagas: isTotalIsento ? 0 : pagasPix,
+      statusPagamento: novoStatus,
+      formaPagamento: novaForma,
+      aprovadoPor: {
+        nome: dirNome,
+        usuario: dirUsuario,
+        dataHora: new Date().toISOString(),
+        status: novaQtdIsentas > 0
+          ? `Isenção ${novaQtdIsentas}/3 (${formatBRL(novoValorIsento)}) — ${motivoEscolhido}`
+          : `Isenção Removida (${novoStatus})`
+      }
+    };
+
+    const audit = buildAuditPayload(
+      'Isenção Sócio',
+      novaQtdIsentas > 0
+        ? `Concedeu isenção de ${novaQtdIsentas}/3 parcela(s) (${formatBRL(novoValorIsento)}) para ${socio.nome}`
+        : `Removeu isenção de parcelas do sócio ${socio.nome}`,
+      novaQtdIsentas > 0
+        ? `Motivo: ${motivoEscolhido} | Saldo Líquido a Pagar: ${formatBRL(Math.max(0, 105 - novoValorIsento - (pagasPix * 35)))}`
+        : `Retornou para o plano padrão de R$ 105,00`
+    );
+
+    appState.socios[idx] = { ...socio, ...updates };
+    try {
+      await fetch(`/api/socios/${socio.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...updates, _auditoria: audit })
+      });
+    } catch (err) {}
+
+    saveLocalBackup();
+    const modalEl = document.getElementById('modalIsentarSocioParcelas');
+    if (modalEl) modalEl.hidden = true;
+    renderAll();
+    showToast(
+      novaQtdIsentas > 0
+        ? `👑 Isenção de ${novaQtdIsentas} parcela(s) (-${formatBRL(novoValorIsento)}) aplicada para ${socio.nome}!`
+        : `↩️ Isenção removida da ficha de ${socio.nome}.`
+    );
+  });
+
+  // ==========================================================================
+  // 6. EVENTOS DO PAINEL DE EVENTOS & AÇÕES SOCIAIS DA TGA (PÚBLICO E ADMIN)
+  // ==========================================================================
+  document.getElementById('btnPortalIrEventos')?.addEventListener('click', () => {
+    const socio = currentLoggedSocio ? (appState.socios.find(s => s.id === currentLoggedSocio.id) || currentLoggedSocio) : null;
+    openFeatureWindow('windowEventosTga');
+    if (socio) {
+      const cpfInput = document.getElementById('evParticipanteCpf');
+      const nomeInput = document.getElementById('evParticipanteNome');
+      const waInput = document.getElementById('evParticipanteWhatsapp');
+      const sangueSelect = document.getElementById('evParticipanteSangue');
+      if (cpfInput) cpfInput.value = socio.cpf || '';
+      if (nomeInput) nomeInput.value = socio.nome || '';
+      if (waInput) waInput.value = socio.whatsapp || '';
+      if (sangueSelect && socio.tipoSanguineo) sangueSelect.value = socio.tipoSanguineo;
+      updateEventoParticipanteCpfFeedback();
+    }
+  });
+
+  document.querySelectorAll('#eventosCategoryFilterBar [data-filter-evento-cat]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      currentEventoCategoryFilter = btn.getAttribute('data-filter-evento-cat') || 'todos';
+      document.querySelectorAll('#eventosCategoryFilterBar [data-filter-evento-cat]').forEach((b) => {
+        const isActive = (b.getAttribute('data-filter-evento-cat') || 'todos') === currentEventoCategoryFilter;
+        b.className = isActive ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+      });
+      renderEventosTgaSection();
+    });
+  });
+
+  document.getElementById('evParticipanteCpf')?.addEventListener('input', updateEventoParticipanteCpfFeedback);
+  document.getElementById('evParticipanteCpf')?.addEventListener('change', updateEventoParticipanteCpfFeedback);
+
+  document.getElementById('formParticiparEventoTga')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const eventoId = document.getElementById('evSelectEvento')?.value;
+    const ev = (appState.eventosTga || []).find(x => x.id === eventoId) || (appState.eventosTga || [])[0];
+    if (!ev) {
+      showToast('⚠️ Selecione um evento ou ação social da TGA.');
+      return;
+    }
+
+    const cpf = document.getElementById('evParticipanteCpf')?.value.trim() || '';
+    const nome = document.getElementById('evParticipanteNome')?.value.trim() || '';
+    const whatsapp = document.getElementById('evParticipanteWhatsapp')?.value.trim() || '';
+    const tipoSanguineo = document.getElementById('evParticipanteSangue')?.value || 'O+';
+    const modalidade = document.getElementById('evParticipanteModalidade')?.value || 'Participante TGA';
+
+    const socioMatch = cpf ? findSocioByCpf(cpf) : null;
+
+    const payload = {
+      eventoId: ev.id,
+      eventoTitulo: ev.titulo,
+      eventoCategoria: ev.categoria || 'Ações Sociais',
+      nome: nome || (socioMatch ? socioMatch.nome : 'Torcedor TGA'),
+      cpf,
+      whatsapp: whatsapp || (socioMatch ? socioMatch.whatsapp : ''),
+      tipoSanguineo: tipoSanguineo || (socioMatch ? socioMatch.tipoSanguineo : 'O+'),
+      modalidade,
+      observacoes: modalidade,
+      isSocio: Boolean(socioMatch),
+      socioId: socioMatch ? socioMatch.id : '',
+      socioMatricula: socioMatch ? socioMatch.matricula : ''
+    };
+
+    try {
+      const res = await fetch('/api/participantes-eventos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.participantesEventos)) {
+          appState.participantesEventos = data.participantesEventos;
+        } else if (data.participante && !data.duplicate) {
+          appState.participantesEventos.unshift(data.participante);
+        }
+        if (Array.isArray(data.eventosTga)) {
+          appState.eventosTga = data.eventosTga;
+        }
+      } else {
+        throw new Error('Fallback local');
+      }
+    } catch (err) {
+      appState.participantesEventos.unshift({
+        id: 'pev-' + Date.now(),
+        ...payload,
+        statusPresenca: 'Inscrito — Aguardando Confirmação',
+        parcelaIsentaConcedida: false,
+        createdAt: new Date().toISOString()
+      });
+      ev.inscritosCount = (Number(ev.inscritosCount) || 0) + 1;
+    }
+
+    saveLocalBackup();
+    renderAll();
+    e.target.reset();
+    updateEventoParticipanteCpfFeedback();
+
+    const msgWa = `\uD83D\uDFE2\u26AA *PARTICIPAÇÃO EM AÇÃO SOCIAL - ${appState.config.nomeTorcida} (TGA)* \uD83D\uDFE2\u26AA\n\n` +
+      `\uD83E\uDD1D *Evento:* ${ev.titulo} (${ev.categoria})\n` +
+      `\uD83D\uDCC5 *Data:* ${formatDateBR(ev.dataEvento)} às ${ev.horario || '08:00'}\n` +
+      `\uD83D\uDC64 *Participante:* ${payload.nome} (CPF: ${payload.cpf})\n` +
+      `\uD83E\uDE78 *Sangue:* ${payload.tipoSanguineo} | *Como vou ajudar:* ${payload.modalidade}\n` +
+      (socioMatch
+        ? `\uD83C\uDF81 *Vínculo Sócio TGA:* ${socioMatch.matricula} (Elegível para Isenção de 1 Parcela = R$ 35,00 após presença confirmada!)`
+        : `\uD83D\uDC9A *Vínculo:* Voluntário Garra Alviverde`);
+
+    openSuccessModal({
+      titulo: '🤝 Presença Registrada na Ação Social TGA!',
+      descricao: socioMatch
+        ? `Salve, ${payload.nome}! Sua inscrição em "${ev.titulo}" foi vinculada ao seu cadastro de Sócio (${socioMatch.matricula}). Compareça na ação para que o Administrador Master confirme sua presença e isente 1 parcela (R$ 35,00)!`
+        : `Salve, ${payload.nome}! Sua inscrição em "${ev.titulo}" foi registrada na lista oficial da Garra Alviverde!`,
+      valor: 0,
+      subtextoValor: socioMatch
+        ? '🎁 Benefício Sócio TGA: Vale 1 Parcela Isenta (- R$ 35,00) mediante presença!'
+        : 'Evento Solidário Oficial — Torcida Organizada Garra Alviverde',
+      mensagemWhatsapp: msgWa
+    });
+  });
+
+  document.getElementById('formNovoEventoTga')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusRaw = document.getElementById('newEventoStatus')?.value || 'Inscrições Abertas';
+    const statusNorm = statusRaw === 'Concluído' ? 'Encerrado' : 'Inscrições Abertas';
+
+    const payload = {
+      categoria: document.getElementById('newEventoCategoria')?.value || 'Doação de Sangue',
+      titulo: document.getElementById('newEventoTitulo')?.value.trim() || 'Ação Social Garra Alviverde',
+      dataEvento: document.getElementById('newEventoData')?.value || '',
+      horario: document.getElementById('newEventoHorario')?.value.trim() || '08:00 às 12:00',
+      local: document.getElementById('newEventoLocal')?.value.trim() || 'Rio Verde - GO',
+      descricao: document.getElementById('newEventoDescricao')?.value.trim() || '',
+      isentaParcela: Boolean(document.getElementById('newEventoIsentaParcela')?.checked),
+      beneficioSocio: document.getElementById('newEventoIsentaParcela')?.checked
+        ? 'Isenção de 1 Parcela do Sócio (R$ 35,00)'
+        : 'Ação Solidária Oficial TGA',
+      status: statusNorm
+    };
+
+    const audit = buildAuditPayload(
+      'Eventos TGA',
+      `Publicou novo evento social: "${payload.titulo}"`,
+      `Categoria: ${payload.categoria} | Data: ${formatDateBR(payload.dataEvento)} | Isenta 1 Parcela: ${payload.isentaParcela ? 'Sim' : 'Não'}`
+    );
+
+    try {
+      const res = await fetch('/api/eventos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, _auditoria: audit })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.eventosTga)) {
+          appState.eventosTga = data.eventosTga;
+        } else if (data.evento) {
+          appState.eventosTga.unshift(data.evento);
+        }
+      } else {
+        throw new Error('Fallback');
+      }
+    } catch (err) {
+      appState.eventosTga.unshift({
+        id: 'evt-' + Date.now(),
+        ...payload,
+        inscritosCount: 0,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    saveLocalBackup();
+    renderAll();
+    e.target.reset();
+    const horEl = document.getElementById('newEventoHorario');
+    const locEl = document.getElementById('newEventoLocal');
+    const chkEl = document.getElementById('newEventoIsentaParcela');
+    if (horEl) horEl.value = '08:00 às 12:00';
+    if (locEl) locEl.value = 'Saída do Estádio Velosão → Rio Verde - GO';
+    if (chkEl) chkEl.checked = true;
+    showToast(`🤝 Evento "${payload.titulo}" publicado no Painel de Ações Sociais TGA!`);
+  });
+
+  document.getElementById('filterEventoParticipantesSelect')?.addEventListener('change', renderAdminEventosTab);
+
+  document.getElementById('btnExportEventosXls')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    downloadStyledExcel(buildEventosReportConfig());
+    showToast('📊 Lista Oficial de Participantes dos Eventos Sociais (.XLS) baixada!');
+  });
+
+  document.getElementById('btnPrintEventosPdf')?.addEventListener('click', () => {
+    if (!hasPerm('exportarPlanilhas')) return;
+    printStyledReport(buildEventosReportConfig());
   });
 });

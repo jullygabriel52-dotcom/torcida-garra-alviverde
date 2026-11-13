@@ -196,7 +196,70 @@ const DEFAULT_DB = {
       status: 'Agendado'
     }
   ],
-  checkinsJogos: []
+  checkinsJogos: [],
+  eventosTga: [
+    {
+      id: 'ev-1',
+      categoria: 'Doação de Sangue',
+      titulo: 'Campanha Sangue Alviverde — Hemocentro de Rio Verde',
+      dataEvento: '2026-11-28',
+      horario: '07:30 às 11:30',
+      local: 'Saída do Estádio Velosão → Hemocentro Regional de Rio Verde',
+      descricao: 'Convocação geral da Garra Alviverde para salvar vidas! Leve documento oficial com foto. Sócios participantes ganham isenção de 1 parcela (R$ 35,00) do Sócio TGA.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-2',
+      categoria: 'Natal',
+      titulo: 'Natal Solidário da Garra Alviverde',
+      dataEvento: '2026-12-20',
+      horario: '14:00',
+      local: 'Concentração no Velosão → Bairros de Rio Verde - GO',
+      descricao: 'Arrecadação e entrega de brinquedos, cestas básicas e chegada do Papai Noel Alviverde para as famílias de Rio Verde.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-3',
+      categoria: 'Páscoa',
+      titulo: 'Páscoa Solidária TGA — Sorriso Alviverde',
+      dataEvento: '2027-04-04',
+      horario: '09:00',
+      local: 'Bairros e Comunidades de Rio Verde - GO',
+      descricao: 'Ação social de Páscoa da Garra Alviverde com distribuição de ovos de chocolate e caixas de bombom para as crianças.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-4',
+      categoria: 'Dia das Crianças',
+      titulo: 'Festa do Dia das Crianças Garra Alviverde (12/10)',
+      dataEvento: '2027-10-12',
+      horario: '13:30 às 18:00',
+      local: 'Arredores do Estádio Velosão / Praça Comunitária',
+      descricao: 'Tarde recreativa com pula-pula, pipoca, algodão-doce, cachorro-quente e entrega de brinquedos para a criançada.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    },
+    {
+      id: 'ev-5',
+      categoria: 'Ações Sociais',
+      titulo: 'Mutirão Solidário TGA — Arrecadação de Alimentos',
+      dataEvento: '2027-02-15',
+      horario: '08:30',
+      local: 'Portaria do Estádio Mozart Veloso do Carmo (Velosão)',
+      descricao: 'Arrecadação de alimentos não perecíveis e montagem de cestas básicas para famílias assistidas pela torcida.',
+      isentaParcela: true,
+      status: 'Aberto',
+      createdAt: '2026-11-12T12:00:00.000Z'
+    }
+  ],
+  participantesEventos: []
 };
 
 function ensureMasterAndCollections(db) {
@@ -209,6 +272,10 @@ function ensureMasterAndCollections(db) {
   db.pedidosMateriais = Array.isArray(db.pedidosMateriais) ? db.pedidosMateriais : [];
   db.jogosEcrv = Array.isArray(db.jogosEcrv) ? db.jogosEcrv : JSON.parse(JSON.stringify(DEFAULT_DB.jogosEcrv));
   db.checkinsJogos = Array.isArray(db.checkinsJogos) ? db.checkinsJogos : [];
+  db.eventosTga = Array.isArray(db.eventosTga) && db.eventosTga.length > 0
+    ? db.eventosTga
+    : JSON.parse(JSON.stringify(DEFAULT_DB.eventosTga));
+  db.participantesEventos = Array.isArray(db.participantesEventos) ? db.participantesEventos : [];
 
   if (db.config) {
     if (!db.config.muralAviso) {
@@ -547,6 +614,8 @@ function buildBackupEntry(db, tipo = 'Automático (00:00)', autor = 'Sistema Aut
       totalPedidosMateriais: Array.isArray(db.pedidosMateriais) ? db.pedidosMateriais.length : 0,
       totalJogos: Array.isArray(db.jogosEcrv) ? db.jogosEcrv.length : 0,
       totalCheckins: Array.isArray(db.checkinsJogos) ? db.checkinsJogos.length : 0,
+      totalEventos: Array.isArray(db.eventosTga) ? db.eventosTga.length : 0,
+      totalParticipantesEventos: Array.isArray(db.participantesEventos) ? db.participantesEventos.length : 0,
       totalDiretores: Array.isArray(db.usuariosDiretoria) ? db.usuariosDiretoria.length : 0,
       totalLogs: Array.isArray(db.auditoriaLogs) ? db.auditoriaLogs.length : 0
     },
@@ -559,6 +628,8 @@ function buildBackupEntry(db, tipo = 'Automático (00:00)', autor = 'Sistema Aut
       pedidosMateriais: Array.isArray(db.pedidosMateriais) ? db.pedidosMateriais : [],
       jogosEcrv: Array.isArray(db.jogosEcrv) ? db.jogosEcrv : [],
       checkinsJogos: Array.isArray(db.checkinsJogos) ? db.checkinsJogos : [],
+      eventosTga: Array.isArray(db.eventosTga) ? db.eventosTga : [],
+      participantesEventos: Array.isArray(db.participantesEventos) ? db.participantesEventos : [],
       usuariosDiretoria: Array.isArray(db.usuariosDiretoria) ? db.usuariosDiretoria : [],
       auditoriaLogs: Array.isArray(db.auditoriaLogs) ? db.auditoriaLogs.slice(0, 250) : []
     }
@@ -1031,6 +1102,8 @@ async function requestHandler(req, res) {
         pedidosMateriais: Array.isArray(targetSnapshot.pedidosMateriais) ? targetSnapshot.pedidosMateriais : currentDb.pedidosMateriais,
         jogosEcrv: Array.isArray(targetSnapshot.jogosEcrv) ? targetSnapshot.jogosEcrv : currentDb.jogosEcrv,
         checkinsJogos: Array.isArray(targetSnapshot.checkinsJogos) ? targetSnapshot.checkinsJogos : currentDb.checkinsJogos,
+        eventosTga: Array.isArray(targetSnapshot.eventosTga) ? targetSnapshot.eventosTga : currentDb.eventosTga,
+        participantesEventos: Array.isArray(targetSnapshot.participantesEventos) ? targetSnapshot.participantesEventos : currentDb.participantesEventos,
         usuariosDiretoria: Array.isArray(targetSnapshot.usuariosDiretoria) ? targetSnapshot.usuariosDiretoria : currentDb.usuariosDiretoria,
         auditoriaLogs: Array.isArray(targetSnapshot.auditoriaLogs) ? targetSnapshot.auditoriaLogs : []
       });
@@ -1230,6 +1303,115 @@ async function requestHandler(req, res) {
       if (body && body._auditoria) appendAuditLog(db, body._auditoria);
       await writeDb(db);
       return sendJson(res, 200, { deleted: id, checkinsJogos: db.checkinsJogos, auditoriaLogs: db.auditoriaLogs });
+    }
+
+    // ========================================================================
+    // ROTAS DO PAINEL DE EVENTOS & AÇÕES SOCIAIS DA TGA (DOAÇÃO DE SANGUE, PÁSCOA, NATAL, DIA DAS CRIANÇAS)
+    // ========================================================================
+    if (pathname === '/api/eventos' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const db = ensureMasterAndCollections(await readDb());
+      const { _auditoria, ...fields } = body;
+      const novoEvento = {
+        id: 'ev-' + Date.now(),
+        categoria: fields.categoria || 'Ações Sociais',
+        titulo: fields.titulo || 'Evento Oficial Garra Alviverde',
+        dataEvento: fields.dataEvento || '',
+        horario: fields.horario || '08:00',
+        local: fields.local || 'Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO',
+        descricao: fields.descricao || '',
+        isentaParcela: fields.isentaParcela !== false,
+        status: fields.status || 'Aberto',
+        createdAt: new Date().toISOString()
+      };
+      db.eventosTga.unshift(novoEvento);
+      if (_auditoria) appendAuditLog(db, _auditoria);
+      await writeDb(db);
+      return sendJson(res, 201, { evento: novoEvento, eventosTga: db.eventosTga, auditoriaLogs: db.auditoriaLogs });
+    }
+
+    if (pathname.startsWith('/api/eventos/') && req.method === 'PATCH') {
+      const id = pathname.replace('/api/eventos/', '');
+      const body = await parseBody(req);
+      const db = ensureMasterAndCollections(await readDb());
+      const idx = db.eventosTga.findIndex((ev) => ev.id === id);
+      if (idx === -1) return sendJson(res, 404, { error: 'Evento não encontrado' });
+      const { _auditoria, ...fields } = body;
+      db.eventosTga[idx] = { ...db.eventosTga[idx], ...fields };
+      if (_auditoria) appendAuditLog(db, _auditoria);
+      await writeDb(db);
+      return sendJson(res, 200, { evento: db.eventosTga[idx], eventosTga: db.eventosTga, auditoriaLogs: db.auditoriaLogs });
+    }
+
+    if (pathname.startsWith('/api/eventos/') && req.method === 'DELETE') {
+      const id = pathname.replace('/api/eventos/', '');
+      const body = await parseBody(req).catch(() => ({}));
+      const db = ensureMasterAndCollections(await readDb());
+      db.eventosTga = (db.eventosTga || []).filter((ev) => ev.id !== id);
+      if (body && body._auditoria) appendAuditLog(db, body._auditoria);
+      await writeDb(db);
+      return sendJson(res, 200, { deleted: id, eventosTga: db.eventosTga, auditoriaLogs: db.auditoriaLogs });
+    }
+
+    if (pathname === '/api/participantes-eventos' && req.method === 'POST') {
+      const body = await parseBody(req);
+      const db = ensureMasterAndCollections(await readDb());
+      const cleanCpf = String(body.cpf || '').replace(/\D/g, '');
+      if (cleanCpf.length >= 6) {
+        const dup = db.participantesEventos.find(
+          (p) => p.eventoId === body.eventoId && String(p.cpf || '').replace(/\D/g, '') === cleanCpf
+        );
+        if (dup) {
+          return sendJson(res, 200, { participante: dup, participantesEventos: db.participantesEventos, duplicate: true });
+        }
+      }
+      const novoParticipante = {
+        id: 'part-' + Date.now(),
+        eventoId: body.eventoId || '',
+        eventoTitulo: body.eventoTitulo || 'Evento TGA',
+        eventoCategoria: body.eventoCategoria || 'Ações Sociais',
+        socioId: body.socioId || '',
+        socioMatricula: body.socioMatricula || '',
+        isSocio: Boolean(body.isSocio),
+        nome: body.nome || '',
+        cpf: body.cpf || '',
+        whatsapp: body.whatsapp || '',
+        tipoSanguineo: body.tipoSanguineo || 'Não informado',
+        modalidadeParticipacao: body.modalidadeParticipacao || 'Participação Voluntária',
+        statusPresenca: body.statusPresenca || 'Inscrito',
+        parcelaIsentaAplicada: Boolean(body.parcelaIsentaAplicada),
+        createdAt: new Date().toISOString()
+      };
+      db.participantesEventos.unshift(novoParticipante);
+      await writeDb(db);
+      return sendJson(res, 201, { participante: novoParticipante, participantesEventos: db.participantesEventos });
+    }
+
+    if (pathname.startsWith('/api/participantes-eventos/') && req.method === 'PATCH') {
+      const id = pathname.replace('/api/participantes-eventos/', '');
+      const body = await parseBody(req);
+      const db = ensureMasterAndCollections(await readDb());
+      const idx = db.participantesEventos.findIndex((p) => p.id === id);
+      if (idx === -1) return sendJson(res, 404, { error: 'Participante não encontrado' });
+      const { _auditoria, ...fields } = body;
+      db.participantesEventos[idx] = { ...db.participantesEventos[idx], ...fields };
+      if (_auditoria) appendAuditLog(db, _auditoria);
+      await writeDb(db);
+      return sendJson(res, 200, {
+        participante: db.participantesEventos[idx],
+        participantesEventos: db.participantesEventos,
+        auditoriaLogs: db.auditoriaLogs
+      });
+    }
+
+    if (pathname.startsWith('/api/participantes-eventos/') && req.method === 'DELETE') {
+      const id = pathname.replace('/api/participantes-eventos/', '');
+      const body = await parseBody(req).catch(() => ({}));
+      const db = ensureMasterAndCollections(await readDb());
+      db.participantesEventos = (db.participantesEventos || []).filter((p) => p.id !== id);
+      if (body && body._auditoria) appendAuditLog(db, body._auditoria);
+      await writeDb(db);
+      return sendJson(res, 200, { deleted: id, participantesEventos: db.participantesEventos, auditoriaLogs: db.auditoriaLogs });
     }
   } catch (apiErr) {
     console.error('Erro na API:', apiErr);

@@ -168,5 +168,63 @@
     }
   ],
   "socios": [],
-  "inscricoesCaravana": []
+  "inscricoesCaravana": [],
+  "eventosTga": [
+    {
+      "id": "ev-1",
+      "categoria": "Doação de Sangue",
+      "titulo": "Campanha Sangue Alviverde — Hemocentro de Rio Verde",
+      "dataEvento": "2026-11-28",
+      "horario": "07:30 às 11:30",
+      "local": "Saída do Estádio Velosão → Hemocentro Regional de Rio Verde",
+      "descricao": "Convocação geral da Garra Alviverde para salvar vidas! Leve documento oficial com foto. Sócios participantes ganham isenção de 1 parcela (R$ 35,00) do Sócio TGA.",
+      "isentaParcela": true,
+      "status": "Aberto"
+    },
+    {
+      "id": "ev-2",
+      "categoria": "Natal",
+      "titulo": "Natal Solidário da Garra Alviverde",
+      "dataEvento": "2026-12-20",
+      "horario": "14:00",
+      "local": "Concentração no Velosão → Bairros de Rio Verde - GO",
+      "descricao": "Arrecadação e entrega de brinquedos, cestas básicas e chegada do Papai Noel Alviverde para as famílias de Rio Verde.",
+      "isentaParcela": true,
+      "status": "Aberto"
+    },
+    {
+      "id": "ev-3",
+      "categoria": "Páscoa",
+      "titulo": "Páscoa Solidária TGA — Sorriso Alviverde",
+      "dataEvento": "2027-04-04",
+      "horario": "09:00",
+      "local": "Bairros e Comunidades de Rio Verde - GO",
+      "descricao": "Ação social de Páscoa da Garra Alviverde com distribuição de ovos de chocolate e caixas de bombom para as crianças.",
+      "isentaParcela": true,
+      "status": "Aberto"
+    },
+    {
+      "id": "ev-4",
+      "categoria": "Dia das Crianças",
+      "titulo": "Festa do Dia das Crianças Garra Alviverde (12/10)",
+      "dataEvento": "2027-10-12",
+      "horario": "13:30 às 18:00",
+      "local": "Arredores do Estádio Velosão / Praça Comunitária",
+      "descricao": "Tarde recreativa com pula-pula, pipoca, algodão-doce, cachorro-quente e entrega de brinquedos para a criançada.",
+      "isentaParcela": true,
+      "status": "Aberto"
+    },
+    {
+      "id": "ev-5",
+      "categoria": "Ações Sociais",
+      "titulo": "Mutirão Solidário TGA — Arrecadação de Alimentos",
+      "dataEvento": "2027-02-15",
+      "horario": "08:30",
+      "local": "Portaria do Estádio Mozart Veloso do Carmo (Velosão)",
+      "descricao": "Arrecadação de alimentos não perecíveis e montagem de cestas básicas para famílias assistidas pela torcida.",
+      "isentaParcela": true,
+      "status": "Aberto"
+    }
+  ],
+  "participantesEventos": []
 }

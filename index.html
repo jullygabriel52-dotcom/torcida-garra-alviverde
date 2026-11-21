@@ -8,274 +8,195 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20261113a" />
+  <link rel="stylesheet" href="/styles.css?v=20261121c" />
 </head>
-<body>
-  <!-- TOPBAR OFICIAL -->
-  <div class="topbar">
-    <div class="container topbar-inner">
-      <div class="topbar-left">
-        <span class="badge-live">● TGA • DESDE 19-05-2015</span>
-        <span class="topbar-pix-label">
-          PIX Oficial TGA: <strong id="topPixKey">torcidagarraalviverde@gmail.com</strong>
-        </span>
-        <button type="button" class="btn-topbar-copy" id="btnCopyTopPix" title="Copiar Chave PIX da Torcida">
-          📋 Copiar PIX
-        </button>
-      </div>
-      <div class="topbar-right">
-        <a href="https://www.instagram.com/torcidagarraalviverde15/" id="topInstagramLink" target="_blank" rel="noopener" class="topbar-link topbar-insta">
-          📸 @torcidagarraalviverde15
-        </a>
-        <button type="button" class="topbar-btn-link" data-open-window="windowPortalSocio" style="color:#fde047; font-weight:800;">🔓 Área do Sócio</button>
-        <button type="button" class="topbar-btn-link" data-open-window="windowEventosTga" style="color:#86efac; font-weight:800;">🤝 Eventos & Doação de Sangue</button>
-        <button type="button" class="topbar-btn-link" data-open-window="windowLojaMateriais">👕 Loja TGA</button>
-        <button type="button" class="topbar-btn-link" data-open-window="windowJogosEcrv">⚽ Jogos E.C.R.V.</button>
-        <a href="#" id="topWhatsappLink" target="_blank" rel="noopener" class="topbar-link">💬 (64) 99330-2283</a>
-        <button type="button" class="btn-admin-trigger" id="btnOpenAdmin">
-          🔒 Painel da Diretoria <span class="admin-counter" id="adminBadgeCount">0</span>
-        </button>
-      </div>
-    </div>
+<body class="m1-theme-body">
+  <!-- ELEMENTOS OCULTOS DE COMPATIBILIDADE DE ESTADO -->
+  <div hidden>
+    <span id="topPixKey">torcidagarraalviverde@gmail.com</span>
+    <button type="button" id="btnCopyTopPix"></button>
+    <span id="heroPixKey">torcidagarraalviverde@gmail.com</span>
+    <span id="heroPixTitular">TORCIDA ORGANIZADA GARRA ALVIVERDE - TGA</span>
+    <span id="heroSinglePlanName">Sócio Garra Alviverde (TGA)</span>
+    <span id="statSociosCount">0</span>
+    <span id="statCaravanasCount">0</span>
   </div>
 
-  <!-- NAVBAR -->
-  <header class="navbar">
-    <div class="container navbar-inner">
-      <a href="/" class="brand">
-        <div class="brand-logos">
-          <img src="/assets/logo-tga.jpg" alt="Escudo Torcida Organizada Garra Alviverde" class="brand-logo-img brand-logo-tga" />
-          <img src="/assets/escudo-ecrv.jpg" alt="Escudo Esporte Clube Rio Verde E.C.R.V." class="brand-logo-img brand-logo-ecrv" />
+  <!-- 1 ÚNICO MENU SUPERIOR LIMPO (ESTILO AVANTI PALMEIRAS — ZERO POLUIÇÃO) -->
+  <header class="m1-header">
+    <div class="container m1-header-inner">
+      <a href="/" class="m1-brand">
+        <div class="m1-brand-logos">
+          <img src="/assets/logo-tga.jpg" alt="TGA" class="m1-logo-img" />
+          <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." class="m1-logo-img m1-logo-ecrv" />
         </div>
-        <div class="brand-text">
-          <span class="brand-subtitle">APOIO INCONDICIONAL AO ESPORTE CLUBE RIO VERDE (E.C.R.V.)</span>
-          <strong class="brand-title" id="navTorcidaNome">TORCIDA ORGANIZADA GARRA ALVIVERDE</strong>
+        <div class="m1-brand-text">
+          <strong id="navTorcidaNome">GARRA ALVIVERDE • E.C.R.V.</strong>
+          <span>Rio Verde - GO • Desde <span id="heroAnoFundacao">19/05/2015</span></span>
         </div>
       </a>
 
-      <nav class="nav-links" id="navMenu">
-        <button type="button" class="nav-btn-link" data-open-window="windowPortalSocio" style="color:#fde047; font-weight:800;">
+      <nav class="m1-nav-links" id="navMenu">
+        <button type="button" class="m1-nav-item" data-open-window="windowSocio">Seja Sócio</button>
+        <button type="button" class="m1-nav-item" data-open-window="windowLojaMateriais">Loja Oficial</button>
+        <button type="button" class="m1-nav-item" data-open-window="windowJogosEcrv">Jogos & Ingressos</button>
+        <button type="button" class="m1-nav-item" data-open-window="windowCaravanas">Caravanas</button>
+        <button type="button" class="m1-nav-item" data-open-window="windowEventosTga">Ações Sociais</button>
+        <button type="button" class="m1-nav-item" data-open-window="windowHistoria">História</button>
+      </nav>
+
+      <div class="m1-header-actions">
+        <button type="button" class="m1-btn-socio-cpf" data-open-window="windowPortalSocio">
           🔓 Área do Sócio (CPF)
         </button>
-        <button type="button" class="nav-btn-link" data-open-window="windowEventosTga" style="color:#86efac; font-weight:800;">
-          🤝 Eventos & Ações Sociais
+        <button type="button" class="m1-btn-diretoria" id="btnOpenAdmin" title="Acesso Exclusivo da Diretoria TGA">
+          🔒 Diretoria <span class="admin-counter" id="adminBadgeCount">0</span>
         </button>
-        <button type="button" class="nav-btn-link" data-open-window="windowLojaMateriais">
-          👕 Loja de Materiais
-        </button>
-        <button type="button" class="nav-btn-link" data-open-window="windowJogosEcrv">
-          ⚽ Jogos & Ingressos
-        </button>
-        <button type="button" class="nav-btn-link" data-open-window="windowCaravanas">
-          🚌 Caravanas
-        </button>
-        <button type="button" class="nav-btn-link" data-open-window="windowHistoria">
-          ECRV e a TGA
-        </button>
-        <button type="button" class="btn-nav-cta" data-open-window="windowSocio">
-          🪪 Seja Sócio TGA
-        </button>
-      </nav>
+      </div>
     </div>
   </header>
 
-  <!-- TELA PRINCIPAL COMPACTA E INTERATIVA (SEM ROLAGEM GIGANTE) -->
-  <main class="main-hub">
-    <section class="hero">
-      <div class="container hero-grid">
-        <div class="hero-content">
-          <div class="hero-tag">
-            <span>🟢⚪ FUNDADA EM <span id="heroAnoFundacao">19/05/2015</span> • RIO VERDE - GO</span>
+  <!-- TELA PRINCIPAL CLEAN — ESTILO AVANTI / BENTO GRID -->
+  <main class="m1-main">
+    <!-- HERO CINEMATOGRÁFICO (CHAMADA SÓCIO TGA + CARD MATCHDAY PRÓXIMO JOGO NO VELOSÃO) -->
+    <section class="m1-hero">
+      <div class="container m1-hero-grid">
+        <!-- Coluna Esquerda: Chamada Principal Limpa e Direta -->
+        <div class="m1-hero-left">
+          <div class="m1-hero-pill">
+            <span class="m1-dot"></span>
+            SÓCIO TORCEDOR OFICIAL • ESPORTE CLUBE RIO VERDE (E.C.R.V.)
           </div>
 
-          <!-- EMBLEMAS OFICIAIS EM DESTAQUE NO HERO -->
-          <div class="hero-emblems-banner">
-            <div class="emblem-showcase">
-              <img src="/assets/escudo-ecrv.jpg" alt="Esporte Clube Rio Verde E.C.R.V." class="hero-emblem-ecrv" />
-              <span class="emblem-plus">+</span>
-              <img src="/assets/logo-tga.jpg" alt="Garra Alviverde 19-05-2015" class="hero-emblem-tga" />
-            </div>
-            <div class="emblem-showcase-text">
-              <strong>ECRV e a TGA</strong>
-              <span>O Pulso da Arquibancada do Verdão do Sudoeste no Estádio Mozart Veloso do Carmo (Velosão)</span>
-            </div>
-          </div>
+          <h1 class="m1-hero-title" id="heroNomeTorcida">
+            A Força do Verdão do Sudoeste na Arquibancada.
+          </h1>
 
-          <h1 class="hero-title" id="heroNomeTorcida">TORCIDA ORGANIZADA GARRA ALVIVERDE</h1>
-          <p class="hero-subtitle" id="heroLema">
-            Apoiando o Esporte Clube Rio Verde desde 19/05/2015 — No Velosão ou em qualquer estádio de Goiás! Clique nos botões abaixo para abrir a ficha de sócio, caravanas ou conhecer a nossa história.
+          <p class="m1-hero-subtitle" id="heroLema">
+            Ingresso garantido nos jogos em casa no <strong>Estádio Velosão</strong>, desconto imediato nas camisas oficiais já na 1ª parcela e isenção de parcela participando das nossas ações de <strong>Doação de Sangue</strong>.
           </p>
 
-          <!-- BOTÕES PRINCIPAIS QUE ABREM AS JANELAS INTERATIVAS -->
-          <div class="hero-actions">
-            <button type="button" class="btn btn-primary btn-lg" data-open-window="windowSocio">
-              🪪 Inscrição de Sócio TGA
+          <!-- Apenas 2 botões de alta conversão no Hero -->
+          <div class="m1-hero-cta-row">
+            <button type="button" class="m1-btn-gold-lg" data-open-window="windowSocio">
+              🪪 Quero Ser Sócio TGA — <span id="heroSinglePlanPrice">R$ 105,00</span> (ou 3x R$ 35)
             </button>
-            <button type="button" class="btn btn-gold btn-lg" data-open-window="windowPortalSocio" style="color:#052e16; font-weight:800;">
-              🔓 Área do Sócio (CPF)
-            </button>
-            <button type="button" class="btn btn-outline-white btn-lg" data-open-window="windowEventosTga" style="border-color:#fde047; color:#fef08a;">
-              🤝 Eventos & Doação de Sangue
-            </button>
-            <button type="button" class="btn btn-outline-white btn-lg" data-open-window="windowLojaMateriais">
-              👕 Loja de Materiais TGA
-            </button>
-            <button type="button" class="btn btn-outline-white btn-lg" data-open-window="windowJogosEcrv">
-              ⚽ Jogos E.C.R.V. & Ingressos
-            </button>
-            <button type="button" class="btn btn-outline-white btn-lg" data-open-window="windowCaravanas">
-              🚌 Caravanas da TGA
-            </button>
-            <button type="button" class="btn btn-insta btn-lg" data-open-window="windowHistoria">
-              🟢⚪ ECRV e a TGA
+            <button type="button" class="m1-btn-glass-lg" data-open-window="windowPortalSocio">
+              📲 Já Sou Sócio (Ver Carteirinha)
             </button>
           </div>
 
-          <!-- CONTADORES OFICIAIS (COMEÇANDO DO ZERO ATÉ CADASTRAREM) -->
-          <div class="hero-stats">
-            <div class="stat-box">
-              <strong id="statSociosCount">0</strong>
-              <span>Sócios Cadastrados</span>
+          <!-- 3 Selos Minimalistas de Benefícios -->
+          <div class="m1-hero-badges-strip">
+            <div class="m1-mini-badge">
+              <strong>🎟️ 100% Gratuito</strong>
+              <span>Jogos em casa no Velosão</span>
             </div>
-            <div class="stat-box">
-              <strong id="statCaravanasCount">2</strong>
-              <span>Caravanas Abertas</span>
+            <div class="m1-mini-badge">
+              <strong>👕 Desconto na Hora</strong>
+              <span>Liberado já na 1ª parcela</span>
             </div>
-            <div class="stat-box">
-              <strong>19/05/15</strong>
-              <span>Fundação da TGA</span>
-            </div>
-            <div class="stat-box">
-              <strong>E.C.R.V.</strong>
-              <span>Verdão do Sudoeste</span>
+            <div class="m1-mini-badge">
+              <strong>🩸 Sócio Solidário</strong>
+              <span>Doe sangue = -1 parcela</span>
             </div>
           </div>
         </div>
 
-        <!-- CARD DE ACESSO RÁPIDO AO PIX, PLANO ÚNICO E CARAVANAS -->
-        <div class="hero-card">
-          <div class="hero-card-header">
-            <div class="hero-card-badges">
-              <span class="pill-green">CENTRAL INTERATIVA TGA</span>
-              <span class="pill-club">⚽ E.C. RIO VERDE</span>
+        <!-- Coluna Direita: Card Matchday (Próximo Jogo do E.C.R.V. no Velosão + Check-in Rápido) -->
+        <div class="m1-hero-right">
+          <div class="m1-matchday-card">
+            <div id="homeMatchdayBox">
+              <!-- Preenchido dinamicamente via JS com o próximo jogo cadastrado -->
             </div>
-            <h3>PIX Oficial, Sócio & Caravanas</h3>
-          </div>
 
-          <!-- CHAVE PIX OFICIAL + QR CODE OFICIAL -->
-          <div class="quick-pix-box">
-            <div class="quick-pix-top">
-              <div>
-                <span class="quick-label">CHAVE PIX OFICIAL DA GARRA ALVIVERDE</span>
-                <strong class="quick-pix-value" id="heroPixKey">torcidagarraalviverde@gmail.com</strong>
-                <small id="heroPixTitular">TORCIDA ORGANIZADA GARRA ALVIVERDE - TGA</small>
-              </div>
-              <button type="button" class="btn btn-gold btn-sm" id="btnCopyHeroPix">
-                📋 Copiar PIX
+            <form id="formHomeQuickCheckin" class="m1-quick-checkin-form">
+              <input type="text" id="inputHomeQuickCheckinCpf" required placeholder="Digite seu CPF de Sócio..." />
+              <button type="submit" class="m1-btn-checkin">
+                🎟️ Fazer Check-in
+              </button>
+            </form>
+
+            <div class="m1-matchday-footer">
+              <button type="button" class="m1-link-btn" data-open-window="windowJogosEcrv">
+                📊 Ver Tabela Completa de Jogos do E.C.R.V. →
               </button>
             </div>
-            <div class="hero-qr-inline">
-              <img src="/assets/qrcode-pix.jpg" alt="QR Code PIX Oficial Garra Alviverde" class="hero-qr-img" />
-              <div class="hero-qr-text">
-                <strong>📲 Escaneie o QR Code PIX</strong>
-                <span>Abra o aplicativo do seu banco e aponte a câmera para pagar o Sócio TGA ou Caravana.</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- RESUMO DO PLANO ÚNICO DE SÓCIO -->
-          <div class="quick-socio-strip">
-            <div>
-              <span class="quick-socio-label">🟢⚪ SÓCIO GARRA ALVIVERDE 🇳🇬</span>
-              <strong id="heroSinglePlanName">Sócio Garra Alviverde (TGA)</strong>
-              <small style="display:block; color:#047857; font-weight:600; margin-top:2px;">
-                R$ 105,00 à vista ou em até 3x de R$ 35,00
-              </small>
-            </div>
-            <div class="quick-socio-right">
-              <strong class="quick-socio-price" id="heroSinglePlanPrice">R$ 105,00</strong>
-              <button type="button" class="btn btn-primary btn-sm" data-open-window="windowSocio">
-                Fazer Inscrição →
-              </button>
-            </div>
-          </div>
-
-          <!-- PRÓXIMA CARAVANA -->
-          <div class="hero-next-caravana" id="heroNextCaravanaBox">
-            <!-- Renderizado via JS -->
-          </div>
-
-          <div class="hero-card-footer">
-            <button type="button" class="btn btn-secondary btn-block" data-open-window="windowCaravanas">
-              🚌 Abrir Janela de Caravanas da TGA →
-            </button>
           </div>
         </div>
       </div>
+    </section>
 
-      <!-- ATALHOS RÁPIDOS EM CARDS COMPACTOS -->
-      <div class="container hub-shortcuts-grid">
-        <div class="hub-shortcut-card" data-open-window="windowPortalSocio" style="border-color:#eab308;">
-          <div class="hub-shortcut-icon">🔓</div>
-          <div class="hub-shortcut-body">
-            <h4>Área Exclusiva do Sócio (Por CPF)</h4>
-            <p>Acesse sua Carteirinha Digital Oficial, acompanhe suas 3 parcelas, veja avisos e garanta benefícios.</p>
+    <!-- BENTO GRID: 3 SEÇÕES LIMPAS E VISUAIS (LOJA OFICIAL + AÇÕES SOCIAIS + CARAVANAS) -->
+    <section class="m1-bento-section">
+      <div class="container">
+        <!-- LINHA 1 DO BENTO: VITRINE RÁPIDA DA LOJA OFICIAL DE MATERIAIS -->
+        <div class="m1-bento-block">
+          <div class="m1-section-head">
+            <div>
+              <span class="m1-kicker">👕 ARMADURA OFICIAL TGA • MASCULINO, FEMININO & INFANTIL</span>
+              <h2>Loja Oficial de Materiais (Com Desconto Automático p/ Sócio)</h2>
+            </div>
+            <button type="button" class="m1-btn-outline-sm" data-open-window="windowLojaMateriais">
+              🛒 Ver Loja Completa & Fazer Pedido →
+            </button>
           </div>
-          <span class="hub-shortcut-arrow">Entrar c/ CPF ↗</span>
+
+          <div class="m1-loja-grid" id="homeBentoLojaGrid">
+            <!-- Renderizado dinamicamente via JS com os produtos reais da Loja TGA -->
+          </div>
         </div>
 
-        <div class="hub-shortcut-card" data-open-window="windowEventosTga" style="border-color:#16a34a;">
-          <div class="hub-shortcut-icon">🩸</div>
-          <div class="hub-shortcut-body">
-            <h4>Eventos & Ações Sociais TGA</h4>
-            <p>Doação de Sangue, Páscoa, Dia das Crianças e Natal Solidário. Participe e ganhe isenção de 1 parcela no Sócio!</p>
+        <!-- LINHA 2 DO BENTO: 2 CARDS LADO A LADO (EVENTOS SOCIAIS / DOAÇÃO DE SANGUE + CARAVANAS) -->
+        <div class="m1-bottom-bento">
+          <!-- Card Esquerdo: Sócio Solidário / Eventos & Doação de Sangue -->
+          <div class="m1-bento-card m1-bento-card-gold" id="homeBentoEventoBox">
+            <!-- Renderizado dinamicamente via JS com os Eventos Sociais da TGA -->
           </div>
-          <span class="hub-shortcut-arrow">Participar ↗</span>
+
+          <!-- Card Direito: Caravanas do E.C.R.V. + PIX Rápido -->
+          <div class="m1-bento-card">
+            <div>
+              <div class="m1-bento-card-top">
+                <span class="m1-tag-green">🚌 VIAGENS COM O VERDÃO</span>
+                <span class="m1-tag-sub">Desconto Exclusivo p/ Sócios</span>
+              </div>
+              <h3>Caravanas Oficiais — Garra Alviverde</h3>
+              <div id="heroNextCaravanaBox" class="m1-caravana-summary">
+                <!-- Renderizado via JS -->
+              </div>
+            </div>
+            <div class="m1-bento-card-footer">
+              <button type="button" class="m1-btn-copy-pix-subtle" id="btnCopyHeroPix" title="Copiar Chave PIX Oficial da Torcida">
+                📋 Copiar PIX da Torcida
+              </button>
+              <button type="button" class="m1-btn-emerald" data-open-window="windowCaravanas">
+                🚌 Reservar Vaga →
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="hub-shortcut-card" data-open-window="windowLojaMateriais">
-          <div class="hub-shortcut-icon">👕</div>
-          <div class="hub-shortcut-body">
-            <h4>Loja Oficial de Materiais TGA</h4>
-            <p>Camisas, regatas e bonés da Garra Alviverde com desconto automático para Sócios a partir da 1ª parcela.</p>
+        <!-- FAIXA DISCRETA DE REDES SOCIAIS & HISTÓRIA -->
+        <div class="m1-quick-bar">
+          <div class="m1-quick-bar-left">
+            <img src="/assets/logo-tga.jpg" alt="TGA" />
+            <div>
+              <strong>Torcida Organizada Garra Alviverde • Rio Verde - GO</strong>
+              <span>Apoiando o Esporte Clube Rio Verde no Estádio Velosão desde 19/05/2015</span>
+            </div>
           </div>
-          <span class="hub-shortcut-arrow">Ver Materiais ↗</span>
-        </div>
-
-        <div class="hub-shortcut-card" data-open-window="windowJogosEcrv">
-          <div class="hub-shortcut-icon">⚽</div>
-          <div class="hub-shortcut-body">
-            <h4>Jogos do E.C.R.V. & Ingresso no Velosão</h4>
-            <p>Tabela atualizada do Verdão do Sudoeste e Check-in de Ingresso Garantido para Sócios nos jogos em casa.</p>
+          <div class="m1-quick-bar-actions">
+            <button type="button" class="m1-btn-ghost" data-open-window="windowHistoria">
+              🥁 Nossa História (ECRV e a TGA)
+            </button>
+            <a href="https://www.instagram.com/torcidagarraalviverde15/" id="topInstagramLink" target="_blank" rel="noopener" class="m1-btn-ghost">
+              📸 @torcidagarraalviverde15
+            </a>
+            <a href="#" id="topWhatsappLink" target="_blank" rel="noopener" class="m1-btn-ghost">
+              💬 (64) 99330-2283
+            </a>
           </div>
-          <span class="hub-shortcut-arrow">Ver Tabela ↗</span>
-        </div>
-
-        <div class="hub-shortcut-card" data-open-window="windowSocio">
-          <div class="hub-shortcut-icon">🪪</div>
-          <div class="hub-shortcut-body">
-            <h4>Seja Sócio TGA (R$ 105 ou 3x R$ 35)</h4>
-            <p>Preencha sua ficha de filiação, gere sua Carteirinha Oficial na hora e fortaleça nossa torcida.</p>
-          </div>
-          <span class="hub-shortcut-arrow">Fazer Inscrição ↗</span>
-        </div>
-
-        <div class="hub-shortcut-card" data-open-window="windowCaravanas">
-          <div class="hub-shortcut-icon">🚌</div>
-          <div class="hub-shortcut-body">
-            <h4>Caravanas da TGA</h4>
-            <p>Veja as viagens abertas para apoiar o E.C.R.V., copie o PIX com QR Code e garanta seu lugar no ônibus.</p>
-          </div>
-          <span class="hub-shortcut-arrow">Abrir Janela ↗</span>
-        </div>
-
-        <div class="hub-shortcut-card" data-open-window="windowHistoria">
-          <div class="hub-shortcut-icon">🥁</div>
-          <div class="hub-shortcut-body">
-            <h4>ECRV e a TGA</h4>
-            <p>Conheça nossa história desde 19/05/2015 no Estádio Velosão e siga o Instagram oficial da torcida.</p>
-          </div>
-          <span class="hub-shortcut-arrow">Abrir Janela ↗</span>
         </div>
       </div>
     </section>
@@ -2637,6 +2558,6 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js?v=20261121b"></script>
+  <script src="/app.js?v=20261121c"></script>
 </body>
 </html>

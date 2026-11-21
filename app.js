@@ -548,6 +548,7 @@ function renderAll() {
 
   renderPixQrSvg(cfg.chavePix);
   renderHeroNextCaravana();
+  renderHomeBentoModel1();
   renderCaravanasSection();
   renderLojaMateriaisSection();
   renderJogosEcrvSection();
@@ -566,23 +567,175 @@ function renderAll() {
   }
 }
 
+function renderHomeBentoModel1() {
+  // 1. Card Matchday no Hero (Próximo Jogo do E.C.R.V. no Velosão)
+  const matchBox = document.getElementById('homeMatchdayBox');
+  if (matchBox) {
+    const jogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
+    const proxJogo = jogos.find(j => j.status === 'Check-in de Ingresso Aberto')
+      || jogos.find(j => j.status !== 'Encerrado')
+      || jogos[0];
+
+    if (!proxJogo) {
+      matchBox.innerHTML = `
+        <div class="m1-matchday-top">
+          <span>⚽ PRÓXIMO JOGO DO E.C.R.V.</span>
+          <span class="m1-matchday-pill">Calendário Oficial</span>
+        </div>
+        <div class="m1-matchday-scoreboard">
+          <div class="m1-team-col">
+            <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." />
+            <strong>E.C. Rio Verde</strong>
+          </div>
+          <div class="m1-matchday-vs">
+            <small>VELOSÃO</small>
+            <strong>E.C.R.V.</strong>
+            <span>Em breve</span>
+          </div>
+          <div class="m1-team-col">
+            <img src="/assets/logo-tga.jpg" alt="TGA" />
+            <strong>Garra Alviverde</strong>
+          </div>
+        </div>
+        <div class="m1-matchday-stadium">
+          📍 <strong>Estádio Mozart Veloso do Carmo (Velosão)</strong> • Rio Verde - GO
+        </div>
+      `;
+    } else {
+      const partes = String(proxJogo.adversario || '').split(/\s+(?:x|vs\.?|×)\s+/i);
+      const timeCasa = partes.length >= 2 ? partes[0].replace(/Esporte Clube Rio Verde/i, 'Rio Verde') : 'E.C. Rio Verde';
+      const timeFora = partes.length >= 2 ? partes[1] : (proxJogo.adversario || 'Adversário');
+      const statusText = proxJogo.status === 'Check-in de Ingresso Aberto' ? 'Check-in Aberto' : (proxJogo.status || 'Agendado');
+
+      matchBox.innerHTML = `
+        <div class="m1-matchday-top">
+          <span>⚽ PRÓXIMO JOGO DO E.C.R.V.</span>
+          <span class="m1-matchday-pill">${escapeHtml(statusText)}</span>
+        </div>
+        <div class="m1-matchday-scoreboard">
+          <div class="m1-team-col">
+            <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." />
+            <strong>${escapeHtml(timeCasa)}</strong>
+          </div>
+          <div class="m1-matchday-vs">
+            <small>${escapeHtml(proxJogo.campeonato || 'CAMPEONATO GOIANO')}</small>
+            <strong>${proxJogo.placar ? escapeHtml(proxJogo.placar) : 'VS'}</strong>
+            <span>${formatDateBR(proxJogo.dataJogo)} • ${escapeHtml(proxJogo.horario || '16:00')}</span>
+          </div>
+          <div class="m1-team-col">
+            <div class="m1-team-badge">⚽</div>
+            <strong>${escapeHtml(timeFora)}</strong>
+          </div>
+        </div>
+        <div class="m1-matchday-stadium">
+          📍 <strong>${escapeHtml(proxJogo.estadio || 'Estádio Mozart Veloso do Carmo (Velosão)')}</strong>
+        </div>
+      `;
+    }
+  }
+
+  // 2. Bento Grid: Vitrine Rápida da Loja Oficial (até 3 produtos)
+  const lojaGrid = document.getElementById('homeBentoLojaGrid');
+  if (lojaGrid) {
+    const mats = (Array.isArray(appState.materiais) ? appState.materiais : []).slice(0, 3);
+    if (mats.length === 0) {
+      lojaGrid.innerHTML = `
+        <div class="m1-product-card" style="grid-column: 1 / -1; text-align:center;">
+          <h4>👕 Loja Oficial Garra Alviverde</h4>
+          <p>Clique em "Ver Loja Completa" para conferir nossos materiais oficiais.</p>
+        </div>
+      `;
+    } else {
+      lojaGrid.innerHTML = mats.map((m) => {
+        const disponivel = m.estoqueStatus !== 'Esgotado';
+        return `
+          <div class="m1-product-card">
+            <div>
+              <div class="m1-product-pills">
+                <span class="m1-pill-emerald">Masculino & Feminino</span>
+                <span class="m1-pill-gold">Adulto & Infantil</span>
+              </div>
+              <div class="m1-product-thumb">
+                <img src="${m.fotoDataUrl || '/assets/logo-tga.jpg'}" alt="${escapeHtml(m.nome)}" />
+              </div>
+              <h4>${escapeHtml(m.nome)}</h4>
+              <p>Tamanhos: ${escapeHtml(m.tamanhos || 'P, M, G, GG, XG')} ${m.descricao ? `• ${escapeHtml(m.descricao)}` : ''}</p>
+            </div>
+            <div class="m1-product-footer">
+              <div class="m1-product-price">
+                <small>Preço Sócio TGA:</small>
+                <strong>${formatBRL(m.valorSocio)}</strong>
+                <span>${formatBRL(m.valorNaoSocio)}</span>
+              </div>
+              <button type="button" class="m1-btn-emerald" data-bento-select-mat="${m.id}">
+                ${disponivel ? '🛒 Pedir' : 'Ver Loja'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lojaGrid.querySelectorAll('[data-bento-select-mat]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const matId = btn.getAttribute('data-bento-select-mat');
+          openFeatureWindow('windowLojaMateriais');
+          const sel = document.getElementById('pedSelectMaterial');
+          if (sel && Array.from(sel.options).some(o => o.value === matId)) {
+            sel.value = matId;
+            updatePedidoMaterialPriceDisplay();
+          }
+        });
+      });
+    }
+  }
+
+  // 3. Bento Card: Sócio Solidário / Eventos & Doação de Sangue
+  const evBox = document.getElementById('homeBentoEventoBox');
+  if (evBox) {
+    const eventos = Array.isArray(appState.eventosTga) ? appState.eventosTga : [];
+    const proxEv = eventos.find(e => e.status !== 'Encerrado') || eventos[0];
+    const proxTitulo = proxEv ? `${getEventoCategoryIcon(proxEv.categoria)} Próxima: ${proxEv.titulo} (${formatDateBR(proxEv.dataEvento)})` : '📅 Campanhas Abertas em Rio Verde - GO';
+
+    evBox.innerHTML = `
+      <div>
+        <div class="m1-bento-card-top">
+          <span class="m1-tag-gold">🩸 SÓCIO SOLIDÁRIO TGA</span>
+          <span class="m1-tag-sub">🎁 Vale 1 Parcela Isenta (-R$ 35,00)</span>
+        </div>
+        <h3>Eventos & Ações Sociais da Garra Alviverde</h3>
+        <p>
+          Campanha de <strong>Doação de Sangue</strong>, <strong>Páscoa Solidária</strong>, <strong>Dia das Crianças</strong> e <strong>Natal Solidário</strong>. Participe e ganhe isenção de 1 parcela no seu plano de Sócio!
+        </p>
+      </div>
+      <div class="m1-bento-card-footer">
+        <span style="font-size:0.78rem; color:#6ee7b7; font-weight:700;">${escapeHtml(proxTitulo)}</span>
+        <button type="button" class="m1-btn-gold-lg" style="padding:9px 16px; font-size:0.8rem; border-radius:11px;" data-bento-open-eventos="true">
+          🤝 Participar Agora →
+        </button>
+      </div>
+    `;
+
+    evBox.querySelector('[data-bento-open-eventos]')?.addEventListener('click', () => {
+      openFeatureWindow('windowEventosTga');
+    });
+  }
+}
+
 function renderHeroNextCaravana() {
   const box = document.getElementById('heroNextCaravanaBox');
   if (!box) return;
   const abertas = appState.caravanas.filter(c => c.status === 'Aberta');
   if (abertas.length === 0) {
-    box.innerHTML = `<h4>Nenhuma caravana aberta no momento</h4><p>Fique ligado no nosso Instagram @torcidagarraalviverde15 para as próximas viagens com o E.C.R.V.!</p>`;
+    box.innerHTML = `<p>Acompanhe o Esporte Clube Rio Verde fora de casa com os ônibus oficiais da Garra Alviverde saindo do Estádio Velosão.</p>`;
     return;
   }
   const next = abertas[0];
   const vagasRestantes = Math.max(0, next.vagasTotais - next.vagasOcupadas);
   box.innerHTML = `
-    <h4>🚌 Próxima Caravana: ${next.jogo}</h4>
+    <h4>🚌 ${escapeHtml(next.jogo)} — ${escapeHtml(next.adversario)}</h4>
     <div class="hero-next-meta">
-      <div><strong>Confronto:</strong> ${next.adversario}</div>
-      <div><strong>Data / Saída:</strong> ${formatDateBR(next.dataJogo)} • Saída às ${next.horarioSaida}</div>
-      <div><strong>Valores no PIX:</strong> Sócio TGA <strong>${formatBRL(next.valorSocio)}</strong> | Não-Sócio <strong>${formatBRL(next.valorNaoSocio)}</strong></div>
-      <div><strong>Vagas Restantes:</strong> <span style="color:#006437;font-weight:800;">${vagasRestantes} lugares disponíveis</span></div>
+      <div>📅 <strong>Data / Saída:</strong> ${formatDateBR(next.dataJogo)} às ${escapeHtml(next.horarioSaida)}</div>
+      <div>💰 <strong>PIX Sócio TGA:</strong> <strong style="color:#fde047;">${formatBRL(next.valorSocio)}</strong> | Não-Sócio: ${formatBRL(next.valorNaoSocio)} • Restam ${vagasRestantes} vagas</div>
     </div>
   `;
 }
@@ -6121,5 +6274,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modal) modal.hidden = true;
     renderAll();
     showToast(`✅ Produto "${updates.nome}" atualizado com sucesso na Loja Oficial TGA!`);
+  });
+
+  // Check-in Rápido de Ingresso no Card Matchday da Tela Inicial (Modelo 1)
+  document.getElementById('formHomeQuickCheckin')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const cpfTyped = document.getElementById('inputHomeQuickCheckinCpf')?.value.trim() || '';
+    openFeatureWindow('windowJogosEcrv');
+    const chkInput = document.getElementById('chkSocioCpf');
+    if (chkInput && cpfTyped) {
+      chkInput.value = cpfTyped;
+      const formChk = document.getElementById('formCheckinJogoSocio');
+      if (formChk) {
+        formChk.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    }
   });
 });

@@ -2555,9 +2555,88 @@
     </div>
   </div>
 
+  <!-- MODAL DE EDIÇÃO DE PRODUTO / MATERIAL DA LOJA OFICIAL TGA -->
+  <div class="modal-backdrop" id="modalEditMaterial" hidden>
+    <div class="modal-box" style="max-width: 640px;">
+      <div class="admin-modal-header">
+        <div class="admin-header-left">
+          <img src="/assets/logo-tga.jpg" alt="TGA" class="admin-header-logo" />
+          <div>
+            <span class="pill-green">LOJA OFICIAL GARRA ALVIVERDE</span>
+            <h2>✏️ Editar Produto / Material da Loja</h2>
+          </div>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseEditMaterial">✕</button>
+      </div>
+
+      <form id="formEditMaterial">
+        <input type="hidden" id="editMatId" />
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editMatNome">Nome do Produto / Material *</label>
+            <input type="text" id="editMatNome" required placeholder="Ex: Camisa Oficial Garra Alviverde" />
+          </div>
+          <div class="form-group">
+            <label for="editMatCategoria">Categoria / Destaque *</label>
+            <input type="text" id="editMatCategoria" required placeholder="Ex: Material Oficial TGA" />
+          </div>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="editMatValorSocio">Preço Sócio TGA (R$) *</label>
+            <input type="number" step="0.01" id="editMatValorSocio" required />
+          </div>
+          <div class="form-group">
+            <label for="editMatValorNaoSocio">Preço Não-Sócio (R$) *</label>
+            <input type="number" step="0.01" id="editMatValorNaoSocio" required />
+          </div>
+          <div class="form-group">
+            <label for="editMatEstoqueStatus">Status do Estoque *</label>
+            <select id="editMatEstoqueStatus">
+              <option value="Disponível">🟢 Disponível</option>
+              <option value="Esgotado">🔴 Esgotado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editMatTamanhos">Tamanhos Disponíveis *</label>
+          <input type="text" id="editMatTamanhos" required placeholder="Ex: P, M, G, GG, XG" />
+        </div>
+
+        <div class="form-group">
+          <label for="editMatDescricao">Descrição Curta do Material *</label>
+          <input type="text" id="editMatDescricao" required placeholder="Ex: Modelo 26/27 — Masculino, Feminino e Infantil" />
+        </div>
+
+        <div class="form-group" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:12px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;">Foto do Produto / Material</label>
+          <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <img id="editMatFotoPreviewImg" src="/assets/logo-tga.jpg" alt="Preview Produto" style="width:68px; height:68px; border-radius:10px; object-fit:cover; border:2px solid #006437; background:#ffffff;" />
+            <div style="flex:1; min-width:200px;">
+              <input type="file" id="editMatFotoInput" accept="image/*" style="margin-bottom:6px;" />
+              <div>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnResetEditMatFoto" style="font-size:0.75rem; padding:4px 10px;">
+                  🔄 Usar Logo Padrão TGA
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+          <button type="button" class="btn btn-secondary" id="btnCancelEditMaterial">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Salvar Alterações do Produto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js?v=20261121a"></script>
+  <script src="/app.js?v=20261121b"></script>
 </body>
 </html>

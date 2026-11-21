@@ -2952,6 +2952,32 @@ function renderAdminEventosTab() {
 // ============================================================================
 // ADMINISTRAÇÃO DA LOJA DE MATERIAIS E DA TABELA DE JOGOS / PORTARIA VELOSÃO
 // ============================================================================
+let currentEditMaterialPhotoDataUrl = '';
+
+function openEditMaterialModal(matId) {
+  const mat = (appState.materiais || []).find(x => x.id === matId);
+  if (!mat) return;
+
+  document.getElementById('editMatId').value = mat.id;
+  document.getElementById('editMatNome').value = mat.nome || '';
+  document.getElementById('editMatCategoria').value = mat.categoria || 'Material Oficial TGA';
+  document.getElementById('editMatValorSocio').value = Number(mat.valorSocio) || 0;
+  document.getElementById('editMatValorNaoSocio').value = Number(mat.valorNaoSocio) || 0;
+  document.getElementById('editMatEstoqueStatus').value = mat.estoqueStatus === 'Esgotado' ? 'Esgotado' : 'Disponível';
+  document.getElementById('editMatTamanhos').value = mat.tamanhos || 'P, M, G, GG, XG';
+  document.getElementById('editMatDescricao').value = mat.descricao || '';
+
+  currentEditMaterialPhotoDataUrl = mat.fotoDataUrl || '/assets/logo-tga.jpg';
+  const previewImg = document.getElementById('editMatFotoPreviewImg');
+  if (previewImg) previewImg.src = currentEditMaterialPhotoDataUrl;
+
+  const fileInput = document.getElementById('editMatFotoInput');
+  if (fileInput) fileInput.value = '';
+
+  const modal = document.getElementById('modalEditMaterial');
+  if (modal) modal.hidden = false;
+}
+
 function renderAdminLojaTab() {
   const matListEl = document.getElementById('adminMateriaisList');
   const pedBodyEl = document.getElementById('adminPedidosMateriaisBody');
@@ -2973,6 +2999,9 @@ function renderAdminLojaTab() {
               </div>
             </div>
             <div class="action-btns">
+              <button type="button" class="btn-table" data-edit-mat="${m.id}" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;font-weight:800;">
+                ✏️ Editar
+              </button>
               <button type="button" class="btn-table btn-approve" data-toggle-mat-status="${m.id}">
                 ${m.estoqueStatus === 'Esgotado' ? 'Liberar Estoque' : 'Marcar Esgotado'}
               </button>
@@ -2980,6 +3009,13 @@ function renderAdminLojaTab() {
             </div>
           </div>
         `).join('');
+
+    matListEl.querySelectorAll('[data-edit-mat]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-edit-mat');
+        openEditMaterialModal(id);
+      });
+    });
 
     matListEl.querySelectorAll('[data-toggle-mat-status]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -5991,5 +6027,99 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnPrintEventosPdf')?.addEventListener('click', () => {
     if (!hasPerm('exportarPlanilhas')) return;
     printStyledReport(buildEventosReportConfig());
+  });
+
+  // ==========================================================================
+  // 7. EVENTOS DO MODAL DE EDIÇÃO DE PRODUTOS / MATERIAIS DA LOJA OFICIAL TGA
+  // ==========================================================================
+  ['btnCloseEditMaterial', 'btnCancelEditMaterial'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      const m = document.getElementById('modalEditMaterial');
+      if (m) m.hidden = true;
+    });
+  });
+
+  document.getElementById('editMatFotoInput')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 420;
+        const maxH = 420;
+        let width = tempImg.width;
+        let height = tempImg.height;
+        const scale = Math.min(maxW / width, maxH / height, 1);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(tempImg, 0, 0, width, height);
+        currentEditMaterialPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const previewImg = document.getElementById('editMatFotoPreviewImg');
+        if (previewImg) previewImg.src = currentEditMaterialPhotoDataUrl;
+      };
+      tempImg.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('btnResetEditMatFoto')?.addEventListener('click', () => {
+    currentEditMaterialPhotoDataUrl = '/assets/logo-tga.jpg';
+    const previewImg = document.getElementById('editMatFotoPreviewImg');
+    if (previewImg) previewImg.src = currentEditMaterialPhotoDataUrl;
+    const fileInput = document.getElementById('editMatFotoInput');
+    if (fileInput) fileInput.value = '';
+    showToast('🔄 Foto redefinida para o Logo Oficial da TGA.');
+  });
+
+  document.getElementById('formEditMaterial')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editMatId')?.value;
+    const idx = (appState.materiais || []).findIndex(m => m.id === id);
+    if (idx === -1) return;
+
+    const oldMat = appState.materiais[idx];
+    const updates = {
+      nome: document.getElementById('editMatNome')?.value.trim() || oldMat.nome,
+      categoria: document.getElementById('editMatCategoria')?.value.trim() || 'Material Oficial TGA',
+      valorSocio: Number(document.getElementById('editMatValorSocio')?.value) || 0,
+      valorNaoSocio: Number(document.getElementById('editMatValorNaoSocio')?.value) || 0,
+      estoqueStatus: document.getElementById('editMatEstoqueStatus')?.value || 'Disponível',
+      tamanhos: document.getElementById('editMatTamanhos')?.value.trim() || 'P, M, G, GG, XG',
+      descricao: document.getElementById('editMatDescricao')?.value.trim() || '',
+      fotoDataUrl: currentEditMaterialPhotoDataUrl || oldMat.fotoDataUrl || '/assets/logo-tga.jpg'
+    };
+
+    const audit = buildAuditPayload(
+      'Loja TGA',
+      `Editou o produto da loja "${updates.nome}"`,
+      `Sócio: ${formatBRL(updates.valorSocio)} | Não-Sócio: ${formatBRL(updates.valorNaoSocio)} | Tam: ${updates.tamanhos} | Status: ${updates.estoqueStatus}`
+    );
+
+    appState.materiais[idx] = { ...oldMat, ...updates };
+
+    try {
+      const res = await fetch(`/api/materiais/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...updates, _auditoria: audit })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.materiais)) {
+          appState.materiais = data.materiais;
+        }
+      }
+    } catch (err) {}
+
+    saveLocalBackup();
+    const modal = document.getElementById('modalEditMaterial');
+    if (modal) modal.hidden = true;
+    renderAll();
+    showToast(`✅ Produto "${updates.nome}" atualizado com sucesso na Loja Oficial TGA!`);
   });
 });

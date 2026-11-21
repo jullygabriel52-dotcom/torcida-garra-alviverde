@@ -1237,6 +1237,7 @@ async function requestHandler(req, res) {
         rodada: fields.rodada || 'Rodada Oficial',
         mando: fields.mando || 'Em Casa (Velosão)',
         adversario: fields.adversario || 'Esporte Clube Rio Verde (E.C.R.V.) vs. Adversário',
+        logoAdversarioDataUrl: fields.logoAdversarioDataUrl || '',
         dataJogo: fields.dataJogo || '',
         horario: fields.horario || '16:00',
         estadio: fields.estadio || 'Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO',

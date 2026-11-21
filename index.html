@@ -1850,9 +1850,15 @@
                     </select>
                   </div>
                 </div>
-                <div class="form-group">
-                  <label>Confronto *</label>
-                  <input type="text" id="newJogoAdversario" required placeholder="Ex: Esporte Clube Rio Verde (E.C.R.V.) vs. Adversário" />
+                <div class="form-row-2">
+                  <div class="form-group">
+                    <label>Confronto *</label>
+                    <input type="text" id="newJogoAdversario" required placeholder="Ex: Rio Verde x Goiás (ou Vila Nova x Rio Verde)" />
+                  </div>
+                  <div class="form-group">
+                    <label>🛡️ Logo / Escudo do Adversário (Opcional)</label>
+                    <input type="file" id="newJogoLogoAdversario" accept="image/*" />
+                  </div>
                 </div>
                 <div class="form-row-3">
                   <div class="form-group">
@@ -1865,7 +1871,7 @@
                   </div>
                   <div class="form-group">
                     <label>Placar (Opcional)</label>
-                    <input type="text" id="newJogoPlacar" placeholder="Ex: E.C.R.V. 2 x 0 Adv" />
+                    <input type="text" id="newJogoPlacar" placeholder="Ex: 2 x 0" />
                   </div>
                 </div>
                 <div class="form-group">
@@ -1873,9 +1879,10 @@
                   <input type="text" id="newJogoEstadio" required value="Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO" />
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">
-                  ⚽ Publicar Jogo na Tabela Oficial
+                  ⚽ Publicar Jogo na Tabela Oficial (Com Escudos)
                 </button>
               </form>
+              <input type="file" id="inputChangeJogoLogoFile" accept="image/*" hidden />
             </div>
 
             <div class="admin-subcard">
@@ -2558,6 +2565,6 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js?v=20261121c"></script>
+  <script src="/app.js?v=20261121d"></script>
 </body>
 </html>

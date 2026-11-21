@@ -567,8 +567,141 @@ function renderAll() {
   }
 }
 
+function isRioVerdeTeamName(name) {
+  const n = String(name || '').toLowerCase();
+  return n.includes('rio verde') || n.includes('e.c.r.v') || n.includes('ecrv') || n.includes('verdão do sudoeste');
+}
+
+function getAutoClubShieldDataUri(teamName) {
+  const raw = String(teamName || 'Clube').trim();
+  const lower = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  let bg1 = '#1e293b';
+  let bg2 = '#0f172a';
+  let border = '#eab308';
+  let text = '#ffffff';
+  let sigla = 'FC';
+
+  if (lower.includes('goias')) {
+    bg1 = '#006437'; bg2 = '#022c16'; border = '#ffffff'; sigla = 'GEC';
+  } else if (lower.includes('vila nova')) {
+    bg1 = '#dc2626'; bg2 = '#991b1b'; border = '#ffffff'; sigla = 'VNFC';
+  } else if (lower.includes('atletico')) {
+    bg1 = '#dc2626'; bg2 = '#111827'; border = '#eab308'; sigla = 'ACG';
+  } else if (lower.includes('aparecidense')) {
+    bg1 = '#1e3a8a'; bg2 = '#172554'; border = '#facc15'; sigla = 'AAC';
+  } else if (lower.includes('anapolis')) {
+    bg1 = '#b91c1c'; bg2 = '#1e3a8a'; border = '#ffffff'; sigla = 'AFC';
+  } else if (lower.includes('crac')) {
+    bg1 = '#0284c7'; bg2 = '#0369a1'; border = '#ffffff'; sigla = 'CRAC';
+  } else if (lower.includes('goiatuba')) {
+    bg1 = '#2563eb'; bg2 = '#1d4ed8'; border = '#ffffff'; sigla = 'GEC';
+  } else if (lower.includes('jataiense')) {
+    bg1 = '#15803d'; bg2 = '#14532d'; border = '#ffffff'; sigla = 'AEJ';
+  } else if (lower.includes('goianesia')) {
+    bg1 = '#1d4ed8'; bg2 = '#1e3a8a'; border = '#ffffff'; sigla = 'GEC';
+  } else if (lower.includes('inhumas')) {
+    bg1 = '#6d28d9'; bg2 = '#4c1d95'; border = '#ffffff'; sigla = 'IEC';
+  } else if (lower.includes('goiania')) {
+    bg1 = '#18181b'; bg2 = '#09090b'; border = '#ffffff'; sigla = 'GEC';
+  } else if (lower.includes('morrinhos')) {
+    bg1 = '#15803d'; bg2 = '#ca8a04'; border = '#ffffff'; sigla = 'MFC';
+  } else if (lower.includes('ipora')) {
+    bg1 = '#1d4ed8'; bg2 = '#eab308'; border = '#ffffff'; sigla = 'IPEC';
+  } else if (lower.includes('abecat')) {
+    bg1 = '#ea580c'; bg2 = '#18181b'; border = '#ffffff'; sigla = 'ABE';
+  } else if (lower.includes('santa helena')) {
+    bg1 = '#dc2626'; bg2 = '#7f1d1d'; border = '#ffffff'; sigla = 'SHEC';
+  } else if (lower.includes('mineiros')) {
+    bg1 = '#16a34a'; bg2 = '#064e3b'; border = '#ffffff'; sigla = 'MEC';
+  } else if (lower.includes('trindade')) {
+    bg1 = '#1e40af'; bg2 = '#dc2626'; border = '#ffffff'; sigla = 'TAC';
+  } else {
+    const words = raw.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim().split(/\s+/).filter(Boolean);
+    if (words.length >= 2) {
+      sigla = (words[0][0] + words[1][0] + (words[2] ? words[2][0] : '')).toUpperCase();
+    } else if (words.length === 1) {
+      sigla = words[0].slice(0, 3).toUpperCase();
+    }
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="${bg1}"/>
+        <stop offset="100%" stop-color="${bg2}"/>
+      </linearGradient>
+    </defs>
+    <circle cx="48" cy="48" r="45" fill="url(#g)" stroke="${border}" stroke-width="5"/>
+    <path d="M48 14 L74 24 L74 49 C74 66 62 77 48 83 C34 77 22 66 22 49 L22 24 Z" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2.5"/>
+    <text x="48" y="55" text-anchor="middle" fill="${text}" font-family="Arial, sans-serif" font-weight="900" font-size="${sigla.length > 3 ? '18' : '21'}">${sigla}</text>
+  </svg>`;
+
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+function getMatchTeamsAndLogos(jogo) {
+  if (!jogo) {
+    return {
+      team1Name: 'E.C. Rio Verde',
+      team1Logo: '/assets/escudo-ecrv.jpg',
+      team2Name: 'Adversário',
+      team2Logo: getAutoClubShieldDataUri('Adversário'),
+      opponentName: 'Adversário',
+      opponentLogo: getAutoClubShieldDataUri('Adversário')
+    };
+  }
+
+  const rawConfronto = String(jogo.adversario || '').trim();
+  const partes = rawConfronto.split(/\s+(?:x|vs\.?|×)\s+/i);
+  const isCasa = String(jogo.mando || '').includes('Casa');
+
+  let team1Name = 'E.C. Rio Verde';
+  let team2Name = 'Adversário';
+
+  if (partes.length >= 2) {
+    team1Name = partes[0].trim();
+    team2Name = partes.slice(1).join(' x ').trim();
+  } else if (rawConfronto) {
+    if (isRioVerdeTeamName(rawConfronto)) {
+      team1Name = 'E.C. Rio Verde';
+      team2Name = 'Adversário';
+    } else if (isCasa) {
+      team1Name = 'E.C. Rio Verde';
+      team2Name = rawConfronto;
+    } else {
+      team1Name = rawConfronto;
+      team2Name = 'E.C. Rio Verde';
+    }
+  }
+
+  const t1IsEcrv = isRioVerdeTeamName(team1Name);
+  const t2IsEcrv = isRioVerdeTeamName(team2Name);
+
+  const oppName = t1IsEcrv ? team2Name : (t2IsEcrv ? team1Name : team2Name);
+  const oppLogo = (jogo.logoAdversarioDataUrl && jogo.logoAdversarioDataUrl.trim())
+    ? jogo.logoAdversarioDataUrl.trim()
+    : getAutoClubShieldDataUri(oppName);
+
+  const team1Logo = t1IsEcrv ? '/assets/escudo-ecrv.jpg' : oppLogo;
+  const team2Logo = t2IsEcrv ? '/assets/escudo-ecrv.jpg' : (t1IsEcrv ? oppLogo : getAutoClubShieldDataUri(team2Name));
+
+  const cleanDisplay = (n) => n
+    .replace(/Esporte Clube Rio Verde\s*\(?E\.?C\.?R\.?V\.?\)?/i, 'E.C. Rio Verde')
+    .trim();
+
+  return {
+    team1Name: cleanDisplay(team1Name),
+    team1Logo,
+    team2Name: cleanDisplay(team2Name),
+    team2Logo,
+    opponentName: cleanDisplay(oppName),
+    opponentLogo: oppLogo
+  };
+}
+
 function renderHomeBentoModel1() {
-  // 1. Card Matchday no Hero (Próximo Jogo do E.C.R.V. no Velosão)
+  // 1. Card Matchday no Hero (Próximo Jogo do E.C.R.V. no Velosão com os Escudos dos 2 Times)
   const matchBox = document.getElementById('homeMatchdayBox');
   if (matchBox) {
     const jogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
@@ -602,9 +735,7 @@ function renderHomeBentoModel1() {
         </div>
       `;
     } else {
-      const partes = String(proxJogo.adversario || '').split(/\s+(?:x|vs\.?|×)\s+/i);
-      const timeCasa = partes.length >= 2 ? partes[0].replace(/Esporte Clube Rio Verde/i, 'Rio Verde') : 'E.C. Rio Verde';
-      const timeFora = partes.length >= 2 ? partes[1] : (proxJogo.adversario || 'Adversário');
+      const info = getMatchTeamsAndLogos(proxJogo);
       const statusText = proxJogo.status === 'Check-in de Ingresso Aberto' ? 'Check-in Aberto' : (proxJogo.status || 'Agendado');
 
       matchBox.innerHTML = `
@@ -614,8 +745,8 @@ function renderHomeBentoModel1() {
         </div>
         <div class="m1-matchday-scoreboard">
           <div class="m1-team-col">
-            <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." />
-            <strong>${escapeHtml(timeCasa)}</strong>
+            <img src="${info.team1Logo}" alt="${escapeHtml(info.team1Name)}" style="background:#ffffff; object-fit:contain; padding:2px;" />
+            <strong>${escapeHtml(info.team1Name)}</strong>
           </div>
           <div class="m1-matchday-vs">
             <small>${escapeHtml(proxJogo.campeonato || 'CAMPEONATO GOIANO')}</small>
@@ -623,8 +754,8 @@ function renderHomeBentoModel1() {
             <span>${formatDateBR(proxJogo.dataJogo)} • ${escapeHtml(proxJogo.horario || '16:00')}</span>
           </div>
           <div class="m1-team-col">
-            <div class="m1-team-badge">⚽</div>
-            <strong>${escapeHtml(timeFora)}</strong>
+            <img src="${info.team2Logo}" alt="${escapeHtml(info.team2Name)}" style="background:#ffffff; object-fit:contain; padding:2px;" />
+            <strong>${escapeHtml(info.team2Name)}</strong>
           </div>
         </div>
         <div class="m1-matchday-stadium">
@@ -1332,6 +1463,7 @@ function renderJogosEcrvSection() {
   tbody.innerHTML = jogos.map((j) => {
     const isCasa = String(j.mando || '').includes('Casa');
     const isEncerrado = j.status === 'Encerrado';
+    const info = getMatchTeamsAndLogos(j);
     return `
       <tr>
         <td>
@@ -1344,8 +1476,19 @@ function renderJogosEcrvSection() {
           </span>
         </td>
         <td>
-          <strong style="font-size:0.95rem; color:#064e3b;">⚽ ${escapeHtml(j.adversario)}</strong>
-          ${j.placar ? `<div style="margin-top:3px; font-weight:800; color:#047857; background:#ecfdf5; display:inline-block; padding:2px 8px; border-radius:6px;">Placar: ${escapeHtml(j.placar)}</div>` : ''}
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:7px;">
+              <img src="${info.team1Logo}" alt="${escapeHtml(info.team1Name)}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; background:#ffffff; border:2px solid #006437; padding:2px; flex-shrink:0;" />
+              <strong style="font-size:0.94rem; color:#064e3b;">${escapeHtml(info.team1Name)}</strong>
+            </div>
+            <span style="background:${j.placar ? '#006437' : '#f1f5f9'}; color:${j.placar ? '#fde047' : '#475569'}; font-weight:900; font-size:0.8rem; padding:3px 9px; border-radius:999px; border:1px solid ${j.placar ? '#eab308' : '#cbd5e1'};">
+              ${j.placar ? escapeHtml(j.placar) : 'VS'}
+            </span>
+            <div style="display:flex; align-items:center; gap:7px;">
+              <img src="${info.team2Logo}" alt="${escapeHtml(info.team2Name)}" style="width:38px; height:38px; border-radius:50%; object-fit:contain; background:#ffffff; border:2px solid #eab308; padding:2px; flex-shrink:0;" />
+              <strong style="font-size:0.94rem; color:#0f172a;">${escapeHtml(info.team2Name)}</strong>
+            </div>
+          </div>
         </td>
         <td>
           <strong>📅 ${formatDateBR(j.dataJogo)}</strong><br>
@@ -3435,6 +3578,9 @@ function renderAdminLojaTab() {
   }
 }
 
+let currentJogoLogoEditTargetId = '';
+let currentNovoJogoLogoDataUrl = '';
+
 function renderAdminJogosTab() {
   const jogosListEl = document.getElementById('adminJogosList');
   const filterSelect = document.getElementById('filterCheckinJogoSelect');
@@ -3454,29 +3600,52 @@ function renderAdminJogosTab() {
   if (jogosListEl) {
     jogosListEl.innerHTML = jogos.length === 0
       ? `<p style="padding:12px;">Nenhum jogo cadastrado.</p>`
-      : jogos.map((j) => `
-          <div class="manage-item" style="flex-direction:column; align-items:stretch; gap:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
-              <div>
-                <strong>⚽ ${escapeHtml(j.adversario)}</strong>
-                <span class="status-badge ${j.status === 'Encerrado' ? 'status-pending' : 'status-paid'}" style="margin-left:6px;">
-                  ${escapeHtml(j.status)}
-                </span><br>
-                <small>${escapeHtml(j.campeonato)} (${escapeHtml(j.rodada)}) • ${formatDateBR(j.dataJogo)} às ${escapeHtml(j.horario)} • ${escapeHtml(j.mando)}</small>
-                ${j.placar ? `<div style="font-size:0.82rem; font-weight:800; color:#047857; margin-top:2px;">Placar: ${escapeHtml(j.placar)}</div>` : ''}
-              </div>
-              <div class="action-btns">
-                <button type="button" class="btn-table" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;" data-set-placar-jogo="${j.id}">
-                  ⚽ Informar Placar
-                </button>
-                <button type="button" class="btn-table btn-approve" data-toggle-status-jogo="${j.id}">
-                  ${j.status === 'Encerrado' ? 'Reabrir Check-in' : 'Encerrar Jogo'}
-                </button>
-                <button type="button" class="btn-table btn-del" data-del-jogo="${j.id}">🗑️</button>
+      : jogos.map((j) => {
+          const info = getMatchTeamsAndLogos(j);
+          return `
+            <div class="manage-item" style="flex-direction:column; align-items:stretch; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="display:flex; align-items:center; gap:4px;">
+                    <img src="${info.team1Logo}" alt="${escapeHtml(info.team1Name)}" style="width:36px; height:36px; border-radius:50%; object-fit:contain; background:#ffffff; border:2px solid #006437; padding:2px;" />
+                    <img src="${info.team2Logo}" alt="${escapeHtml(info.team2Name)}" style="width:36px; height:36px; border-radius:50%; object-fit:contain; background:#ffffff; border:2px solid #eab308; padding:2px;" />
+                  </div>
+                  <div>
+                    <strong>⚽ ${escapeHtml(info.team1Name)} x ${escapeHtml(info.team2Name)}</strong>
+                    <span class="status-badge ${j.status === 'Encerrado' ? 'status-pending' : 'status-paid'}" style="margin-left:6px;">
+                      ${escapeHtml(j.status)}
+                    </span><br>
+                    <small>${escapeHtml(j.campeonato)} (${escapeHtml(j.rodada)}) • ${formatDateBR(j.dataJogo)} às ${escapeHtml(j.horario)} • ${escapeHtml(j.mando)}</small>
+                    ${j.placar ? `<div style="font-size:0.82rem; font-weight:800; color:#047857; margin-top:2px;">Placar: ${escapeHtml(j.placar)}</div>` : ''}
+                  </div>
+                </div>
+                <div class="action-btns">
+                  <button type="button" class="btn-table" style="background:#fef9c3;color:#854d0e;border-color:#eab308;font-weight:800;" data-change-logo-jogo="${j.id}" title="Enviar ou trocar a logo/escudo do time adversário">
+                    🛡️ Escudo Adversário
+                  </button>
+                  <button type="button" class="btn-table" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;" data-set-placar-jogo="${j.id}">
+                    ⚽ Informar Placar
+                  </button>
+                  <button type="button" class="btn-table btn-approve" data-toggle-status-jogo="${j.id}">
+                    ${j.status === 'Encerrado' ? 'Reabrir Check-in' : 'Encerrar Jogo'}
+                  </button>
+                  <button type="button" class="btn-table btn-del" data-del-jogo="${j.id}">🗑️</button>
+                </div>
               </div>
             </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
+
+    jogosListEl.querySelectorAll('[data-change-logo-jogo]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentJogoLogoEditTargetId = btn.getAttribute('data-change-logo-jogo') || '';
+        const fileInput = document.getElementById('inputChangeJogoLogoFile');
+        if (fileInput) {
+          fileInput.value = '';
+          fileInput.click();
+        }
+      });
+    });
 
     jogosListEl.querySelectorAll('[data-set-placar-jogo]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -5659,6 +5828,77 @@ document.addEventListener('DOMContentLoaded', () => {
     printStyledReport(buildPedidosLojaReportConfig());
   });
 
+  document.getElementById('newJogoLogoAdversario')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      currentNovoJogoLogoDataUrl = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 160;
+        const maxH = 160;
+        let width = tempImg.width;
+        let height = tempImg.height;
+        const scale = Math.min(maxW / width, maxH / height, 1);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(tempImg, 0, 0, width, height);
+        currentNovoJogoLogoDataUrl = canvas.toDataURL('image/png');
+      };
+      tempImg.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('inputChangeJogoLogoFile')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentJogoLogoEditTargetId) return;
+    const targetId = currentJogoLogoEditTargetId;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const tempImg = new Image();
+      tempImg.onload = async () => {
+        const canvas = document.createElement('canvas');
+        const maxW = 160;
+        const maxH = 160;
+        let width = tempImg.width;
+        let height = tempImg.height;
+        const scale = Math.min(maxW / width, maxH / height, 1);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(tempImg, 0, 0, width, height);
+        const logoDataUrl = canvas.toDataURL('image/png');
+
+        const jogo = (appState.jogosEcrv || []).find(x => x.id === targetId);
+        if (jogo) {
+          jogo.logoAdversarioDataUrl = logoDataUrl;
+          try {
+            await fetch(`/api/jogos/${targetId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ logoAdversarioDataUrl: logoDataUrl })
+            });
+          } catch (err) {}
+          saveLocalBackup();
+          renderAll();
+          showToast(`🛡️ Escudo do adversário atualizado no jogo "${jogo.adversario}"!`);
+        }
+      };
+      tempImg.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
   document.getElementById('formNovoJogo')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const estadioEl = document.getElementById('newJogoEstadio') || document.getElementById('newJogoLocal');
@@ -5670,6 +5910,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mando: document.getElementById('newJogoMando')?.value || 'Em Casa (Velosão)',
       status: document.getElementById('newJogoStatus')?.value || 'Check-in de Ingresso Aberto',
       adversario: document.getElementById('newJogoAdversario')?.value.trim() || '',
+      logoAdversarioDataUrl: currentNovoJogoLogoDataUrl || '',
       dataJogo: document.getElementById('newJogoData')?.value || '',
       horario: document.getElementById('newJogoHorario')?.value.trim() || '16:00',
       placar: placarEl ? placarEl.value.trim() : '',
@@ -5705,6 +5946,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    currentNovoJogoLogoDataUrl = '';
     saveLocalBackup();
     renderAll();
     e.target.reset();

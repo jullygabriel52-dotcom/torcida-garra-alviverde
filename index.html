@@ -1470,6 +1470,9 @@
           <button type="button" class="admin-tab" data-tab="tab-jogos" id="btnTabJogos">
             ⚽ Jogos & Ingressos (<span id="tabCountCheckins">0</span>)
           </button>
+          <button type="button" class="admin-tab" data-tab="tab-plano-acao" id="btnTabPlanoAcao">
+            📋 Plano de Ação dos Jogos (<span id="tabCountPlanoAcao">8</span>)
+          </button>
           <button type="button" class="admin-tab" data-tab="tab-diretores" id="btnTabDiretores">
             👑 Diretores & Permissões (<span id="tabCountDiretores">1</span>)
           </button>
@@ -1931,6 +1934,36 @@
                   <!-- Preenchido via JS -->
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ABA NOVA: PLANO DE AÇÃO DOS JOGOS DA TGA (GOIANÃO 2027 • TAREFAS, INSTRUMENTOS, ENTRADA E CARAVANAS) -->
+        <div class="admin-tab-panel" id="tab-plano-acao" hidden>
+          <div class="admin-subcard" style="padding:16px;">
+            <div class="admin-toolbar" style="margin-bottom:14px;">
+              <div>
+                <h3 style="margin:0; color:#052e16;">📋 Plano de Ação dos Jogos da TGA — Goianão 2027</h3>
+                <small style="color:#475569; font-weight:700;">
+                  Planeje quem vai fazer o quê, quais instrumentos da bateria levar, data/horário limite de entrada de materiais e logística das caravanas. Edite por jogo e imprima em PDF (A4)!
+                </small>
+              </div>
+              <div class="admin-export-btns" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary btn-sm" id="btnPrintPlanoAcaoIframe">
+                  🖨️ Imprimir / Salvar Plano Atual em PDF (A4)
+                </button>
+                <a href="/plano-de-acao.html" target="_blank" rel="noopener" class="btn btn-secondary btn-sm" style="text-decoration:none;">
+                  ↗️ Abrir Plano de Ação em Tela Cheia
+                </a>
+              </div>
+            </div>
+            <div style="border:2px solid #006437; border-radius:14px; overflow:hidden; background:#04160c; box-shadow:0 12px 30px rgba(0,0,0,0.18);">
+              <iframe
+                id="iframeAdminPlanoAcao"
+                src="/plano-de-acao.html"
+                title="Plano de Ação dos Jogos da TGA — Goianão 2027"
+                style="width:100%; height:980px; border:none; display:block;"
+              ></iframe>
             </div>
           </div>
         </div>
@@ -2647,6 +2680,6 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js?v=20261121e"></script>
+  <script src="/app.js?v=20261121f"></script>
 </body>
 </html>

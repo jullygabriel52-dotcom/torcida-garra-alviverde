@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TGA • Goianão 2027 — Plano de Ação dos Jogos</title>
+  <style>
+    :root {
+      --bg: #04160c;
+      --surface: #0b2416;
+      --surface-2: #113420;
+      --border: #1e4d34;
+      --text: #f0fdf4;
+      --text-muted: #9ca3af;
+      --accent: #16a34a;
+      --accent-hover: #15803d;
+      --accent-bright: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.14);
+      --gold: #eab308;
+      --blue: #38bdf8;
+      --blue-soft: rgba(56, 189, 248, 0.14);
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.14);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background:
+        radial-gradient(circle at 18% 22%, rgba(16, 185, 129, 0.22), transparent 45%),
+        radial-gradient(circle at 82% 28%, rgba(234, 179, 8, 0.12), transparent 48%),
+        linear-gradient(135deg, #02130a 0%, #062b16 52%, #031a0d 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      line-height: 1.5;
+      padding-bottom: 50px;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    /* TGA Background Watermark (Estilizada no Fundo) */
+    .tga-watermark {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .tga-watermark img.wm-center {
+      width: min(540px, 75vw);
+      height: auto;
+      opacity: 0.11;
+      mix-blend-mode: screen;
+      filter: drop-shadow(0 0 36px rgba(16, 185, 129, 0.45)) contrast(1.08);
+      object-fit: contain;
+    }
+
+    .tga-watermark img.wm-left {
+      position: absolute;
+      left: -60px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-5deg);
+      width: 420px;
+      height: 420px;
+      opacity: 0.06;
+      mix-blend-mode: luminosity;
+      object-fit: contain;
+    }
+
+    .topbar, .container {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Top Bar */
+    .topbar {
+      background: rgba(6, 26, 15, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 22px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .brand-logo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .brand-badge-fallback {
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      color: var(--accent-bright);
+    }
+
+    .brand-title h1 {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #ffffff;
+    }
+
+    .brand-title p {
+      font-size: 12px;
+      color: #6ee7b7;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    select, input, textarea, button {
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 13px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 700;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover {
+      background: #19452e;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+      border-color: #fde047;
+      color: #052e16;
+      font-weight: 900;
+    }
+
+    .btn-success:hover {
+      filter: brightness(1.06);
+    }
+
+    .btn-danger {
+      background: transparent;
+      border-color: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.18);
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+
+    .game-selector {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid #10b981;
+      padding: 8px 12px;
+      border-radius: 8px;
+      min-width: 270px;
+      font-weight: 700;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1060px;
+      margin: 20px auto;
+      padding: 0 16px;
+    }
+
+    /* Matchup Banner */
+    .matchup-banner {
+      background: linear-gradient(135deg, rgba(14, 48, 29, 0.92), rgba(5, 24, 14, 0.95));
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+    }
+
+    .matchup-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #fde047;
+    }
+
+    .matchup-teams {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      flex-wrap: wrap;
+      padding: 6px 0;
+    }
+
+    .team-side {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 190px;
+    }
+
+    .team-side.home-side {
+      justify-content: flex-end;
+      text-align: right;
+    }
+
+    .team-side.away-side {
+      justify-content: flex-start;
+      text-align: left;
+    }
+
+    .team-logo-box {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2.5px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      padding: 4px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .team-logo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .team-logo-fallback {
+      font-size: 11px;
+      font-weight: 800;
+      color: #064e3b;
+      text-align: center;
+    }
+
+    .team-name {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+      color: #ffffff;
+    }
+
+    .team-role {
+      font-size: 11px;
+      color: #6ee7b7;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .vs-badge {
+      font-size: 15px;
+      font-weight: 900;
+      color: #fde047;
+      background: #052e16;
+      border: 2px solid #eab308;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Mode Switcher & Logo Config */
+    .mode-banner {
+      background: rgba(11, 36, 22, 0.92);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mode-pills {
+      display: flex;
+      gap: 8px;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .mode-pill {
+      padding: 7px 14px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .mode-pill.active-casa {
+      background: var(--accent-soft);
+      color: #4ade80;
+    }
+
+    .mode-pill.active-caravana {
+      background: var(--blue-soft);
+      color: #38bdf8;
+    }
+
+    /* Cards */
+    .card {
+      background: rgba(11, 36, 22, 0.88);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-header h2 {
+      font-size: 16px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #ffffff;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 760px) {
+      .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr;
+      }
+      .team-side.home-side,
+      .team-side.away-side {
+        justify-content: center;
+        text-align: center;
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #a7f3d0;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 11px;
+      border-radius: 7px;
+      width: 100%;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--accent-bright);
+    }
+
+    .highlight-box {
+      background: var(--amber-soft);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+
+    .caravana-box {
+      background: var(--blue-soft);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    th {
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #a7f3d0;
+      font-weight: 800;
+    }
+
+    td input[type="text"],
+    td input[type="number"],
+    td input[type="time"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 6px;
+      width: 100%;
+    }
+
+    td input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-bright);
+      cursor: pointer;
+    }
+
+    .row-unchecked {
+      opacity: 0.45;
+    }
+
+    .summary-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 13px;
+      color: #a7f3d0;
+      margin-top: 10px;
+    }
+
+    .summary-strip strong {
+      color: #fde047;
+    }
+
+    .status-saved {
+      font-size: 12px;
+      color: #4ade80;
+      font-weight: 700;
+    }
+
+    .logo-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .print-only-header,
+    .print-check-mark,
+    .print-textarea-mirror {
+      display: none;
+    }
+
+    /* ================= PRINT / PDF STYLES ================= */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm 13mm;
+      }
+
+      body {
+        background: #ffffff !important;
+        color: #111827 !important;
+        padding: 0 !important;
+        font-size: 11px !important;
+        line-height: 1.35 !important;
+      }
+
+      .tga-watermark {
+        display: flex !important;
+        z-index: 0 !important;
+      }
+
+      .tga-watermark img.wm-center {
+        opacity: 0.08 !important;
+        width: 440px !important;
+        mix-blend-mode: normal !important;
+        filter: none !important;
+      }
+
+      .tga-watermark img.wm-left {
+        display: none !important;
+      }
+
+      .no-print,
+      .topbar,
+      .mode-banner,
+      .btn,
+      .col-actions {
+        display: none !important;
+      }
+
+      .container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .print-only-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2.5px solid #15803d;
+        padding-bottom: 7px;
+        margin-bottom: 10px;
+      }
+
+      .print-only-header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .print-only-header-left img {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .print-only-header h1 {
+        font-size: 16px;
+        font-weight: 800;
+        color: #111827;
+        text-transform: uppercase;
+      }
+
+      .print-only-header .print-badge {
+        display: inline-block;
+        padding: 3px 9px;
+        border: 1.5px solid #15803d;
+        color: #15803d;
+        border-radius: 4px;
+        font-weight: 800;
+        font-size: 10.5px;
+        text-transform: uppercase;
+      }
+
+      .matchup-banner {
+        background: rgba(240, 253, 244, 0.9) !important;
+        border: 1.5px solid #15803d !important;
+        padding: 10px 14px !important;
+        margin-bottom: 10px !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+      }
+
+      .matchup-meta {
+        color: #15803d !important;
+        font-size: 10px !important;
+      }
+
+      .team-logo-box {
+        width: 44px !important;
+        height: 44px !important;
+        background: #ffffff !important;
+        border: 1.5px solid #15803d !important;
+        box-shadow: none !important;
+      }
+
+      .team-name {
+        font-size: 14px !important;
+        color: #111827 !important;
+      }
+
+      .team-role {
+        color: #475569 !important;
+        font-size: 9.5px !important;
+      }
+
+      .vs-badge {
+        background: #15803d !important;
+        color: #ffffff !important;
+        border-color: #15803d !important;
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 12px !important;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 9px 11px !important;
+        margin-bottom: 9px !important;
+        page-break-inside: avoid;
+      }
+
+      .card-header {
+        border-bottom: 1px solid #cbd5e1 !important;
+        margin-bottom: 7px !important;
+        padding-bottom: 4px !important;
+      }
+
+      .card-header h2 {
+        font-size: 12px !important;
+        color: #15803d !important;
+        text-transform: uppercase;
+      }
+
+      .highlight-box,
+      .caravana-box {
+        background: rgba(248, 250, 252, 0.92) !important;
+        border: 1.5px solid #334155 !important;
+        padding: 7px 9px !important;
+        margin-top: 7px !important;
+      }
+
+      .highlight-box > div:first-child,
+      .caravana-box > div:first-child {
+        color: #111827 !important;
+        font-size: 10.5px !important;
+      }
+
+      .field label {
+        color: #475569 !important;
+        font-size: 9px !important;
+      }
+
+      .field input,
+      .field select,
+      .field textarea,
+      td input[type="text"],
+      td input[type="number"],
+      td input[type="time"] {
+        border: none !important;
+        background: transparent !important;
+        color: #111827 !important;
+        padding: 0 !important;
+        font-weight: 600 !important;
+        font-size: 10.5px !important;
+      }
+
+      textarea {
+        display: none !important;
+      }
+
+      .print-textarea-mirror {
+        display: block !important;
+        white-space: pre-wrap;
+        font-weight: 600;
+        font-size: 10.5px;
+        color: #111827;
+      }
+
+      th, td {
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 4px 6px !important;
+        color: #111827 !important;
+      }
+
+      th {
+        color: #334155 !important;
+        font-size: 9px !important;
+        background: #f1f5f9 !important;
+      }
+
+      tr.row-unchecked {
+        display: none !important;
+      }
+
+      td input[type="checkbox"] {
+        display: none !important;
+      }
+
+      .print-check-mark {
+        display: inline !important;
+        font-weight: 700;
+        color: #15803d;
+      }
+
+      .summary-strip {
+        color: #334155 !important;
+        font-size: 10px !important;
+      }
+
+      .summary-strip strong {
+        color: #111827 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fundo com Logo da TGA (Marca d'água estilizada na tela e no PDF) -->
+  <div class="tga-watermark" id="watermarkBox">
+    <img id="watermarkImgLeft" class="wm-left" src="/assets/logo-tga.jpg" onerror="this.src='logo-tga.jpg'" alt="" />
+    <img id="watermarkImg" class="wm-center" src="/assets/logo-tga.jpg" onerror="this.src='logo-tga.jpg'" alt="Logo TGA" />
+  </div>
+
+  <!-- Top Navigation & Actions -->
+  <header class="topbar no-print">
+    <div class="brand">
+      <div class="brand-logo-wrap" id="headerLogoWrap">
+        <img src="/assets/logo-tga.jpg" onerror="this.src='logo-tga.jpg'" alt="TGA" />
+      </div>
+      <div class="brand-title">
+        <h1>TGA • Goianão 2027 — Plano de Ação dos Jogos</h1>
+        <p>Quem vai fazer o quê, instrumentos, horário de entrada e logística de caravana (Edite e imprima em PDF)</p>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <select id="gameSelect" class="game-selector" title="Selecionar Jogo"></select>
+      <button class="btn" id="btnNewGame" title="Criar novo plano">+ Novo Jogo</button>
+      <button class="btn" id="btnDuplicate" title="Duplicar jogo atual">Duplicar</button>
+      <button class="btn btn-danger" id="btnDelete" title="Excluir jogo atual">Excluir</button>
+      <button class="btn btn-success" id="btnPrint">🖨️ Imprimir / Salvar PDF</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Print-only Official Header -->
+    <div class="print-only-header">
+      <div class="print-only-header-left">
+        <img id="printHeaderLogo" src="/assets/logo-tga.jpg" onerror="this.src='logo-tga.jpg'" alt="TGA" />
+        <div>
+          <div style="font-size: 10px; font-weight: 800; color: #15803d; letter-spacing: 0.06em;">TORCIDA ORGANIZADA GARRA ALVIVERDE (TGA) • E.C. RIO VERDE</div>
+          <h1 id="printTitle">Plano de Ação — Jogo</h1>
+        </div>
+      </div>
+      <div class="print-badge" id="printModeBadge">DENTRO DE CASA</div>
+    </div>
+
+    <!-- Mode Switcher & Custom Logos -->
+    <section class="mode-banner no-print">
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div class="mode-pills">
+          <button type="button" class="mode-pill" id="pillCasa">🏟️ Dentro de Casa (Velosão)</button>
+          <button type="button" class="mode-pill" id="pillCaravana">🚌 Fora de Casa (Caravana)</button>
+        </div>
+        <span class="status-saved" id="saveStatus">✓ Salvo automaticamente</span>
+      </div>
+
+      <div class="logo-tools">
+        <input type="file" id="inputTgaLogo" accept="image/*" style="display: none;" />
+        <input type="file" id="inputEcrvLogo" accept="image/*" style="display: none;" />
+        <button type="button" class="btn btn-sm" id="btnPickTga" title="Trocar imagem da logo da TGA para o fundo">🖼️ Logo TGA (Fundo)</button>
+        <button type="button" class="btn btn-sm" id="btnPickEcrv" title="Trocar escudo do E.C. Rio Verde">🛡️ Escudo ECRV</button>
+        <button type="button" class="btn btn-sm" id="btnResetGoianao" title="Restaurar os 8 jogos do Goianão 2027">↺ Restaurar Tabela</button>
+      </div>
+    </section>
+
+    <!-- Confronto Visual (Escudos) -->
+    <section class="matchup-banner">
+      <div class="matchup-meta">
+        <span id="bannerCampeonato">GOIANÃO 2027 • 1ª FASE</span>
+        <span id="bannerDataDia">📅 --/--/----</span>
+      </div>
+      <div class="matchup-teams" id="matchupTeams"></div>
+    </section>
+
+    <!-- 1. Dados do Jogo & Entrada de Materiais -->
+    <section class="card">
+      <div class="card-header">
+        <h2>📋 1. Informações do Jogo e Entrada de Materiais</h2>
+      </div>
+
+      <div class="grid-4">
+        <div class="field">
+          <label>Adversário</label>
+          <input type="text" id="adversario" placeholder="Ex: Atlético-GO" />
+        </div>
+        <div class="field no-print">
+          <label>Escudo do Adversário</label>
+          <select id="adversarioLogoSelect"></select>
+        </div>
+        <div class="field">
+          <label>Campeonato / Rodada</label>
+          <input type="text" id="campeonato" placeholder="Ex: Goianão 2027 • 1ª Fase" />
+        </div>
+        <div class="field">
+          <label>Estádio / Local</label>
+          <input type="text" id="estadio" placeholder="Ex: Mozart Veloso do Carmo" />
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-top: 14px;">
+        <div class="field">
+          <label>Data do Jogo</label>
+          <input type="date" id="dataJogo" />
+        </div>
+        <div class="field">
+          <label>Horário da Partida</label>
+          <input type="time" id="horaJogo" />
+        </div>
+        <div class="field">
+          <label>Concentração / Esquenta</label>
+          <input type="text" id="concentracao" placeholder="Ex: 13:30 na Sede da TGA" />
+        </div>
+        <div class="field">
+          <label>Portão / Setor da TGA</label>
+          <input type="text" id="setor" placeholder="Ex: Arquibancada / Portão Principal" />
+        </div>
+      </div>
+
+      <!-- Entrada de Materiais Highlight -->
+      <div class="highlight-box">
+        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; color: #fcd34d;">
+          ⏰ Entrada com os Materiais / Instrumentos no Estádio
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Data de Entrada dos Materiais</label>
+            <input type="date" id="dataEntrada" />
+          </div>
+          <div class="field">
+            <label>Horário Limite de Entrada</label>
+            <input type="time" id="horaEntrada" />
+          </div>
+          <div class="field">
+            <label>Local / Responsável pela Liberação</label>
+            <input type="text" id="localEntrada" placeholder="Ex: Portão de Carga / Contato PM ou Clube" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Caravana Specific Block -->
+      <div class="caravana-box" id="caravanaSection" style="display: none;">
+        <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; color: #7dd3fc;">
+          🚌 Logística da Caravana (Jogo Fora de Casa)
+        </div>
+        <div class="grid-4">
+          <div class="field">
+            <label>Ponto de Saída</label>
+            <input type="text" id="caravanaSaidaLocal" placeholder="Ex: Sede da TGA / Velosão" />
+          </div>
+          <div class="field">
+            <label>Horário de Saída</label>
+            <input type="time" id="caravanaSaidaHora" />
+          </div>
+          <div class="field">
+            <label>Previsão de Retorno</label>
+            <input type="text" id="caravanaRetorno" placeholder="Ex: Logo após o jogo" />
+          </div>
+          <div class="field">
+            <label>Transporte (Ônibus / Vans)</label>
+            <input type="text" id="caravanaTransporte" placeholder="Ex: 1 Ônibus (46 lugares)" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top: 12px;">
+          <div class="field">
+            <label>Responsável pela Lista / Embarque</label>
+            <input type="text" id="caravanaResp" placeholder="Nome(s) de quem confere a lista e documentos" />
+          </div>
+          <div class="field">
+            <label>Obs. da Viagem (Paradas, Valor, Documentos)</label>
+            <input type="text" id="caravanaObs" placeholder="Ex: Levar documento oficial com foto" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Quem vai fazer o quê -->
+    <section class="card">
+      <div class="card-header">
+        <h2>👥 2. Quem Vai Fazer o Quê (Divisão de Tarefas)</h2>
+        <button type="button" class="btn btn-sm no-print" id="btnAddTask">+ Adicionar Tarefa</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 30%;">Função / Tarefa</th>
+              <th style="width: 32%;">Responsável(is)</th>
+              <th style="width: 30%;">Horário / Detalhes</th>
+              <th class="col-actions" style="width: 8%;"></th>
+            </tr>
+          </thead>
+          <tbody id="tasksBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. Quais Instrumentos e Materiais Levar -->
+    <section class="card">
+      <div class="card-header">
+        <h2>🥁 3. Instrumentos e Materiais para Levar</h2>
+        <button type="button" class="btn btn-sm no-print" id="btnAddInstrument">+ Adicionar Item</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 6%; text-align: center;">Vai?</th>
+              <th style="width: 32%;">Instrumento / Material</th>
+              <th style="width: 12%;">Qtd</th>
+              <th style="width: 26%;">Quem Leva / Traz</th>
+              <th style="width: 18%;">Observação</th>
+              <th class="col-actions" style="width: 6%;"></th>
+            </tr>
+          </thead>
+          <tbody id="instrumentsBody"></tbody>
+        </table>
+      </div>
+
+      <div class="summary-strip" id="instrumentsSummary"></div>
+    </section>
+
+    <!-- 4. Observações Gerais & Regras -->
+    <section class="card">
+      <div class="card-header">
+        <h2>📌 4. Observações Gerais, Regras e Contatos</h2>
+      </div>
+      <div class="field">
+        <label>Anotações importantes para o dia do jogo (proibições, retorno, emergências)</label>
+        <textarea id="observacoes" rows="3" placeholder="Ex: Proibido entrar com mastros de madeira, apenas PVC; conferir todos os instrumentos no retorno antes de fechar o bagageiro."></textarea>
+        <div class="print-textarea-mirror" id="observacoesPrint"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'tga_planos_goianao_2027_v2';
+    const TGA_LOGO_KEY = 'tga_custom_logo_dataurl';
+    const ECRV_LOGO_KEY = 'tga_ecrv_logo_dataurl';
+
+    // Escudos oficiais (com Atlético-GO, Anapolina, Aparecidense e Goianésia em P&B e de cabeça pra baixo)
+    const KNOWN_LOGOS = [
+      { label: 'Goiatuba', file: '/assets/escudos/goiatuba.png', localFallback: 'goiatuba.png' },
+      { label: 'Atlético-GO (P&B Invertido 🙃)', file: '/assets/escudos/atletico-go.png', localFallback: 'Atletico Goianiense.png' },
+      { label: 'CRAC', file: '/assets/escudos/crac.png', localFallback: 'Crac.png' },
+      { label: 'Goianésia (P&B Invertido 🙃)', file: '/assets/escudos/goianesia.png', localFallback: 'goianeisa.png' },
+      { label: 'Aparecidense (P&B Invertido 🙃)', file: '/assets/escudos/aparecidense.png', localFallback: 'Aparecidense.png' },
+      { label: 'Anapolina (P&B Invertido 🙃)', file: '/assets/escudos/anapolina.png', localFallback: 'Anapolina.png' },
+      { label: 'Goiás', file: '/assets/escudos/goias.png', localFallback: 'Goias.png' },
+      { label: 'Jataiense', file: '/assets/escudos/jataiense.png', localFallback: 'Jataiense.png' },
+      { label: 'Sem logo', file: '', localFallback: '' }
+    ];
+
+    function resolveLogoFallback(logoVal) {
+      if (!logoVal) return { primary: '', fallback: '' };
+      const found = KNOWN_LOGOS.find(l => l.file === logoVal || l.localFallback === logoVal);
+      if (found) {
+        return { primary: found.file, fallback: found.localFallback };
+      }
+      return { primary: logoVal, fallback: logoVal };
+    }
+
+    function uid() {
+      return 'g_' + Math.random().toString(36).slice(2, 10);
+    }
+
+    function baseTasksCasa() {
+      return [
+        { role: 'Coordenação Geral', person: '', detail: 'Alinhamento com diretoria / PM' },
+        { role: 'Entrada dos Materiais', person: '', detail: 'Estar no portão no horário limite' },
+        { role: 'Transporte / Carga', person: '', detail: 'Levar e buscar instrumentos na sede' },
+        { role: 'Comando da Bateria', person: '', detail: 'Regência e ritmo na arquibancada' },
+        { role: 'Faixas e Bandeiras', person: '', detail: 'Colocar e recolher pós-jogo' },
+        { role: 'Conferência Pós-Jogo', person: '', detail: 'Conferir 100% dos itens na volta' }
+      ];
+    }
+
+    function baseTasksCaravana() {
+      return [
+        { role: 'Coordenação da Caravana', person: '', detail: 'Contato com motorista e escolta' },
+        { role: 'Lista de Embarque / Chamada', person: '', detail: 'Conferir ida e volta' },
+        { role: 'Bagageiro (Instrumentos)', person: '', detail: 'Acomodar e proteger surdos e caixas' },
+        { role: 'Entrada dos Materiais no Estádio', person: '', detail: 'Vistoria no portão visitante' },
+        { role: 'Comando da Bateria', person: '', detail: 'Setor visitante' },
+        { role: 'Conferência Pós-Jogo', person: '', detail: 'Conferir tudo antes do ônibus sair' }
+      ];
+    }
+
+    function baseInstrumentsCasa() {
+      return [
+        { checked: true, name: 'Surdo de 1ª (Marcação)', qty: 2, owner: '', note: 'Com baquetas' },
+        { checked: true, name: 'Surdo de 2ª (Resposta)', qty: 2, owner: '', note: '' },
+        { checked: true, name: 'Surdo de 3ª (Corte)', qty: 2, owner: '', note: '' },
+        { checked: true, name: 'Caixa de Guerra', qty: 4, owner: '', note: 'Conferir esteira' },
+        { checked: true, name: 'Repique', qty: 2, owner: '', note: '' },
+        { checked: true, name: 'Tamborim', qty: 4, owner: '', note: '' },
+        { checked: true, name: 'Chocalho / Ganzá', qty: 2, owner: '', note: '' },
+        { checked: true, name: 'Prato', qty: 1, owner: '', note: '' },
+        { checked: true, name: 'Talabartes e Baquetas Extras', qty: 1, owner: '', note: 'Kit reserva' },
+        { checked: true, name: 'Faixas da TGA', qty: 2, owner: '', note: '' },
+        { checked: false, name: 'Bandeirão', qty: 1, owner: '', note: 'Verificar liberação' },
+        { checked: true, name: 'Bandeiras de Mão (PVC)', qty: 6, owner: '', note: '' }
+      ];
+    }
+
+    function baseInstrumentsCaravana() {
+      return [
+        { checked: true, name: 'Surdo de 1ª (Marcação)', qty: 1, owner: '', note: 'Para viagem' },
+        { checked: true, name: 'Surdo de 2ª (Resposta)', qty: 1, owner: '', note: '' },
+        { checked: true, name: 'Surdo de 3ª (Corte)', qty: 1, owner: '', note: '' },
+        { checked: true, name: 'Caixa de Guerra', qty: 3, owner: '', note: '' },
+        { checked: true, name: 'Repique', qty: 2, owner: '', note: '' },
+        { checked: true, name: 'Tamborim', qty: 3, owner: '', note: '' },
+        { checked: true, name: 'Talabartes e Baquetas Extras', qty: 1, owner: '', note: 'Kit reserva' },
+        { checked: true, name: 'Faixa de Viagem da TGA', qty: 1, owner: '', note: '' }
+      ];
+    }
+
+    function defaultGoianaoGames() {
+      const schedule = [
+        {
+          mode: 'caravana',
+          adversario: 'Goiatuba',
+          adversarioLogo: '/assets/escudos/goiatuba.png',
+          dataJogo: '2027-01-06',
+          estadio: 'Divino Garcia Rosa (Goiatuba)',
+          setor: 'Setor Visitante',
+          localEntrada: 'Portão Visitante (com escolta)'
+        },
+        {
+          mode: 'casa',
+          adversario: 'Atlético-GO',
+          adversarioLogo: '/assets/escudos/atletico-go.png',
+          dataJogo: '2027-01-10',
+          estadio: 'Mozart Veloso do Carmo (Velosão — Rio Verde)',
+          setor: 'Arquibancada da TGA',
+          localEntrada: 'Portão de Carga / Serviço'
+        },
+        {
+          mode: 'caravana',
+          adversario: 'CRAC',
+          adversarioLogo: '/assets/escudos/crac.png',
+          dataJogo: '2027-01-13',
+          estadio: 'Genervino da Fonseca (Catalão)',
+          setor: 'Setor Visitante',
+          localEntrada: 'Portão Visitante (com escolta)'
+        },
+        {
+          mode: 'casa',
+          adversario: 'Goianésia',
+          adversarioLogo: '/assets/escudos/goianesia.png',
+          dataJogo: '2027-01-17',
+          estadio: 'Mozart Veloso do Carmo (Velosão — Rio Verde)',
+          setor: 'Arquibancada da TGA',
+          localEntrada: 'Portão de Carga / Serviço'
+        },
+        {
+          mode: 'caravana',
+          adversario: 'Aparecidense',
+          adversarioLogo: '/assets/escudos/aparecidense.png',
+          dataJogo: '2027-01-20',
+          estadio: 'Aníbal Batista de Toledo (Aparecida de Goiânia)',
+          setor: 'Setor Visitante',
+          localEntrada: 'Portão Visitante (com escolta)'
+        },
+        {
+          mode: 'casa',
+          adversario: 'Anapolina',
+          adversarioLogo: '/assets/escudos/anapolina.png',
+          dataJogo: '2027-01-24',
+          estadio: 'Mozart Veloso do Carmo (Velosão — Rio Verde)',
+          setor: 'Arquibancada da TGA',
+          localEntrada: 'Portão de Carga / Serviço'
+        },
+        {
+          mode: 'caravana',
+          adversario: 'Goiás',
+          adversarioLogo: '/assets/escudos/goias.png',
+          dataJogo: '2027-01-30',
+          estadio: 'Estádio Hailé Pinheiro / Serrinha (Goiânia)',
+          setor: 'Setor Visitante',
+          localEntrada: 'Portão Visitante (com escolta)'
+        },
+        {
+          mode: 'casa',
+          adversario: 'Jataiense',
+          adversarioLogo: '/assets/escudos/jataiense.png',
+          dataJogo: '2027-02-06',
+          estadio: 'Mozart Veloso do Carmo (Velosão — Rio Verde)',
+          setor: 'Arquibancada da TGA',
+          localEntrada: 'Portão de Carga / Serviço'
+        }
+      ];
+
+      return schedule.map((item, idx) => ({
+        id: uid(),
+        mode: item.mode,
+        adversario: item.adversario,
+        adversarioLogo: item.adversarioLogo,
+        campeonato: `Goianão 2027 • 1ª Fase (${idx + 1}ª Rodada)`,
+        estadio: item.estadio,
+        dataJogo: item.dataJogo,
+        horaJogo: '16:00',
+        concentracao: item.mode === 'casa' ? 'Sede da TGA / Esquenta Velosão' : 'Estádio Velosão / Sede da TGA (Embarque)',
+        setor: item.setor,
+        dataEntrada: item.dataJogo,
+        horaEntrada: '14:00',
+        localEntrada: item.localEntrada,
+        caravanaSaidaLocal: item.mode === 'caravana' ? 'Estádio Velosão / Sede da TGA' : '',
+        caravanaSaidaHora: item.mode === 'caravana' ? '11:00' : '',
+        caravanaRetorno: item.mode === 'caravana' ? 'Logo após liberação da saída' : '',
+        caravanaTransporte: item.mode === 'caravana' ? 'Ônibus / Van TGA' : '',
+        caravanaResp: '',
+        caravanaObs: item.mode === 'caravana' ? 'Obrigatório documento oficial com foto.' : '',
+        tasks: item.mode === 'caravana' ? baseTasksCaravana() : baseTasksCasa(),
+        instruments: item.mode === 'caravana' ? baseInstrumentsCaravana() : baseInstrumentsCasa(),
+        observacoes: 'Conferir 100% dos instrumentos na entrada e na saída.'
+      }));
+    }
+
+    let state = { games: [], activeId: null };
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('tga_planos_goianao_2027_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.games) && parsed.games.length > 0) {
+            state = parsed;
+            if (!state.games.some(g => g.id === state.activeId)) {
+              state.activeId = state.games[0].id;
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao carregar dados:', e);
+      }
+      state.games = defaultGoianaoGames();
+      state.activeId = state.games[0].id;
+      saveState();
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const el = document.getElementById('saveStatus');
+      if (el) {
+        el.textContent = '✓ Salvo agora';
+        clearTimeout(window._saveTimer);
+        window._saveTimer = setTimeout(() => {
+          el.textContent = '✓ Salvo automaticamente';
+        }, 1500);
+      }
+    }
+
+    function getActiveGame() {
+      return state.games.find(g => g.id === state.activeId) || state.games[0];
+    }
+
+    function formatDateBR(iso) {
+      if (!iso) return '--/--/----';
+      const parts = iso.split('-');
+      if (parts.length !== 3) return iso;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function getWeekdayPT(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const days = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+      return days[dt.getDay()] || '';
+    }
+
+    /* ========= LOGOS (TGA + E.C. Rio Verde) ========= */
+    function applyTgaLogo(src) {
+      const wmImg = document.getElementById('watermarkImg');
+      const wmImgLeft = document.getElementById('watermarkImgLeft');
+      const headerWrap = document.getElementById('headerLogoWrap');
+      const printLogo = document.getElementById('printHeaderLogo');
+
+      if (wmImg) wmImg.src = src;
+      if (wmImgLeft) wmImgLeft.src = src;
+      if (headerWrap) headerWrap.innerHTML = `<img src="${src}" alt="TGA" />`;
+      if (printLogo) printLogo.src = src;
+    }
+
+    function initCustomLogos() {
+      const savedTga = localStorage.getItem(TGA_LOGO_KEY);
+      if (savedTga) {
+        applyTgaLogo(savedTga);
+      }
+    }
+
+    function getEcrvLogoSrc() {
+      const saved = localStorage.getItem(ECRV_LOGO_KEY);
+      return saved || '/assets/escudo-ecrv.jpg';
+    }
+
+    function setupLogoFileInput(inputId, storageKey, onLoaded) {
+      document.getElementById(inputId).addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            localStorage.setItem(storageKey, reader.result);
+          } catch (err) {
+            alert('Imagem muito grande para salvar no navegador. Use uma imagem menor (ex: PNG até 1MB).');
+          }
+          onLoaded(reader.result);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('btnPickTga').addEventListener('click', () => {
+      document.getElementById('inputTgaLogo').click();
+    });
+    document.getElementById('btnPickEcrv').addEventListener('click', () => {
+      document.getElementById('inputEcrvLogo').click();
+    });
+
+    setupLogoFileInput('inputTgaLogo', TGA_LOGO_KEY, (dataUrl) => {
+      applyTgaLogo(dataUrl);
+    });
+    setupLogoFileInput('inputEcrvLogo', ECRV_LOGO_KEY, () => {
+      renderMatchupBanner(getActiveGame());
+    });
+
+    /* ========= RENDERING ========= */
+    function renderAdversarioLogoSelect(game) {
+      const sel = document.getElementById('adversarioLogoSelect');
+      sel.innerHTML = '';
+      const resolved = resolveLogoFallback(game.adversarioLogo || '');
+      KNOWN_LOGOS.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.file;
+        opt.textContent = item.label;
+        if (item.file === resolved.primary || (item.localFallback && item.localFallback === game.adversarioLogo)) {
+          opt.selected = true;
+        }
+        sel.appendChild(opt);
+      });
+    }
+
+    function renderGameSelector() {
+      const select = document.getElementById('gameSelect');
+      select.innerHTML = '';
+      state.games.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id;
+        const tag = g.mode === 'caravana' ? '🚌' : '🏟️';
+        const dateStr = g.dataJogo ? formatDateBR(g.dataJogo).slice(0, 5) : '--/--';
+        const matchLabel = g.mode === 'caravana'
+          ? `${g.adversario || 'Adversário'} x E.C. Rio Verde`
+          : `E.C. Rio Verde x ${g.adversario || 'Adversário'}`;
+        opt.textContent = `${tag} ${dateStr} — ${matchLabel}`;
+        if (g.id === state.activeId) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderMatchupBanner(game) {
+      const campEl = document.getElementById('bannerCampeonato');
+      const dataEl = document.getElementById('bannerDataDia');
+      const teamsEl = document.getElementById('matchupTeams');
+
+      campEl.textContent = (game.campeonato || 'GOIANÃO 2027').toUpperCase();
+      const wd = getWeekdayPT(game.dataJogo);
+      const hr = game.horaJogo ? ` • ${game.horaJogo}` : '';
+      dataEl.textContent = `📅 ${formatDateBR(game.dataJogo)}${wd ? ' (' + wd + ')' : ''}${hr}`;
+
+      const ecrvSrc = getEcrvLogoSrc();
+      const ecrvHtml = `<img src="${ecrvSrc}" onerror="this.src='escudo-ecrv.jpg'" alt="E.C. Rio Verde" />`;
+
+      const resolvedAdv = resolveLogoFallback(game.adversarioLogo);
+      const advLogoHtml = resolvedAdv.primary
+        ? `<img src="${resolvedAdv.primary}" onerror="if(this.src.indexOf('${resolvedAdv.fallback}')===-1){this.src='${resolvedAdv.fallback}';}else{this.style.display='none';}" alt="${game.adversario}" />`
+        : `<span class="team-logo-fallback">ADV</span>`;
+
+      const ecrvBlock = (isHome) => `
+        <div class="team-side ${isHome ? 'home-side' : 'away-side'}">
+          ${!isHome ? `<div class="team-logo-box">${ecrvHtml}</div>` : ''}
+          <div>
+            <div class="team-name">E.C. RIO VERDE</div>
+            <div class="team-role">${isHome ? 'Mandante (Velosão)' : 'Visitante (Caravana TGA)'}</div>
+          </div>
+          ${isHome ? `<div class="team-logo-box">${ecrvHtml}</div>` : ''}
+        </div>
+      `;
+
+      const advBlock = (isHome) => `
+        <div class="team-side ${isHome ? 'home-side' : 'away-side'}">
+          ${!isHome ? `<div class="team-logo-box">${advLogoHtml}</div>` : ''}
+          <div>
+            <div class="team-name">${(game.adversario || 'ADVERSÁRIO').toUpperCase()}</div>
+            <div class="team-role">${isHome ? 'Mandante' : 'Visitante'}</div>
+          </div>
+          ${isHome ? `<div class="team-logo-box">${advLogoHtml}</div>` : ''}
+        </div>
+      `;
+
+      if (game.mode === 'caravana') {
+        teamsEl.innerHTML = `${advBlock(true)}<div class="vs-badge">VS</div>${ecrvBlock(false)}`;
+      } else {
+        teamsEl.innerHTML = `${ecrvBlock(true)}<div class="vs-badge">VS</div>${advBlock(false)}`;
+      }
+    }
+
+    function renderModeUI(game) {
+      const pillCasa = document.getElementById('pillCasa');
+      const pillCaravana = document.getElementById('pillCaravana');
+      const caravanaSection = document.getElementById('caravanaSection');
+      const printBadge = document.getElementById('printModeBadge');
+      const printTitle = document.getElementById('printTitle');
+
+      if (game.mode === 'caravana') {
+        pillCasa.className = 'mode-pill';
+        pillCaravana.className = 'mode-pill active-caravana';
+        caravanaSection.style.display = 'block';
+        printBadge.textContent = 'FORA DE CASA • CARAVANA TGA';
+        printTitle.textContent = `Plano de Ação — ${game.adversario || 'Adversário'} x E.C. Rio Verde`;
+      } else {
+        pillCasa.className = 'mode-pill active-casa';
+        pillCaravana.className = 'mode-pill';
+        caravanaSection.style.display = 'none';
+        printBadge.textContent = 'DENTRO DE CASA • VELOSÃO';
+        printTitle.textContent = `Plano de Ação — E.C. Rio Verde x ${game.adversario || 'Adversário'}`;
+      }
+    }
+
+    function renderTasks(game) {
+      const tbody = document.getElementById('tasksBody');
+      tbody.innerHTML = '';
+
+      game.tasks.forEach((task, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="text" data-field="role" placeholder="Função / Tarefa" /></td>
+          <td><input type="text" data-field="person" placeholder="Responsável(is)" /></td>
+          <td><input type="text" data-field="detail" placeholder="Horário ou detalhe" /></td>
+          <td class="col-actions" style="text-align: center;">
+            <button type="button" class="btn btn-sm btn-danger" title="Remover">✕</button>
+          </td>
+        `;
+
+        const inputs = tr.querySelectorAll('input');
+        inputs[0].value = task.role || '';
+        inputs[1].value = task.person || '';
+        inputs[2].value = task.detail || '';
+
+        inputs.forEach(inp => {
+          inp.addEventListener('input', () => {
+            game.tasks[idx][inp.dataset.field] = inp.value;
+            saveState();
+          });
+        });
+
+        tr.querySelector('button').addEventListener('click', () => {
+          game.tasks.splice(idx, 1);
+          saveState();
+          renderTasks(game);
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderInstrumentsSummary(game) {
+      const selected = game.instruments.filter(i => i.checked);
+      const totalUnits = selected.reduce((acc, i) => acc + (Number(i.qty) || 0), 0);
+      document.getElementById('instrumentsSummary').innerHTML = `
+        <span>Itens selecionados para este jogo: <strong>${selected.length}</strong> de ${game.instruments.length}</span>
+        <span>Quantidade total de unidades: <strong>${totalUnits}</strong></span>
+      `;
+    }
+
+    function renderInstruments(game) {
+      const tbody = document.getElementById('instrumentsBody');
+      tbody.innerHTML = '';
+
+      game.instruments.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+        if (!item.checked) tr.classList.add('row-unchecked');
+
+        tr.innerHTML = `
+          <td style="text-align: center;">
+            <input type="checkbox" />
+            <span class="print-check-mark">✓</span>
+          </td>
+          <td><input type="text" data-field="name" placeholder="Instrumento / Material" /></td>
+          <td><input type="number" min="0" data-field="qty" /></td>
+          <td><input type="text" data-field="owner" placeholder="Responsável" /></td>
+          <td><input type="text" data-field="note" placeholder="Obs." /></td>
+          <td class="col-actions" style="text-align: center;">
+            <button type="button" class="btn btn-sm btn-danger" title="Remover">✕</button>
+          </td>
+        `;
+
+        const checkbox = tr.querySelector('input[type="checkbox"]');
+        checkbox.checked = !!item.checked;
+        checkbox.addEventListener('change', () => {
+          game.instruments[idx].checked = checkbox.checked;
+          tr.classList.toggle('row-unchecked', !checkbox.checked);
+          saveState();
+          renderInstrumentsSummary(game);
+        });
+
+        const textInputs = tr.querySelectorAll('input[data-field]');
+        textInputs[0].value = item.name || '';
+        textInputs[1].value = item.qty ?? 1;
+        textInputs[2].value = item.owner || '';
+        textInputs[3].value = item.note || '';
+
+        textInputs.forEach(inp => {
+          inp.addEventListener('input', () => {
+            const f = inp.dataset.field;
+            game.instruments[idx][f] = f === 'qty' ? Number(inp.value) : inp.value;
+            saveState();
+            if (f === 'qty') renderInstrumentsSummary(game);
+          });
+        });
+
+        tr.querySelector('button').addEventListener('click', () => {
+          game.instruments.splice(idx, 1);
+          saveState();
+          renderInstruments(game);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      renderInstrumentsSummary(game);
+    }
+
+    const simpleFields = [
+      'adversario', 'campeonato', 'estadio', 'dataJogo', 'horaJogo',
+      'concentracao', 'setor', 'dataEntrada', 'horaEntrada', 'localEntrada',
+      'caravanaSaidaLocal', 'caravanaSaidaHora', 'caravanaRetorno',
+      'caravanaTransporte', 'caravanaResp', 'caravanaObs', 'observacoes'
+    ];
+
+    function renderActiveGame() {
+      const game = getActiveGame();
+      renderGameSelector();
+      renderAdversarioLogoSelect(game);
+      renderModeUI(game);
+      renderMatchupBanner(game);
+
+      simpleFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = game[id] || '';
+      });
+      document.getElementById('observacoesPrint').textContent = game.observacoes || '';
+
+      renderTasks(game);
+      renderInstruments(game);
+    }
+
+    simpleFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', () => {
+        const game = getActiveGame();
+        game[id] = el.value;
+        saveState();
+        if (id === 'adversario' || id === 'dataJogo' || id === 'horaJogo' || id === 'campeonato') {
+          renderGameSelector();
+          renderModeUI(game);
+          renderMatchupBanner(game);
+        }
+        if (id === 'observacoes') {
+          document.getElementById('observacoesPrint').textContent = el.value;
+        }
+      });
+    });
+
+    document.getElementById('adversarioLogoSelect').addEventListener('change', (e) => {
+      const game = getActiveGame();
+      game.adversarioLogo = e.target.value;
+      saveState();
+      renderMatchupBanner(game);
+    });
+
+    document.getElementById('pillCasa').addEventListener('click', () => {
+      const game = getActiveGame();
+      game.mode = 'casa';
+      saveState();
+      renderModeUI(game);
+      renderGameSelector();
+      renderMatchupBanner(game);
+    });
+
+    document.getElementById('pillCaravana').addEventListener('click', () => {
+      const game = getActiveGame();
+      game.mode = 'caravana';
+      saveState();
+      renderModeUI(game);
+      renderGameSelector();
+      renderMatchupBanner(game);
+    });
+
+    document.getElementById('gameSelect').addEventListener('change', (e) => {
+      state.activeId = e.target.value;
+      saveState();
+      renderActiveGame();
+    });
+
+    document.getElementById('btnNewGame').addEventListener('click', () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const newGame = {
+        id: uid(),
+        mode: 'casa',
+        adversario: 'Novo Adversário',
+        adversarioLogo: '',
+        campeonato: 'Goianão 2027',
+        estadio: 'Mozart Veloso do Carmo (Velosão — Rio Verde)',
+        dataJogo: today,
+        horaJogo: '16:00',
+        concentracao: 'Sede da TGA',
+        setor: 'Arquibancada da TGA',
+        dataEntrada: today,
+        horaEntrada: '14:00',
+        localEntrada: 'Portão de Carga',
+        caravanaSaidaLocal: '',
+        caravanaSaidaHora: '',
+        caravanaRetorno: '',
+        caravanaTransporte: '',
+        caravanaResp: '',
+        caravanaObs: '',
+        tasks: baseTasksCasa(),
+        instruments: baseInstrumentsCasa(),
+        observacoes: ''
+      };
+      state.games.push(newGame);
+      state.activeId = newGame.id;
+      saveState();
+      renderActiveGame();
+    });
+
+    document.getElementById('btnDuplicate').addEventListener('click', () => {
+      const current = getActiveGame();
+      const copy = JSON.parse(JSON.stringify(current));
+      copy.id = uid();
+      copy.adversario = (copy.adversario || 'Jogo') + ' (Cópia)';
+      state.games.push(copy);
+      state.activeId = copy.id;
+      saveState();
+      renderActiveGame();
+    });
+
+    document.getElementById('btnDelete').addEventListener('click', () => {
+      if (state.games.length <= 1) {
+        alert('Você precisa manter pelo menos 1 plano de jogo.');
+        return;
+      }
+      const current = getActiveGame();
+      if (!confirm(`Excluir o plano contra "${current.adversario || 'Sem título'}"?`)) return;
+      state.games = state.games.filter(g => g.id !== current.id);
+      state.activeId = state.games[0].id;
+      saveState();
+      renderActiveGame();
+    });
+
+    document.getElementById('btnResetGoianao').addEventListener('click', () => {
+      if (!confirm('Restaurar os 8 jogos originais do Goianão 2027? As alterações feitas até agora serão substituídas.')) return;
+      state.games = defaultGoianaoGames();
+      state.activeId = state.games[0].id;
+      saveState();
+      renderActiveGame();
+    });
+
+    document.getElementById('btnAddTask').addEventListener('click', () => {
+      const game = getActiveGame();
+      game.tasks.push({ role: '', person: '', detail: '' });
+      saveState();
+      renderTasks(game);
+    });
+
+    document.getElementById('btnAddInstrument').addEventListener('click', () => {
+      const game = getActiveGame();
+      game.instruments.push({ checked: true, name: '', qty: 1, owner: '', note: '' });
+      saveState();
+      renderInstruments(game);
+    });
+
+    document.getElementById('btnPrint').addEventListener('click', () => {
+      window.print();
+    });
+
+    // Comunicação com o Painel da Diretoria TGA (selecionar jogo por data/adversário ou imprimir)
+    window.addEventListener('message', (ev) => {
+      const msg = ev.data;
+      if (!msg || typeof msg !== 'object') return;
+      if (msg.type === 'TGA_PRINT_PLANO_ACAO') {
+        window.print();
+      } else if (msg.type === 'TGA_SELECT_PLANO_JOGO') {
+        const targetDate = String(msg.dataJogo || '').trim();
+        const targetAdv = String(msg.adversario || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        let found = null;
+        if (targetDate) {
+          found = state.games.find(g => g.dataJogo === targetDate);
+        }
+        if (!found && targetAdv) {
+          found = state.games.find(g => {
+            const gAdv = String(g.adversario || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return gAdv && (targetAdv.includes(gAdv) || gAdv.includes(targetAdv));
+          });
+        }
+        if (found) {
+          state.activeId = found.id;
+          saveState();
+          renderActiveGame();
+        }
+      }
+    });
+
+    // Init
+    loadState();
+    initCustomLogos();
+    renderActiveGame();
+  </script>
+</body>
+</html>

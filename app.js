@@ -628,9 +628,30 @@ function getNextUpcomingJogo(jogosList) {
   return futuro || naoEncerrados[0];
 }
 
+function isInvertedBwClub(teamName) {
+  const lower = String(teamName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return (
+    lower.includes('atletico') ||
+    lower.includes('anapolina') ||
+    lower.includes('aparecidense') ||
+    lower.includes('goianesia') ||
+    lower.includes('goianeisa')
+  );
+}
+
 function getAutoClubShieldDataUri(teamName) {
   const raw = String(teamName || 'Clube').trim();
   const lower = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Escudos oficiais locais (com Atlético-GO, Anapolina, Aparecidense e Goianésia em P&B e de cabeça pra baixo)
+  if (lower.includes('atletico')) return '/assets/escudos/atletico-go.png';
+  if (lower.includes('anapolina')) return '/assets/escudos/anapolina.png';
+  if (lower.includes('aparecidense')) return '/assets/escudos/aparecidense.png';
+  if (lower.includes('goianesia') || lower.includes('goianeisa')) return '/assets/escudos/goianesia.png';
+  if (lower.includes('goias')) return '/assets/escudos/goias.png';
+  if (lower.includes('crac')) return '/assets/escudos/crac.png';
+  if (lower.includes('goiatuba')) return '/assets/escudos/goiatuba.png';
+  if (lower.includes('jataiense')) return '/assets/escudos/jataiense.png';
 
   let bg1 = '#1e293b';
   let bg2 = '#0f172a';
@@ -638,26 +659,10 @@ function getAutoClubShieldDataUri(teamName) {
   let text = '#ffffff';
   let sigla = 'FC';
 
-  if (lower.includes('goias')) {
-    bg1 = '#006437'; bg2 = '#022c16'; border = '#ffffff'; sigla = 'GEC';
-  } else if (lower.includes('vila nova')) {
+  if (lower.includes('vila nova')) {
     bg1 = '#dc2626'; bg2 = '#991b1b'; border = '#ffffff'; sigla = 'VNFC';
-  } else if (lower.includes('atletico')) {
-    bg1 = '#dc2626'; bg2 = '#111827'; border = '#eab308'; sigla = 'ACG';
-  } else if (lower.includes('aparecidense')) {
-    bg1 = '#1e3a8a'; bg2 = '#172554'; border = '#facc15'; sigla = 'AAC';
-  } else if (lower.includes('anapolina')) {
-    bg1 = '#dc2626'; bg2 = '#991b1b'; border = '#ffffff'; sigla = 'AA';
   } else if (lower.includes('anapolis')) {
     bg1 = '#b91c1c'; bg2 = '#1e3a8a'; border = '#ffffff'; sigla = 'AFC';
-  } else if (lower.includes('crac')) {
-    bg1 = '#0284c7'; bg2 = '#0369a1'; border = '#ffffff'; sigla = 'CRAC';
-  } else if (lower.includes('goiatuba')) {
-    bg1 = '#2563eb'; bg2 = '#1d4ed8'; border = '#ffffff'; sigla = 'GEC';
-  } else if (lower.includes('jataiense')) {
-    bg1 = '#15803d'; bg2 = '#14532d'; border = '#ffffff'; sigla = 'AEJ';
-  } else if (lower.includes('goianesia')) {
-    bg1 = '#1d4ed8'; bg2 = '#1e3a8a'; border = '#ffffff'; sigla = 'GEC';
   } else if (lower.includes('inhumas')) {
     bg1 = '#6d28d9'; bg2 = '#4c1d95'; border = '#ffffff'; sigla = 'IEC';
   } else if (lower.includes('goiania')) {
@@ -737,7 +742,8 @@ function getMatchTeamsAndLogos(jogo) {
   const t2IsEcrv = isRioVerdeTeamName(team2Name);
 
   const oppName = t1IsEcrv ? team2Name : (t2IsEcrv ? team1Name : team2Name);
-  const oppLogo = (jogo.logoAdversarioDataUrl && jogo.logoAdversarioDataUrl.trim())
+  const useDefaultInverted = isInvertedBwClub(oppName) && !jogo.logoInvertidoManual;
+  const oppLogo = (!useDefaultInverted && jogo.logoAdversarioDataUrl && jogo.logoAdversarioDataUrl.trim())
     ? jogo.logoAdversarioDataUrl.trim()
     : getAutoClubShieldDataUri(oppName);
 
@@ -1827,6 +1833,8 @@ function renderAdminDashboard() {
   if (countPedidosEl) countPedidosEl.textContent = (appState.pedidosMateriais || []).length;
   const countCheckinsEl = document.getElementById('tabCountCheckins');
   if (countCheckinsEl) countCheckinsEl.textContent = (appState.checkinsJogos || []).length;
+  const countPlanoAcaoEl = document.getElementById('tabCountPlanoAcao');
+  if (countPlanoAcaoEl) countPlanoAcaoEl.textContent = Math.max(8, (appState.jogosEcrv || []).length);
   const countDirEl = document.getElementById('tabCountDiretores');
   if (countDirEl) countDirEl.textContent = (appState.usuariosDiretoria || []).length;
   const countAudEl = document.getElementById('tabCountAuditoria');
@@ -3719,6 +3727,9 @@ function renderAdminJogosTab() {
                     <option value="Em Casa (Velosão)" ${isCasa ? 'selected' : ''}>🏟️ Em Casa (Velosão)</option>
                     <option value="Fora de Casa" ${!isCasa ? 'selected' : ''}>🚌 Fora de Casa</option>
                   </select>
+                  <button type="button" class="btn-table" style="background:#dcfce7;color:#166534;border-color:#22c55e;font-weight:800;" data-open-plano-jogo="${j.id}" title="Abrir Plano de Ação deste Jogo (Tarefas, Instrumentos e PDF)">
+                    📋 Plano de Ação
+                  </button>
                   <button type="button" class="btn-table" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;font-weight:800;" data-edit-jogo="${j.id}">
                     ✏️ Editar
                   </button>
@@ -3757,6 +3768,26 @@ function renderAdminJogosTab() {
         saveLocalBackup();
         renderAll();
         showToast(`🏟️ Mando de campo de "${jogo.adversario}" alterado para: ${jogo.mando}!`);
+      });
+    });
+
+    // Abrir Plano de Ação do Jogo selecionado
+    jogosListEl.querySelectorAll('[data-open-plano-jogo]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-open-plano-jogo');
+        const jogo = (appState.jogosEcrv || []).find(x => x.id === id);
+        const tabBtn = document.getElementById('btnTabPlanoAcao');
+        if (tabBtn) tabBtn.click();
+        const iframe = document.getElementById('iframeAdminPlanoAcao');
+        if (iframe && iframe.contentWindow && jogo) {
+          const info = getMatchTeamsAndLogos(jogo);
+          iframe.contentWindow.postMessage({
+            type: 'TGA_SELECT_PLANO_JOGO',
+            dataJogo: jogo.dataJogo || '',
+            adversario: info.opponentName || jogo.adversario || ''
+          }, '*');
+        }
+        showToast(`📋 Plano de Ação aberto para ${jogo ? jogo.adversario : 'o jogo'}!`);
       });
     });
 
@@ -6014,11 +6045,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const jogo = (appState.jogosEcrv || []).find(x => x.id === targetId);
         if (jogo) {
           jogo.logoAdversarioDataUrl = logoDataUrl;
+          jogo.logoInvertidoManual = true;
           try {
             await fetch(`/api/jogos/${targetId}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ logoAdversarioDataUrl: logoDataUrl })
+              body: JSON.stringify({ logoAdversarioDataUrl: logoDataUrl, logoInvertidoManual: true })
             });
           } catch (err) {}
           saveLocalBackup();
@@ -6101,6 +6133,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnPrintCheckins')?.addEventListener('click', () => {
     if (!hasPerm('exportarPlanilhas')) return;
     printStyledReport(buildCheckinsPortariaReportConfig());
+  });
+
+  document.getElementById('btnPrintPlanoAcaoIframe')?.addEventListener('click', () => {
+    const iframe = document.getElementById('iframeAdminPlanoAcao');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'TGA_PRINT_PLANO_ACAO' }, '*');
+    } else {
+      window.open('/plano-de-acao.html', '_blank');
+    }
   });
 
   // Salvar Configurações do Plano Único, PIX, WhatsApp, Instagram, Mural do Sócio e Torcida

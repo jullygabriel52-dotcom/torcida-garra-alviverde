@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20261121c" />
+  <link rel="stylesheet" href="/styles.css?v=20261121e" />
 </head>
 <body class="m1-theme-body">
   <!-- ELEMENTOS OCULTOS DE COMPATIBILIDADE DE ESTADO -->
@@ -58,13 +58,16 @@
 
   <!-- TELA PRINCIPAL CLEAN — ESTILO AVANTI / BENTO GRID -->
   <main class="m1-main">
-    <!-- HERO CINEMATOGRÁFICO (CHAMADA SÓCIO TGA + CARD MATCHDAY PRÓXIMO JOGO NO VELOSÃO) -->
+    <!-- HERO CINEMATOGRÁFICO (COM A ARTE DA TGA NO FUNDO + PRÓXIMO JOGO PELA DATA) -->
     <section class="m1-hero">
+      <div class="m1-hero-bg-mascot-left" aria-hidden="true"></div>
+      <div class="m1-hero-bg-mascot-center" aria-hidden="true"></div>
+
       <div class="container m1-hero-grid">
         <!-- Coluna Esquerda: Chamada Principal Limpa e Direta -->
         <div class="m1-hero-left">
           <div class="m1-hero-pill">
-            <span class="m1-dot"></span>
+            <img src="/assets/logo-tga.jpg" alt="TGA" class="m1-pill-logo" />
             SÓCIO TORCEDOR OFICIAL • ESPORTE CLUBE RIO VERDE (E.C.R.V.)
           </div>
 
@@ -2562,9 +2565,88 @@
     </div>
   </div>
 
+  <!-- MODAL DE EDIÇÃO DE JOGO DO E.C.R.V. (MANDO DE CAMPO, CONFRONTO, DATA, PLACAR, ESTÁDIO) -->
+  <div class="modal-backdrop" id="modalEditJogo" hidden>
+    <div class="modal-box" style="max-width: 640px;">
+      <div class="admin-modal-header">
+        <div class="admin-header-left">
+          <img src="/assets/escudo-ecrv.jpg" alt="E.C.R.V." class="admin-header-logo" />
+          <div>
+            <span class="pill-green">TABELA OFICIAL DO E.C.R.V.</span>
+            <h2>✏️ Editar Jogo / Alterar Mando de Campo</h2>
+          </div>
+        </div>
+        <button type="button" class="modal-close" id="btnCloseEditJogo">✕</button>
+      </div>
+
+      <form id="formEditJogo">
+        <input type="hidden" id="editJogoId" />
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editJogoCampeonato">Campeonato *</label>
+            <input type="text" id="editJogoCampeonato" required placeholder="Campeonato Goiano" />
+          </div>
+          <div class="form-group">
+            <label for="editJogoRodada">Rodada / Fase *</label>
+            <input type="text" id="editJogoRodada" required placeholder="Ex: Rodada 1" />
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="editJogoMando">Mando de Campo (Casa ou Fora) *</label>
+            <select id="editJogoMando" required>
+              <option value="Em Casa (Velosão)">🏟️ Em Casa (Estádio Velosão - Ingresso Sócio)</option>
+              <option value="Fora de Casa">🚌 Fora de Casa (Viagem / Caravana TGA)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editJogoStatus">Status do Jogo *</label>
+            <select id="editJogoStatus" required>
+              <option value="Check-in de Ingresso Aberto">🎟️ Check-in de Ingresso Aberto (Sócios)</option>
+              <option value="Agendado">📅 Agendado</option>
+              <option value="Encerrado">🏁 Jogo Encerrado (Com Placar)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editJogoAdversario">Confronto *</label>
+          <input type="text" id="editJogoAdversario" required placeholder="Ex: Rio Verde x Goiás (ou Goiatuba x Rio Verde)" />
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="editJogoData">Data do Jogo *</label>
+            <input type="date" id="editJogoData" required />
+          </div>
+          <div class="form-group">
+            <label for="editJogoHorario">Horário *</label>
+            <input type="text" id="editJogoHorario" required placeholder="Ex: 16:00 ou A definir" />
+          </div>
+          <div class="form-group">
+            <label for="editJogoPlacar">Placar (Opcional)</label>
+            <input type="text" id="editJogoPlacar" placeholder="Ex: 2 x 0" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editJogoEstadio">Estádio / Cidade *</label>
+          <input type="text" id="editJogoEstadio" required placeholder="Ex: Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO" />
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px;">
+          <button type="button" class="btn btn-secondary" id="btnCancelEditJogo">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Salvar Alterações do Jogo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js?v=20261121d"></script>
+  <script src="/app.js?v=20261121e"></script>
 </body>
 </html>

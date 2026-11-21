@@ -2209,20 +2209,87 @@ h1, h2, h3, h4, .brand-title, .hero-title {
   background: rgba(255, 255, 255, 0.16);
 }
 
-/* HERO CINEMATOGRÁFICO */
+/* HERO CINEMATOGRÁFICO COM A ARTE OFICIAL DA TGA NO FUNDO */
 .m1-hero {
+  position: relative;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 82% 20%, rgba(16, 185, 129, 0.24) 0%, transparent 45%),
-    linear-gradient(135deg, #02180c 0%, #04361c 55%, #006437 100%);
+    radial-gradient(circle at 18% 30%, rgba(16, 185, 129, 0.24) 0%, transparent 48%),
+    radial-gradient(circle at 82% 45%, rgba(234, 179, 8, 0.14) 0%, transparent 45%),
+    linear-gradient(135deg, #01140a 0%, #032b16 52%, #004d29 100%);
   padding: 44px 0 48px;
-  border-bottom: 1px solid rgba(16, 185, 129, 0.25);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.m1-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.025) 0px,
+    rgba(255, 255, 255, 0.025) 14px,
+    transparent 14px,
+    transparent 28px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.m1-hero-bg-mascot-left {
+  position: absolute;
+  left: -40px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  width: 480px;
+  height: 480px;
+  background-image: url('/assets/logo-tga.jpg');
+  background-size: cover;
+  background-position: center;
+  border-radius: 50%;
+  opacity: 0.15;
+  filter: saturate(1.25) contrast(1.15);
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 38%, rgba(0, 0, 0, 0) 72%);
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 38%, rgba(0, 0, 0, 0) 72%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.m1-hero-bg-mascot-center {
+  position: absolute;
+  left: 44%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 550px;
+  height: 550px;
+  background-image: url('/assets/logo-tga.jpg');
+  background-size: cover;
+  background-position: center;
+  border-radius: 50%;
+  opacity: 0.21;
+  filter: contrast(1.2) drop-shadow(0 0 40px rgba(16, 185, 129, 0.45));
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 42%, rgba(0, 0, 0, 0) 74%);
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 1) 42%, rgba(0, 0, 0, 0) 74%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .m1-hero-grid {
+  position: relative;
+  z-index: 5;
   display: grid;
   grid-template-columns: 1.35fr 1fr;
   gap: 32px;
   align-items: center;
+}
+
+.m1-pill-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #eab308;
+  object-fit: cover;
+  background: #ffffff;
 }
 
 .m1-hero-pill {

@@ -572,6 +572,62 @@ function isRioVerdeTeamName(name) {
   return n.includes('rio verde') || n.includes('e.c.r.v') || n.includes('ecrv') || n.includes('verdão do sudoeste');
 }
 
+function isJogoEmCasa(j) {
+  if (!j) return true;
+  const m = String(j.mando || '').toLowerCase();
+  if (m.includes('fora')) return false;
+  if (j.mandoExplicit) {
+    return !m.includes('fora');
+  }
+  const est = String(j.estadio || '').toLowerCase();
+  if (est && !est.includes('velos') && !est.includes('rio verde') && !est.includes('mozart')) {
+    return false;
+  }
+  const partes = String(j.adversario || '').trim().split(/\s+(?:x|vs\.?|×)\s+/i);
+  if (partes.length >= 2) {
+    const t1IsEcrv = isRioVerdeTeamName(partes[0]);
+    const t2IsEcrv = isRioVerdeTeamName(partes[1]);
+    if (!t1IsEcrv && t2IsEcrv) return false;
+  }
+  return true;
+}
+
+function parseJogoDateMs(dateStr) {
+  const s = String(dateStr || '').trim();
+  if (!s) return 9999999999999;
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return Date.UTC(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  }
+  const brMatch = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (brMatch) {
+    return Date.UTC(Number(brMatch[3]), Number(brMatch[2]) - 1, Number(brMatch[1]));
+  }
+  const parsed = Date.parse(s);
+  return isNaN(parsed) ? 9999999999999 : parsed;
+}
+
+function getJogosSortedByDate(jogosList) {
+  const arr = Array.isArray(jogosList) ? [...jogosList] : [];
+  return arr.sort((a, b) => {
+    const diff = parseJogoDateMs(a.dataJogo) - parseJogoDateMs(b.dataJogo);
+    if (diff !== 0) return diff;
+    return String(a.rodada || '').localeCompare(String(b.rodada || ''), 'pt-BR', { numeric: true });
+  });
+}
+
+function getNextUpcomingJogo(jogosList) {
+  const sorted = getJogosSortedByDate(jogosList);
+  if (sorted.length === 0) return null;
+  const naoEncerrados = sorted.filter(j => j.status !== 'Encerrado');
+  if (naoEncerrados.length === 0) return sorted[sorted.length - 1];
+
+  const now = new Date();
+  const todayUtcMs = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const futuro = naoEncerrados.find(j => parseJogoDateMs(j.dataJogo) >= todayUtcMs);
+  return futuro || naoEncerrados[0];
+}
+
 function getAutoClubShieldDataUri(teamName) {
   const raw = String(teamName || 'Clube').trim();
   const lower = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -590,6 +646,8 @@ function getAutoClubShieldDataUri(teamName) {
     bg1 = '#dc2626'; bg2 = '#111827'; border = '#eab308'; sigla = 'ACG';
   } else if (lower.includes('aparecidense')) {
     bg1 = '#1e3a8a'; bg2 = '#172554'; border = '#facc15'; sigla = 'AAC';
+  } else if (lower.includes('anapolina')) {
+    bg1 = '#dc2626'; bg2 = '#991b1b'; border = '#ffffff'; sigla = 'AA';
   } else if (lower.includes('anapolis')) {
     bg1 = '#b91c1c'; bg2 = '#1e3a8a'; border = '#ffffff'; sigla = 'AFC';
   } else if (lower.includes('crac')) {
@@ -654,7 +712,7 @@ function getMatchTeamsAndLogos(jogo) {
 
   const rawConfronto = String(jogo.adversario || '').trim();
   const partes = rawConfronto.split(/\s+(?:x|vs\.?|×)\s+/i);
-  const isCasa = String(jogo.mando || '').includes('Casa');
+  const isCasa = isJogoEmCasa(jogo);
 
   let team1Name = 'E.C. Rio Verde';
   let team2Name = 'Adversário';
@@ -701,13 +759,13 @@ function getMatchTeamsAndLogos(jogo) {
 }
 
 function renderHomeBentoModel1() {
-  // 1. Card Matchday no Hero (Próximo Jogo do E.C.R.V. no Velosão com os Escudos dos 2 Times)
+  // 1. Card Matchday no Hero (Identifica o Próximo Jogo automaticamente pela Data Mais Próxima)
   const matchBox = document.getElementById('homeMatchdayBox');
   if (matchBox) {
     const jogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
-    const proxJogo = jogos.find(j => j.status === 'Check-in de Ingresso Aberto')
-      || jogos.find(j => j.status !== 'Encerrado')
-      || jogos[0];
+    const proxJogo = getNextUpcomingJogo(jogos);
+    const sortedAbertos = getJogosSortedByDate(jogos).filter(j => j.status !== 'Encerrado');
+    const proxJogoCasa = sortedAbertos.find(j => isJogoEmCasa(j));
 
     if (!proxJogo) {
       matchBox.innerHTML = `
@@ -736,12 +794,21 @@ function renderHomeBentoModel1() {
       `;
     } else {
       const info = getMatchTeamsAndLogos(proxJogo);
-      const statusText = proxJogo.status === 'Check-in de Ingresso Aberto' ? 'Check-in Aberto' : (proxJogo.status || 'Agendado');
+      const isCasa = isJogoEmCasa(proxJogo);
+      const mandoBadgeText = isCasa ? '🏟️ Em Casa (Velosão)' : '🚌 Fora de Casa';
+      const rodadaText = proxJogo.rodada ? ` • ${proxJogo.rodada}` : '';
+
+      const nextHomeHintHtml = (!isCasa && proxJogoCasa && proxJogoCasa.id !== proxJogo.id)
+        ? `<div style="background:rgba(6,78,59,0.55); border:1px solid rgba(16,185,129,0.38); border-radius:10px; padding:7px 10px; margin-bottom:10px; font-size:0.73rem; color:#d1fae5; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+             <span>🏟️ <strong>Próximo em Casa (Velosão):</strong> ${formatDateBR(proxJogoCasa.dataJogo)} — ${escapeHtml(proxJogoCasa.adversario)}</span>
+             <span style="color:#fde047; font-weight:800;">${escapeHtml(proxJogoCasa.rodada || '')}</span>
+           </div>`
+        : '';
 
       matchBox.innerHTML = `
         <div class="m1-matchday-top">
-          <span>⚽ PRÓXIMO JOGO DO E.C.R.V.</span>
-          <span class="m1-matchday-pill">${escapeHtml(statusText)}</span>
+          <span>⚽ PRÓXIMO JOGO DO E.C.R.V.${escapeHtml(rodadaText.toUpperCase())}</span>
+          <span class="m1-matchday-pill" style="${!isCasa ? 'background:rgba(59,130,246,0.22);color:#bfdbfe;border-color:rgba(96,165,250,0.45);' : ''}">${escapeHtml(mandoBadgeText)}</span>
         </div>
         <div class="m1-matchday-scoreboard">
           <div class="m1-team-col">
@@ -749,7 +816,7 @@ function renderHomeBentoModel1() {
             <strong>${escapeHtml(info.team1Name)}</strong>
           </div>
           <div class="m1-matchday-vs">
-            <small>${escapeHtml(proxJogo.campeonato || 'CAMPEONATO GOIANO')}</small>
+            <small>${escapeHtml(proxJogo.campeonato || 'CAMPEONATO GOIANO')}${escapeHtml(rodadaText)}</small>
             <strong>${proxJogo.placar ? escapeHtml(proxJogo.placar) : 'VS'}</strong>
             <span>${formatDateBR(proxJogo.dataJogo)} • ${escapeHtml(proxJogo.horario || '16:00')}</span>
           </div>
@@ -761,6 +828,7 @@ function renderHomeBentoModel1() {
         <div class="m1-matchday-stadium">
           📍 <strong>${escapeHtml(proxJogo.estadio || 'Estádio Mozart Veloso do Carmo (Velosão)')}</strong>
         </div>
+        ${nextHomeHintHtml}
       `;
     }
   }
@@ -1442,11 +1510,13 @@ function renderJogosEcrvSection() {
   const tbody = document.getElementById('publicJogosTableBody');
   if (!tbody) return;
 
-  const jogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
+  const rawJogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
+  const jogos = getJogosSortedByDate(rawJogos);
+  const proxJogo = getNextUpcomingJogo(rawJogos);
 
   if (selectChk) {
     const currentVal = selectChk.value;
-    const jogosCheckin = jogos.filter(j => String(j.mando || '').includes('Casa') && j.status !== 'Encerrado');
+    const jogosCheckin = jogos.filter(j => isJogoEmCasa(j) && j.status !== 'Encerrado');
     selectChk.innerHTML = jogosCheckin.length === 0
       ? `<option value="">Nenhum jogo em casa com check-in aberto no momento</option>`
       : jogosCheckin.map(j => `<option value="${j.id}">🏟️ ${j.adversario} (${formatDateBR(j.dataJogo)} às ${j.horario})</option>`).join('');
@@ -1461,17 +1531,20 @@ function renderJogosEcrvSection() {
   }
 
   tbody.innerHTML = jogos.map((j) => {
-    const isCasa = String(j.mando || '').includes('Casa');
+    const isCasa = isJogoEmCasa(j);
     const isEncerrado = j.status === 'Encerrado';
+    const isNext = proxJogo && j.id === proxJogo.id;
     const info = getMatchTeamsAndLogos(j);
     return `
-      <tr>
+      <tr style="${isNext ? 'background:#f0fdf4;' : ''}">
         <td>
-          <strong>${escapeHtml(j.campeonato || 'Campeonato Goiano')}</strong><br>
+          <strong>${escapeHtml(j.campeonato || 'Campeonato Goiano')}</strong>
+          ${isNext ? `<span style="display:inline-block; margin-left:6px; background:#eab308; color:#052e16; font-weight:900; font-size:0.68rem; padding:1px 7px; border-radius:999px;">⭐ PRÓXIMO JOGO</span>` : ''}
+          <br>
           <small>${escapeHtml(j.rodada || '')}</small>
         </td>
         <td>
-          <span class="status-badge" style="background:${isCasa ? '#dcfce7' : '#dbeafe'}; color:${isCasa ? '#166534' : '#1e40af'};">
+          <span class="status-badge" style="background:${isCasa ? '#dcfce7' : '#dbeafe'}; color:${isCasa ? '#166534' : '#1e40af'}; border:1px solid ${isCasa ? '#86efac' : '#93c5fd'}; font-weight:800;">
             ${isCasa ? '🏟️ EM CASA (Velosão)' : '🚌 FORA DE CASA'}
           </span>
         </td>
@@ -3581,12 +3654,33 @@ function renderAdminLojaTab() {
 let currentJogoLogoEditTargetId = '';
 let currentNovoJogoLogoDataUrl = '';
 
+function openEditJogoModal(jogoId) {
+  const jogo = (appState.jogosEcrv || []).find(x => x.id === jogoId);
+  if (!jogo) return;
+
+  const isCasa = isJogoEmCasa(jogo);
+  document.getElementById('editJogoId').value = jogo.id;
+  document.getElementById('editJogoCampeonato').value = jogo.campeonato || 'Campeonato Goiano';
+  document.getElementById('editJogoRodada').value = jogo.rodada || 'Rodada 1';
+  document.getElementById('editJogoMando').value = isCasa ? 'Em Casa (Velosão)' : 'Fora de Casa';
+  document.getElementById('editJogoStatus').value = jogo.status || 'Agendado';
+  document.getElementById('editJogoAdversario').value = jogo.adversario || '';
+  document.getElementById('editJogoData').value = jogo.dataJogo || '';
+  document.getElementById('editJogoHorario').value = jogo.horario || '16:00';
+  document.getElementById('editJogoPlacar').value = jogo.placar || '';
+  document.getElementById('editJogoEstadio').value = jogo.estadio || 'Estádio Mozart Veloso do Carmo (Velosão) — Rio Verde - GO';
+
+  const modal = document.getElementById('modalEditJogo');
+  if (modal) modal.hidden = false;
+}
+
 function renderAdminJogosTab() {
   const jogosListEl = document.getElementById('adminJogosList');
   const filterSelect = document.getElementById('filterCheckinJogoSelect');
   const chkBodyEl = document.getElementById('adminCheckinsJogosBody');
 
-  const jogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
+  const rawJogos = Array.isArray(appState.jogosEcrv) ? appState.jogosEcrv : [];
+  const jogos = getJogosSortedByDate(rawJogos);
 
   if (filterSelect) {
     const cur = filterSelect.value;
@@ -3602,6 +3696,7 @@ function renderAdminJogosTab() {
       ? `<p style="padding:12px;">Nenhum jogo cadastrado.</p>`
       : jogos.map((j) => {
           const info = getMatchTeamsAndLogos(j);
+          const isCasa = isJogoEmCasa(j);
           return `
             <div class="manage-item" style="flex-direction:column; align-items:stretch; gap:8px;">
               <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -3615,19 +3710,26 @@ function renderAdminJogosTab() {
                     <span class="status-badge ${j.status === 'Encerrado' ? 'status-pending' : 'status-paid'}" style="margin-left:6px;">
                       ${escapeHtml(j.status)}
                     </span><br>
-                    <small>${escapeHtml(j.campeonato)} (${escapeHtml(j.rodada)}) • ${formatDateBR(j.dataJogo)} às ${escapeHtml(j.horario)} • ${escapeHtml(j.mando)}</small>
+                    <small>${escapeHtml(j.campeonato)} (${escapeHtml(j.rodada)}) • 📅 <strong>${formatDateBR(j.dataJogo)}</strong> às ${escapeHtml(j.horario)} • 📍 ${escapeHtml(j.estadio || '')}</small>
                     ${j.placar ? `<div style="font-size:0.82rem; font-weight:800; color:#047857; margin-top:2px;">Placar: ${escapeHtml(j.placar)}</div>` : ''}
                   </div>
                 </div>
-                <div class="action-btns">
+                <div class="action-btns" style="align-items:center;">
+                  <select data-change-mando-jogo="${j.id}" title="Alterar Mando de Campo (Em Casa ou Fora de Casa)" style="padding:4px 8px; border-radius:8px; font-size:0.76rem; font-weight:800; border:1px solid ${isCasa ? '#16a34a' : '#2563eb'}; background:${isCasa ? '#dcfce7' : '#dbeafe'}; color:${isCasa ? '#166534' : '#1e40af'}; cursor:pointer;">
+                    <option value="Em Casa (Velosão)" ${isCasa ? 'selected' : ''}>🏟️ Em Casa (Velosão)</option>
+                    <option value="Fora de Casa" ${!isCasa ? 'selected' : ''}>🚌 Fora de Casa</option>
+                  </select>
+                  <button type="button" class="btn-table" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;font-weight:800;" data-edit-jogo="${j.id}">
+                    ✏️ Editar
+                  </button>
                   <button type="button" class="btn-table" style="background:#fef9c3;color:#854d0e;border-color:#eab308;font-weight:800;" data-change-logo-jogo="${j.id}" title="Enviar ou trocar a logo/escudo do time adversário">
-                    🛡️ Escudo Adversário
+                    🛡️ Escudo
                   </button>
                   <button type="button" class="btn-table" style="background:#e0f2fe;color:#0369a1;border-color:#7dd3fc;" data-set-placar-jogo="${j.id}">
-                    ⚽ Informar Placar
+                    ⚽ Placar
                   </button>
                   <button type="button" class="btn-table btn-approve" data-toggle-status-jogo="${j.id}">
-                    ${j.status === 'Encerrado' ? 'Reabrir Check-in' : 'Encerrar Jogo'}
+                    ${j.status === 'Encerrado' ? 'Reabrir' : 'Encerrar'}
                   </button>
                   <button type="button" class="btn-table btn-del" data-del-jogo="${j.id}">🗑️</button>
                 </div>
@@ -3635,6 +3737,36 @@ function renderAdminJogosTab() {
             </div>
           `;
         }).join('');
+
+    // Alterar Mando de Campo (Em Casa / Fora de Casa) diretamente na lista de jogos
+    jogosListEl.querySelectorAll('[data-change-mando-jogo]').forEach((sel) => {
+      sel.addEventListener('change', async () => {
+        const id = sel.getAttribute('data-change-mando-jogo');
+        const jogo = (appState.jogosEcrv || []).find(x => x.id === id);
+        if (!jogo) return;
+        jogo.mando = sel.value;
+        jogo.mandoExplicit = true;
+        const audit = buildAuditPayload('Jogos ECRV', `Alterou mando de campo do jogo "${jogo.adversario}" para ${jogo.mando}`, '');
+        try {
+          await fetch(`/api/jogos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mando: jogo.mando, mandoExplicit: true, _auditoria: audit })
+          });
+        } catch (e) {}
+        saveLocalBackup();
+        renderAll();
+        showToast(`🏟️ Mando de campo de "${jogo.adversario}" alterado para: ${jogo.mando}!`);
+      });
+    });
+
+    // Abrir modal completo de Edição de Jogo
+    jogosListEl.querySelectorAll('[data-edit-jogo]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-edit-jogo');
+        openEditJogoModal(id);
+      });
+    });
 
     jogosListEl.querySelectorAll('[data-change-logo-jogo]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -6531,5 +6663,64 @@ document.addEventListener('DOMContentLoaded', () => {
         formChk.dispatchEvent(new Event('submit', { cancelable: true }));
       }
     }
+  });
+
+  // ==========================================================================
+  // 8. EVENTOS DO MODAL DE EDIÇÃO DE JOGOS DO E.C.R.V. (MANDO DE CAMPO, DATA, PLACAR)
+  // ==========================================================================
+  ['btnCloseEditJogo', 'btnCancelEditJogo'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      const m = document.getElementById('modalEditJogo');
+      if (m) m.hidden = true;
+    });
+  });
+
+  document.getElementById('formEditJogo')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editJogoId')?.value;
+    const idx = (appState.jogosEcrv || []).findIndex(j => j.id === id);
+    if (idx === -1) return;
+
+    const oldJogo = appState.jogosEcrv[idx];
+    const updates = {
+      campeonato: document.getElementById('editJogoCampeonato')?.value.trim() || oldJogo.campeonato || 'Campeonato Goiano',
+      rodada: document.getElementById('editJogoRodada')?.value.trim() || oldJogo.rodada || 'Rodada 1',
+      mando: document.getElementById('editJogoMando')?.value || 'Em Casa (Velosão)',
+      mandoExplicit: true,
+      status: document.getElementById('editJogoStatus')?.value || 'Agendado',
+      adversario: document.getElementById('editJogoAdversario')?.value.trim() || oldJogo.adversario,
+      dataJogo: document.getElementById('editJogoData')?.value || oldJogo.dataJogo,
+      horario: document.getElementById('editJogoHorario')?.value.trim() || '16:00',
+      placar: document.getElementById('editJogoPlacar')?.value.trim() || '',
+      estadio: document.getElementById('editJogoEstadio')?.value.trim() || oldJogo.estadio
+    };
+
+    const audit = buildAuditPayload(
+      'Jogos ECRV',
+      `Editou o jogo "${updates.adversario}" (${updates.rodada})`,
+      `Mando: ${updates.mando} | Data: ${formatDateBR(updates.dataJogo)} | Estádio: ${updates.estadio}`
+    );
+
+    appState.jogosEcrv[idx] = { ...oldJogo, ...updates };
+
+    try {
+      const res = await fetch(`/api/jogos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...updates, _auditoria: audit })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.jogosEcrv)) {
+          appState.jogosEcrv = data.jogosEcrv;
+        }
+      }
+    } catch (err) {}
+
+    saveLocalBackup();
+    const modal = document.getElementById('modalEditJogo');
+    if (modal) modal.hidden = true;
+    renderAll();
+    showToast(`✅ Jogo "${updates.adversario}" atualizado com sucesso!`);
   });
 });

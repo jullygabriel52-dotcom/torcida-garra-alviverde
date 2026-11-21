@@ -1051,6 +1051,23 @@
 
               <div class="form-row-2">
                 <div class="form-group">
+                  <label for="pedModeloGenero">Modelo (Masculino / Feminino) *</label>
+                  <select id="pedModeloGenero" required>
+                    <option value="Masculino" selected>👕 Masculino</option>
+                    <option value="Feminino">👚 Feminino (Baby Look / Feminino)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="pedFaixaEtaria">Adulto ou Infantil *</label>
+                  <select id="pedFaixaEtaria" required>
+                    <option value="Adulto" selected>🧑 Adulto</option>
+                    <option value="Infantil">🧒 Infantil</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row-2">
+                <div class="form-group">
                   <label for="pedTamanho">Tamanho *</label>
                   <select id="pedTamanho" required>
                     <option value="P">P</option>
@@ -1058,6 +1075,13 @@
                     <option value="G" selected>G</option>
                     <option value="GG">GG</option>
                     <option value="XG">XG / Especial</option>
+                    <option value="Infantil 2 Anos">Infantil - 2 Anos</option>
+                    <option value="Infantil 4 Anos">Infantil - 4 Anos</option>
+                    <option value="Infantil 6 Anos">Infantil - 6 Anos</option>
+                    <option value="Infantil 8 Anos">Infantil - 8 Anos</option>
+                    <option value="Infantil 10 Anos">Infantil - 10 Anos</option>
+                    <option value="Infantil 12 Anos">Infantil - 12 Anos</option>
+                    <option value="Infantil 14 Anos">Infantil - 14 Anos</option>
                     <option value="Único">Tamanho Único</option>
                   </select>
                 </div>
@@ -1547,7 +1571,8 @@
                 <option value="1ª Parcela Paga (R$ 35)">1ª Parcela Paga (R$ 35)</option>
                 <option value="2ª Parcela Paga (R$ 70)">2ª Parcela Paga (R$ 70)</option>
                 <option value="Pago / Ativo">Quitado Total (R$ 105)</option>
-                <option value="com_isencao">🎁 Com Parcela ou Saldo Isento (Ações / Diretoria)</option>
+                <option value="bateria_50">🥁 Turma da Bateria — 50% Isento (Paga R$ 52,50)</option>
+                <option value="com_isencao">🎁 Com Parcela ou Saldo Isento (Ações / Bateria / Diretoria)</option>
                 <option value="Isento (Diretoria)">👑 Isento Total (Diretoria — R$ 0)</option>
               </select>
             </div>
@@ -1854,6 +1879,8 @@
                   <tr>
                     <th>Data</th>
                     <th>Material / Tamanho</th>
+                    <th>Modelo (Masc / Fem)</th>
+                    <th>Adulto / Infantil</th>
                     <th>Comprador / CPF</th>
                     <th>WhatsApp</th>
                     <th>Modalidade / Valor</th>
@@ -2484,7 +2511,15 @@
               </div>
             </label>
 
-            <label style="display:flex; align-items:flex-start; gap:8px; padding:12px; border:2px solid #fecdd3; border-radius:12px; cursor:pointer; background:#fff1f2;" data-isencao-card="0">
+            <label style="display:flex; align-items:flex-start; gap:8px; padding:12px; border:2px solid #16a34a; border-radius:12px; cursor:pointer; background:#dcfce7; grid-column: 1 / -1;" data-isencao-card="bateria50">
+              <input type="radio" name="qtdParcelasIsentas" value="bateria50" style="margin-top:3px;" />
+              <div>
+                <strong style="display:block; color:#065f46; font-size:0.94rem;">🥁 Isenção 50% — Turma da Bateria TGA (- R$ 52,50)</strong>
+                <small style="color:#166534; font-size:0.78rem;">Abate 50% do plano de Sócio (Sócio da Bateria paga apenas metade = R$ 52,50)</small>
+              </div>
+            </label>
+
+            <label style="display:flex; align-items:flex-start; gap:8px; padding:12px; border:2px solid #fecdd3; border-radius:12px; cursor:pointer; background:#fff1f2; grid-column: 1 / -1;" data-isencao-card="0">
               <input type="radio" name="qtdParcelasIsentas" value="0" style="margin-top:3px;" />
               <div>
                 <strong style="display:block; color:#9f1239; font-size:0.92rem;">↩️ Remover Isenções (0 Parc.)</strong>
@@ -2500,6 +2535,7 @@
           </label>
           <select id="isencaoMotivoSelect" style="font-weight:700;">
             <option value="🩸 Campanha de Doação de Sangue TGA">🩸 Participou da Campanha de Doação de Sangue TGA</option>
+            <option value="🥁 Turma da Bateria TGA — Isenção 50%">🥁 Turma da Bateria TGA — Isenção 50% (-R$ 52,50)</option>
             <option value="🐰 Ação Social — Páscoa Solidária TGA">🐰 Ação Social — Páscoa Solidária TGA</option>
             <option value="🎈 Ação Social — Dia das Crianças TGA">🎈 Ação Social — Dia das Crianças TGA</option>
             <option value="🎄 Ação Social — Natal Solidário TGA">🎄 Ação Social — Natal Solidário TGA</option>
@@ -2522,6 +2558,6 @@
   <!-- TOAST NOTIFICATION -->
   <div id="toastNotification" class="toast" hidden></div>
 
-  <script src="/app.js?v=20261113a"></script>
+  <script src="/app.js?v=20261121a"></script>
 </body>
 </html>

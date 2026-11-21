@@ -1183,11 +1183,16 @@ async function requestHandler(req, res) {
         cpf: body.cpf || '',
         whatsapp: body.whatsapp || '',
         tamanho: body.tamanho || 'G',
+        modeloGenero: body.modeloGenero || 'Masculino',
+        faixaEtaria: body.faixaEtaria || 'Adulto',
         quantidade: Number(body.quantidade) || 1,
         isSocioDesconto: Boolean(body.isSocioDesconto),
         statusSocioVerificado: body.statusSocioVerificado || 'Não-Sócio',
+        socioMatricula: body.socioMatricula || '',
         valorUnitario: Number(body.valorUnitario) || 0,
         valorTotal: Number(body.valorTotal) || 0,
+        valorOriginal: Number(body.valorOriginal) || Number(body.valorTotal) || 0,
+        isentoBateria: Boolean(body.isentoBateria),
         statusPix: body.statusPix || 'Pendente PIX',
         createdAt: new Date().toISOString()
       };
